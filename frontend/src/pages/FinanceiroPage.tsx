@@ -153,24 +153,65 @@ export default function FinanceiroPage() {
       .sort((a, b) => a.contaLabel.localeCompare(b.contaLabel));
   }, [flowEvents]);
 
-  const resultadoPorMes = useMemo(() => {
+  const isImpostoLabel = (label: string) => {
+    const up = label.toUpperCase();
+    return up.includes('IRPJ') || up.includes('CSLL');
+  };
+
+  const resultadoOperacionalPorMes = useMemo(() => {
     const result: Record<string, number> = {};
     for (const mes of meses) {
-      result[mes] = fluxoMensal.reduce((sum, row) => {
-        const cell = row.meses[mes] || { real: 0, previsao: 0, simulacao: 0 };
-        return sum + cell.real + cell.previsao + cell.simulacao;
-      }, 0);
+      result[mes] = fluxoMensal
+        .filter((row) => !isImpostoLabel(row.contaLabel))
+        .reduce((sum, row) => {
+          const cell = row.meses[mes] || { real: 0, previsao: 0, simulacao: 0 };
+          return sum + cell.real + cell.previsao + cell.simulacao;
+        }, 0);
     }
     return result;
   }, [fluxoMensal, meses]);
 
+  const irpjPorMes = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const mes of meses) {
+      result[mes] = fluxoMensal
+        .filter((row) => row.contaLabel.toUpperCase().includes('IRPJ'))
+        .reduce((sum, row) => {
+          const cell = row.meses[mes] || { real: 0, previsao: 0, simulacao: 0 };
+          return sum + Math.abs(cell.real + cell.previsao + cell.simulacao);
+        }, 0);
+    }
+    return result;
+  }, [fluxoMensal, meses]);
+
+  const csllPorMes = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const mes of meses) {
+      result[mes] = fluxoMensal
+        .filter((row) => row.contaLabel.toUpperCase().includes('CSLL'))
+        .reduce((sum, row) => {
+          const cell = row.meses[mes] || { real: 0, previsao: 0, simulacao: 0 };
+          return sum + Math.abs(cell.real + cell.previsao + cell.simulacao);
+        }, 0);
+    }
+    return result;
+  }, [fluxoMensal, meses]);
+
+  const lucroLiquidoPorMes = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const mes of meses) {
+      result[mes] = (resultadoOperacionalPorMes[mes] ?? 0) - (irpjPorMes[mes] ?? 0) - (csllPorMes[mes] ?? 0);
+    }
+    return result;
+  }, [resultadoOperacionalPorMes, irpjPorMes, csllPorMes, meses]);
+
   const saldoAcumulado = useMemo(() => {
     let acc = 0;
     return meses.map((mes) => {
-      acc += resultadoPorMes[mes] ?? 0;
+      acc += lucroLiquidoPorMes[mes] ?? 0;
       return acc;
     });
-  }, [resultadoPorMes, meses]);
+  }, [lucroLiquidoPorMes, meses]);
 
   const fluxoDiarioAgrupado = useMemo(() => {
     const map = new Map<string, { data: string; events: FlowEvent[]; totalEntradas: number; totalSaidas: number }>();
@@ -346,9 +387,30 @@ export default function FinanceiroPage() {
                     {fluxoMensal.length > 0 ? (
                       <>
                         <tr className="flow-total-row">
-                          <td>Resultado do mês</td>
+                          <td>Resultado Operacional Líquido</td>
                           {meses.map((mes) => {
-                            const val = resultadoPorMes[mes] ?? 0;
+                            const val = resultadoOperacionalPorMes[mes] ?? 0;
+                            return <td key={mes} className={val < 0 ? 'value--negative' : val > 0 ? 'value--positive' : ''}>{formatCurrency(val)}</td>;
+                          })}
+                        </tr>
+                        <tr className="flow-total-row">
+                          <td>(-) IRPJ</td>
+                          {meses.map((mes) => {
+                            const val = irpjPorMes[mes] ?? 0;
+                            return <td key={mes} className={val > 0 ? 'value--negative' : ''}>{val > 0 ? `(${formatCurrency(val)})` : '—'}</td>;
+                          })}
+                        </tr>
+                        <tr className="flow-total-row">
+                          <td>(-) CSLL</td>
+                          {meses.map((mes) => {
+                            const val = csllPorMes[mes] ?? 0;
+                            return <td key={mes} className={val > 0 ? 'value--negative' : ''}>{val > 0 ? `(${formatCurrency(val)})` : '—'}</td>;
+                          })}
+                        </tr>
+                        <tr className="flow-total-row flow-total-row--accent">
+                          <td>= Lucro Líquido</td>
+                          {meses.map((mes) => {
+                            const val = lucroLiquidoPorMes[mes] ?? 0;
                             return <td key={mes} className={val < 0 ? 'value--negative' : val > 0 ? 'value--positive' : ''}>{formatCurrency(val)}</td>;
                           })}
                         </tr>
