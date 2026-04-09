@@ -13,7 +13,7 @@ RUN npm ci --include=dev
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN npx prisma generate
 
-RUN npm run build && ls dist/main.js
+RUN npx tsc -p tsconfig.build.json && ls dist/main.js
 
 EXPOSE 3001
 
