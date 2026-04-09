@@ -1,40 +1,20 @@
-# ──────────────────────────────────────────────
-# Raccolto API — Dockerfile de produção
-# ──────────────────────────────────────────────
-
-FROM node:22-alpine AS builder
+FROM node:22-alpine
 WORKDIR /app
 
-# Dependências
-COPY package*.json ./
-COPY tsconfig*.json nest-cli.json ./
-COPY prisma.config.ts ./
-COPY prisma/ ./prisma/
-RUN npm ci
-
-# Gera Prisma Client
-RUN npx prisma generate --config prisma.config.ts
-
-# Build NestJS
-COPY src/ ./src/
-RUN npm run build
-
-# ──────────────────────────────────────────────
-FROM node:22-alpine AS runner
-WORKDIR /app
-
-# Instala apenas produção + ts-node (necessário para prisma.config.ts)
 COPY package*.json ./
 COPY tsconfig*.json ./
+COPY nest-cli.json ./
 COPY prisma.config.ts ./
 COPY prisma/ ./prisma/
-RUN npm ci --omit=dev && npm install ts-node tsconfig-paths
+COPY src/ ./src/
 
-# Copia build e cliente Prisma gerado
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+RUN npm ci --include=dev
+
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+RUN npx prisma generate
+
+RUN npm run build && ls dist/main.js
 
 EXPOSE 3001
 
-# Roda migrations e sobe a API
-CMD ["sh", "-c", "npx prisma migrate deploy --config prisma.config.ts && node dist/main"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/main.js"]
