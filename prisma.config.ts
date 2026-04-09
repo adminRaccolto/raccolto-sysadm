@@ -3,6 +3,6 @@ import { defineConfig } from 'prisma/config';
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   datasource: {
-    url: process.env.DB_URL ?? process.env.DATABASE_URL ?? '',
+    url: 'postgresql://postgres:TXTxdunCKhoPwbSxhFaBKwQXKNYvEaQs@mainline.proxy.rlwy.net:44815/railway',
   },
 });
