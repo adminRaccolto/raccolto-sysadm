@@ -293,8 +293,8 @@ export default function FaturamentoPage() {
         subtitle="Gerencie o faturamento mensal de contratos e a emissão de NFS-e via eNotas."
       />
 
-      {error ? <Feedback type="error" message={error} onClose={() => setError(null)} /> : null}
-      {success ? <Feedback type="success" message={success} onClose={() => setSuccess(null)} /> : null}
+      {error ? <Feedback type="error" message={error} /> : null}
+      {success ? <Feedback type="success" message={success} /> : null}
 
       {/* Seletor de competência + alerta de dia de faturamento */}
       <section className="panel">

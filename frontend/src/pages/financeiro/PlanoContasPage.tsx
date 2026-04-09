@@ -106,17 +106,7 @@ export default function PlanoContasPage() {
     }
   }
 
-  async function handleDelete(item: ContaGerencial) {
-    if (!window.confirm(`Excluir a conta gerencial "${item.descricao}"?`)) return;
-    try {
-      await http.delete(`/financeiro/plano-contas/${item.id}`);
-      setSuccess('Conta gerencial excluída com sucesso.');
-      if (editingId === item.id) closeModal();
-      await load();
-    } catch (err) {
-      handleError(err, 'Falha ao excluir conta gerencial.');
-    }
-  }
+
 
   async function handleEnsureDefaultPlan() {
     setSaving(true);

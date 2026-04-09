@@ -206,6 +206,9 @@ export interface Contrato {
   contaGerencialId?: string | null;
   recebiveis?: Recebivel[];
   cobrancas?: ContratoCobranca[];
+  autentiqueDocId?: string | null;
+  autentiqueSignUrl?: string | null;
+  pdfAssinadoUrl?: string | null;
   createdAt: string;
 }
 

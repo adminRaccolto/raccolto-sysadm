@@ -114,6 +114,9 @@ const initialForm: ContratoForm = {
   modeloContratoNome: 'Contrato padrão',
   textoContratoBase: '',
   observacoes: '',
+  autentiqueDocId: null,
+  autentiqueSignUrl: null,
+  pdfAssinadoUrl: null,
   cobrancas: [],
 };
 
@@ -440,6 +443,9 @@ export default function ContratosPage() {
       modeloContratoNome: contrato.modeloContratoNome || 'Contrato padrão',
       textoContratoBase: contrato.textoContratoBase || '',
       observacoes: contrato.observacoes || '',
+      autentiqueDocId: contrato.autentiqueDocId ?? null,
+      autentiqueSignUrl: contrato.autentiqueSignUrl ?? null,
+      pdfAssinadoUrl: contrato.pdfAssinadoUrl ?? null,
       cobrancas: (contrato.cobrancas || []).map((item) => ({
         id: item.id,
         ordem: item.ordem,
