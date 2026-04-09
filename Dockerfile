@@ -9,7 +9,7 @@ COPY prisma/ ./prisma/
 
 RUN npm ci
 
-RUN npx prisma generate --config prisma.config.ts
+RUN npx prisma generate
 
 COPY src/ ./src/
 
@@ -17,4 +17,4 @@ RUN npm run build
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push --config prisma.config.ts --accept-data-loss && node dist/main"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/main"]
