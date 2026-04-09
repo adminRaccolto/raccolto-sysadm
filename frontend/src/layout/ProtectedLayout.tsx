@@ -7,6 +7,7 @@ import {
   ChevronDown,
   FileSignature,
   FileText,
+  GraduationCap,
   LayoutDashboard,
   LogOut,
   Package,
@@ -33,6 +34,7 @@ const menuItems = [
   { to: '/financeiro',       label: 'Financeiro',   Icon: Wallet },
   { to: '/bi',               label: 'BI',           Icon: BarChart3 },
   { to: '/sistema',          label: 'Sistema',      Icon: Settings },
+  { to: '/aprendizado',      label: 'Aprenda',      Icon: GraduationCap },
 ];
 
 export default function ProtectedLayout() {

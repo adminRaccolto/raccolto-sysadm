@@ -22,6 +22,7 @@ import EmpresasPage from '../pages/EmpresasPage';
 import UsuariosPage from '../pages/UsuariosPage';
 import PerfisAcessoPage from '../pages/PerfisAcessoPage';
 import BiPage from '../pages/BiPage';
+import LearningPage from '../pages/LearningPage';
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="perfis-acesso" element={<PerfisAcessoPage />} />
         <Route path="sistema" element={<SistemaPage />} />
         <Route path="bi" element={<BiPage />} />
+        <Route path="aprendizado" element={<LearningPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

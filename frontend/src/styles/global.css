@@ -445,6 +445,7 @@ button { cursor: pointer; }
 .panel__header h3      { margin: 0 0 2px; font-size: 14px; font-weight: 700; letter-spacing: -0.1px; }
 .panel__header p       { margin: 0; font-size: 12px; color: var(--muted); }
 .panel__header--row    { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.panel__body           { margin-top: 4px; }
 
 .stat-card {
   background: var(--surface);
