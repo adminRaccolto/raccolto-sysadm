@@ -9,6 +9,8 @@ COPY prisma/ ./prisma/
 
 RUN npm ci
 
+# URL fictícia só para o prisma generate (não conecta ao banco, apenas lê o schema)
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN npx prisma generate
 
 COPY src/ ./src/
