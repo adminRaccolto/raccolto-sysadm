@@ -17,15 +17,19 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  const allowedOrigins = (process.env.CORS_ORIGIN ?? '')
+    .split(',')
+    .map((o) => o.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+
   app.enableCors({
     origin: (origin, callback) => {
-      // Em desenvolvimento aceita qualquer localhost
       if (!origin || /^http:\/\/localhost:\d+$/.test(origin)) {
         callback(null, true);
-      } else if (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN) {
+      } else if (allowedOrigins.includes(origin.replace(/\/$/, ''))) {
         callback(null, true);
       } else {
-        callback(new Error(`Origin ${origin} não permitida por CORS`));
+        callback(null, false);
       }
     },
     credentials: true,
