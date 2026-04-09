@@ -19,4 +19,4 @@ RUN npm run build
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "echo '=== DATABASE_URL ===' && echo $DATABASE_URL && npx prisma db push --accept-data-loss && node dist/main"]
+CMD ["sh", "-c", "echo '=== DB_URL ===' && echo $DB_URL && npx prisma db push --accept-data-loss && node dist/main"]
