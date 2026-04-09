@@ -15,7 +15,7 @@ RUN npx prisma generate
 
 COPY src/ ./src/
 
-RUN npm run build
+RUN npm run build && ls -la dist/
 
 EXPOSE 3001
 
