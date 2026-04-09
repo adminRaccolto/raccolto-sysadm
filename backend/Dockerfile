@@ -13,8 +13,8 @@ RUN npm ci --include=dev
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN npx prisma generate
 
-RUN npx tsc -p tsconfig.build.json && ls dist/main.js
+RUN npx tsc -p tsconfig.build.json && ls dist/src/main.js
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/src/main.js"]
