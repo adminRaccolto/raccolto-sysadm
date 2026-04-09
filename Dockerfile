@@ -17,4 +17,4 @@ RUN npm run build
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy --config prisma.config.ts && node dist/main"]
+CMD ["sh", "-c", "npx prisma db push --config prisma.config.ts --accept-data-loss && node dist/main"]
