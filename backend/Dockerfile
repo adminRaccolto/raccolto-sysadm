@@ -1,12 +1,12 @@
 FROM node:22-alpine
 WORKDIR /app
 
-COPY package*.json ./
-COPY tsconfig*.json ./
-COPY nest-cli.json ./
-COPY prisma.config.ts ./
-COPY prisma/ ./prisma/
-COPY src/ ./src/
+COPY backend/package*.json ./
+COPY backend/tsconfig*.json ./
+COPY backend/nest-cli.json ./
+COPY backend/prisma.config.ts ./
+COPY backend/prisma/ ./prisma/
+COPY backend/src/ ./src/
 
 RUN npm ci --include=dev
 
