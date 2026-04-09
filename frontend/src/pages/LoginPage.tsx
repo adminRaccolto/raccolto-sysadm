@@ -19,15 +19,15 @@ export default function LoginPage() {
   const [empresaSelecionadaId, setEmpresaSelecionadaId] = useState<string>(() => localStorage.getItem(LOGIN_EMPRESA_KEY) || '');
 
   const [loginForm, setLoginForm] = useState({
-    email: 'admin@raccolto.com',
-    senha: '123456',
+    email: '',
+    senha: '',
   });
 
   const [bootstrapForm, setBootstrapForm] = useState({
-    nome: 'Gino',
-    email: 'admin@raccolto.com',
-    senha: '123456',
-    empresaNome: 'Raccolto',
+    nome: '',
+    email: '',
+    senha: '',
+    empresaNome: '',
   });
 
   useEffect(() => {
