@@ -25,22 +25,41 @@ import type { Notificacao, NotificacoesResponse } from '../types/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDate } from '../utils/format';
 
-const menuItems = [
-  { to: '/dashboard',        label: 'Início',       Icon: LayoutDashboard },
-  { to: '/clientes',         label: 'Clientes',     Icon: Users },
-  { to: '/produtos-servicos',label: 'Produtos',     Icon: Package },
-  { to: '/propostas',        label: 'Propostas',    Icon: FileText },
-  { to: '/contratos',        label: 'Contratos',    Icon: FileSignature },
-  { to: '/projetos',         label: 'Projetos',     Icon: Briefcase },
-  { to: '/crm',              label: 'CRM',          Icon: Target },
-  { to: '/captacao',         label: 'Captação',     Icon: Megaphone },
-  { to: '/modelos',          label: 'Modelos',      Icon: FolderOpen },
-  { to: '/deslocamentos',    label: 'Deslocamentos',Icon: Car },
-  { to: '/faturamento',      label: 'Faturamento',  Icon: Receipt },
-  { to: '/financeiro',       label: 'Financeiro',   Icon: Wallet },
-  { to: '/bi',               label: 'BI',           Icon: BarChart3 },
-  { to: '/sistema',          label: 'Sistema',      Icon: Settings },
-  { to: '/aprendizado',      label: 'Aprenda',      Icon: GraduationCap },
+type MenuItem = { to: string; label: string; Icon: React.ElementType };
+type MenuGroup = { label: string; Icon: React.ElementType; items: MenuItem[] };
+type NavEntry = { type: 'link' } & MenuItem | { type: 'group' } & MenuGroup;
+
+const navEntries: NavEntry[] = [
+  { type: 'link',  to: '/dashboard', label: 'Início', Icon: LayoutDashboard },
+  {
+    type: 'group', label: 'Comercial', Icon: FileSignature,
+    items: [
+      { to: '/clientes',          label: 'Clientes',   Icon: Users },
+      { to: '/produtos-servicos', label: 'Produtos',   Icon: Package },
+      { to: '/propostas',         label: 'Propostas',  Icon: FileText },
+      { to: '/contratos',         label: 'Contratos',  Icon: FileSignature },
+      { to: '/crm',               label: 'CRM',        Icon: Target },
+      { to: '/captacao',          label: 'Captação',   Icon: Megaphone },
+    ],
+  },
+  {
+    type: 'group', label: 'Operacional', Icon: Briefcase,
+    items: [
+      { to: '/projetos',       label: 'Projetos',       Icon: Briefcase },
+      { to: '/deslocamentos',  label: 'Deslocamentos',  Icon: Car },
+      { to: '/modelos',        label: 'Modelos',        Icon: FolderOpen },
+    ],
+  },
+  {
+    type: 'group', label: 'Financeiro', Icon: Wallet,
+    items: [
+      { to: '/faturamento', label: 'Faturamento', Icon: Receipt },
+      { to: '/financeiro',  label: 'Financeiro',  Icon: Wallet },
+    ],
+  },
+  { type: 'link', to: '/bi',         label: 'BI',      Icon: BarChart3 },
+  { type: 'link', to: '/sistema',    label: 'Sistema', Icon: Settings },
+  { type: 'link', to: '/aprendizado',label: 'Aprenda', Icon: GraduationCap },
 ];
 
 export default function ProtectedLayout() {
@@ -51,8 +70,10 @@ export default function ProtectedLayout() {
   const [naoLidas, setNaoLidas] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   const empresaNome = useMemo(() => user?.empresa?.nomeFantasia || user?.empresa?.nome || 'Raccolto', [user]);
   const primeiroNome = useMemo(() => user?.nome?.split(' ')[0] || '', [user]);
@@ -76,15 +97,19 @@ export default function ProtectedLayout() {
 
   useEffect(() => { void loadNotificacoes(); }, [location.pathname]);
 
-  // Close dropdowns on outside click
+  // Close all dropdowns on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
       if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
+      if (navRef.current && !navRef.current.contains(e.target as Node)) setOpenGroup(null);
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Close group dropdown on route change
+  useEffect(() => { setOpenGroup(null); }, [location.pathname]);
 
   function handleLogout() {
     logout();
@@ -98,6 +123,10 @@ export default function ProtectedLayout() {
     }
     if (item.link) navigate(item.link);
     setNotifOpen(false);
+  }
+
+  function isGroupActive(group: MenuGroup) {
+    return group.items.some((item) => location.pathname.startsWith(item.to));
   }
 
   return (
@@ -117,18 +146,54 @@ export default function ProtectedLayout() {
         </div>
 
         {/* Navigation */}
-        <nav className="topnav__nav">
-          {menuItems.map(({ to, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              title={label}
-              className={({ isActive }) => `topnav__link${isActive ? ' topnav__link--active' : ''}`}
-            >
-              <Icon size={16} strokeWidth={2} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
+        <nav className="topnav__nav" ref={navRef}>
+          {navEntries.map((entry) => {
+            if (entry.type === 'link') {
+              return (
+                <NavLink
+                  key={entry.to}
+                  to={entry.to}
+                  title={entry.label}
+                  className={({ isActive }) => `topnav__link${isActive ? ' topnav__link--active' : ''}`}
+                >
+                  <entry.Icon size={16} strokeWidth={2} />
+                  <span>{entry.label}</span>
+                </NavLink>
+              );
+            }
+
+            const group = entry as MenuGroup & { type: 'group' };
+            const active = isGroupActive(group);
+            const open = openGroup === group.label;
+
+            return (
+              <div key={group.label} className="topnav__group">
+                <button
+                  type="button"
+                  className={`topnav__link topnav__link--group${active ? ' topnav__link--active' : ''}`}
+                  onClick={() => setOpenGroup(open ? null : group.label)}
+                >
+                  <group.Icon size={16} strokeWidth={2} />
+                  <span>{group.label}</span>
+                  <ChevronDown size={12} strokeWidth={2} className={`topnav__chevron${open ? ' topnav__chevron--open' : ''}`} />
+                </button>
+                {open && (
+                  <div className="topnav__group-panel">
+                    {group.items.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        className={({ isActive }) => `topnav__group-item${isActive ? ' topnav__group-item--active' : ''}`}
+                      >
+                        <item.Icon size={14} strokeWidth={2} />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Right actions */}
