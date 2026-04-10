@@ -581,3 +581,42 @@ export interface OportunidadeCrm {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface FormularioCaptacao {
+  id: string;
+  empresaId: string;
+  produtoServicoId?: string | null;
+  nome: string;
+  slug: string;
+  origemLead: string;
+  etapaInicial: EtapaCrm;
+  titulo: string;
+  descricao?: string | null;
+  ativo: boolean;
+  produtoServico?: { id: string; nome: string } | null;
+  _count?: { submissoes: number };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FormularioSubmissao {
+  id: string;
+  formularioId: string;
+  oportunidadeId?: string | null;
+  nomeContato: string;
+  empresaNome?: string | null;
+  email?: string | null;
+  telefone?: string | null;
+  mensagem?: string | null;
+  oportunidade?: { id: string; titulo: string; etapa: EtapaCrm } | null;
+  createdAt: string;
+}
+
+export interface PublicFormulario {
+  id: string;
+  nome: string;
+  titulo: string;
+  descricao?: string | null;
+  origemLead: string;
+  empresa: { nomeFantasia?: string | null; nome: string; logoUrl?: string | null };
+}

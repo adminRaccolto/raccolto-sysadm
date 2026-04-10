@@ -239,6 +239,7 @@ model Empresa {
   perfisAcesso PerfilAcesso[]
   usuarioEmpresas UsuarioEmpresa[]
   oportunidadesCrm OportunidadeCrm[]
+  formulariosCaptacao FormularioCaptacao[]
   comentariosTarefa TarefaComentario[]
   comentariosOportunidade OportunidadeCrmComentario[]
   contratoModelos ContratoModelo[]
@@ -263,6 +264,7 @@ model ProdutoServico {
   projetos              Projeto[]
   recebiveis            Recebivel[]
   oportunidadesCrm      OportunidadeCrm[]
+  formulariosCaptacao   FormularioCaptacao[]
 
   @@unique([empresaId, nome])
   @@index([empresaId])
@@ -728,6 +730,7 @@ model OportunidadeCrm {
   produtoServico    ProdutoServico? @relation(fields: [produtoServicoId], references: [id], onDelete: SetNull)
   responsavel       Usuario?  @relation("OportunidadeResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
   comentarios       OportunidadeCrmComentario[]
+  submissoesFormulario FormularioSubmissao[]
 
   @@index([empresaId])
   @@index([clienteId])
@@ -959,4 +962,43 @@ model Usuario {
 
   @@index([empresaId])
   @@index([clienteId])
+}
+
+model FormularioCaptacao {
+  id               String               @id @default(cuid())
+  empresaId        String
+  produtoServicoId String?
+  nome             String
+  slug             String
+  origemLead       String               // WHATSAPP | EMAIL | INSTAGRAM | OUTRO
+  etapaInicial     EtapaCrm             @default(LEAD_RECEBIDO)
+  titulo           String
+  descricao        String?
+  ativo            Boolean              @default(true)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  empresa          Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  produtoServico   ProdutoServico?      @relation(fields: [produtoServicoId], references: [id], onDelete: SetNull)
+  submissoes       FormularioSubmissao[]
+
+  @@unique([empresaId, slug])
+  @@index([empresaId])
+  @@index([produtoServicoId])
+}
+
+model FormularioSubmissao {
+  id             String              @id @default(cuid())
+  formularioId   String
+  oportunidadeId String?
+  nomeContato    String
+  empresaNome    String?
+  email          String?
+  telefone       String?
+  mensagem       String?
+  createdAt      DateTime            @default(now())
+  formulario     FormularioCaptacao  @relation(fields: [formularioId], references: [id], onDelete: Cascade)
+  oportunidade   OportunidadeCrm?   @relation(fields: [oportunidadeId], references: [id], onDelete: SetNull)
+
+  @@index([formularioId])
+  @@index([oportunidadeId])
 }

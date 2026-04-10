@@ -8,6 +8,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { ContratosModule } from './contratos/contratos.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { CrmModule } from './crm/crm.module';
+import { CaptacaoModule } from './captacao/captacao.module';
 import { EmpresasModule } from './empresas/empresas.module';
 import { EntregaveisModule } from './entregaveis/entregaveis.module';
 import { FinanceiroModule } from './financeiro/financeiro.module';
@@ -45,6 +46,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     FinanceiroModule,
     DashboardModule,
     CrmModule,
+    CaptacaoModule,
     SuporteModule,
     FaturamentoModule,
   ],

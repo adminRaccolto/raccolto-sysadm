@@ -12,6 +12,8 @@ import SistemaPage from '../pages/SistemaPage';
 import ProdutosPage from '../pages/ProdutosPage';
 import FinanceiroPage from '../pages/FinanceiroPage';
 import CrmPage from '../pages/CrmPage';
+import FormulariosCaptacaoPage from '../pages/FormulariosCaptacaoPage';
+import CaptacaoPublicPage from '../pages/CaptacaoPublicPage';
 import ContasReceberPage from '../pages/financeiro/ContasReceberPage';
 import ContasPagarPage from '../pages/financeiro/ContasPagarPage';
 import TesourariaPage from '../pages/financeiro/TesourariaPage';
@@ -28,6 +30,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/captacao/:slug" element={<CaptacaoPublicPage />} />
       <Route path="/" element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
@@ -41,6 +44,7 @@ export default function App() {
         <Route path="projetos/:id/tarefas/:tarefaId" element={<TaskDetailPage />} />
         <Route path="financeiro" element={<FinanceiroPage />} />
         <Route path="crm" element={<CrmPage />} />
+        <Route path="captacao" element={<FormulariosCaptacaoPage />} />
         <Route path="financeiro/receber" element={<ContasReceberPage />} />
         <Route path="financeiro/pagar" element={<ContasPagarPage />} />
         <Route path="financeiro/tesouraria" element={<TesourariaPage />} />
