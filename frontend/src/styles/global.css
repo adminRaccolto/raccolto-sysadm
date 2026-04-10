@@ -709,8 +709,6 @@ th {
   gap: 8px;
   flex-wrap: nowrap;
   align-items: center;
-  padding-left: 12px;
-  border-left: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -852,9 +850,11 @@ th {
 /* ── Header tools bar ──────────────────────────────────────── */
 .header-tools {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex: 1;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-left: 16px;
 }
 
 /* ── Section label ─────────────────────────────────────────── */
