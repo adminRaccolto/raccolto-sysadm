@@ -10,7 +10,7 @@ import type {
   Cliente,
   Contrato,
   ContratoCobranca,
-  ContratoModelo,
+  ModeloDocumento,
   Empresa,
   ProdutoServico,
   StatusAssinatura,
@@ -312,7 +312,7 @@ export default function ContratosPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [produtos, setProdutos] = useState<ProdutoServico[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
-  const [modelos, setModelos] = useState<ContratoModelo[]>([]);
+  const [modelos, setModelos] = useState<ModeloDocumento[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<FiltroContrato>('ABERTOS');
   const [form, setForm] = useState<ContratoForm>(initialForm);
@@ -335,7 +335,7 @@ export default function ContratosPage() {
         http.get<Cliente[]>('/clientes'),
         http.get<ProdutoServico[]>('/produtos-servicos'),
         http.get<Contrato[]>('/contratos'),
-        http.get<ContratoModelo[]>('/contratos/modelos'),
+        http.get<ModeloDocumento[]>('/modelos-documento?tipo=CONTRATO'),
       ]);
       setClientes(clientesResponse.data);
       setProdutos(produtosResponse.data);
@@ -465,7 +465,7 @@ export default function ContratosPage() {
     setIsModelosModalOpen(true);
   }
 
-  function startEditModelo(modelo: ContratoModelo) {
+  function startEditModelo(modelo: ModeloDocumento) {
     setEditingModeloId(modelo.id);
     setModeloForm({
       nome: modelo.nome,
@@ -523,10 +523,10 @@ export default function ContratosPage() {
         padrao: modeloForm.padrao,
       };
       if (editingModeloId) {
-        await http.put(`/contratos/modelos/${editingModeloId}`, payload);
+        await http.put(`/modelos-documento/${editingModeloId}`, payload);
         setSuccess('Modelo de contrato atualizado com sucesso.');
       } else {
-        await http.post('/contratos/modelos', payload);
+        await http.post('/modelos-documento', { ...payload, tipo: 'CONTRATO' });
         setSuccess('Modelo de contrato criado com sucesso.');
       }
       setIsModelosModalOpen(false);
@@ -540,11 +540,11 @@ export default function ContratosPage() {
     }
   }
 
-  async function handleDeleteModelo(modelo: ContratoModelo) {
+  async function handleDeleteModelo(modelo: ModeloDocumento) {
     const confirmed = window.confirm(`Excluir o modelo "${modelo.nome}"?`);
     if (!confirmed) return;
     try {
-      await http.delete(`/contratos/modelos/${modelo.id}`);
+      await http.delete(`/modelos-documento/${modelo.id}`);
       setSuccess('Modelo de contrato excluído com sucesso.');
       await loadData();
     } catch (err) {

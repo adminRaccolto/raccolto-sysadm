@@ -240,10 +240,10 @@ model Empresa {
   usuarioEmpresas UsuarioEmpresa[]
   oportunidadesCrm OportunidadeCrm[]
   formulariosCaptacao FormularioCaptacao[]
-  propostaModelos PropostaModelo[]
+  modelosDocumento ModeloDocumento[]
+  deslocamentos Deslocamento[]
   comentariosTarefa TarefaComentario[]
   comentariosOportunidade OportunidadeCrmComentario[]
-  contratoModelos ContratoModelo[]
   faturamentos Faturamento[]
 }
 
@@ -290,6 +290,9 @@ model Cliente {
   bairro             String?
   cidade             String?
   estado             String?
+  nomeFazenda        String?
+  distanciaKm        Float?
+  precoKmReembolso   Float?
   status             StatusCliente @default(ATIVO)
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
@@ -302,6 +305,7 @@ model Cliente {
   recebiveis         Recebivel[]
   oportunidadesCrm   OportunidadeCrm[]
   faturamentos       Faturamento[]
+  deslocamentos      Deslocamento[]
 
   @@index([empresaId])
 }
@@ -390,20 +394,30 @@ model ContratoCobranca {
 
 
 
-model ContratoModelo {
-  id          String   @id @default(cuid())
+enum TipoModeloDocumento {
+  CONTRATO
+  PROPOSTA
+  RELATORIO_CONSULTORIA
+  RELATORIO_DESLOCAMENTO
+  OUTRO
+}
+
+model ModeloDocumento {
+  id          String               @id @default(cuid())
   empresaId   String
+  tipo        TipoModeloDocumento  @default(CONTRATO)
   nome        String
   descricao   String?
   conteudo    String
-  ativo       Boolean  @default(true)
-  padrao      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ativo       Boolean              @default(true)
+  padrao      Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  empresa     Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
-  @@unique([empresaId, nome])
+  @@unique([empresaId, tipo, nome])
   @@index([empresaId])
+  @@index([empresaId, tipo])
 }
 
 model Proposta {
@@ -499,6 +513,7 @@ model Projeto {
   tarefas                   Tarefa[]
   entregaveis               Entregavel[]
   documentos                Documento[]
+  deslocamentos             Deslocamento[]
 
   @@index([empresaId])
   @@index([clienteId])
@@ -960,25 +975,35 @@ model Usuario {
   oportunidadesResponsavel OportunidadeCrm[] @relation("OportunidadeResponsavel")
   comentariosTarefa      TarefaComentario[] @relation("ComentarioTarefaAutor")
   comentariosOportunidade OportunidadeCrmComentario[] @relation("ComentarioOportunidadeAutor")
+  deslocamentos          Deslocamento[] @relation("DeslocamentoResponsavel")
 
   @@index([empresaId])
   @@index([clienteId])
 }
 
-model PropostaModelo {
-  id          String   @id @default(cuid())
-  empresaId   String
-  nome        String
-  descricao   String?
-  conteudo    String
-  ativo       Boolean  @default(true)
-  padrao      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+model Deslocamento {
+  id             String   @id @default(cuid())
+  empresaId      String
+  projetoId      String
+  clienteId      String
+  responsavelId  String?
+  data           DateTime
+  distanciaKm    Float
+  precoKm        Float
+  valorTotal     Float
+  descricao      String?
+  observacoes    String?
+  reembolsado    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  empresa        Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  projeto        Projeto  @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  cliente        Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  responsavel    Usuario? @relation("DeslocamentoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
 
-  @@unique([empresaId, nome])
   @@index([empresaId])
+  @@index([projetoId])
+  @@index([clienteId])
 }
 
 model FormularioCaptacao {

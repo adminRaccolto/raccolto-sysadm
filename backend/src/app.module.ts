@@ -24,6 +24,8 @@ import { FaturamentoModule } from './faturamento/faturamento.module';
 import { SuporteModule } from './suporte/suporte.module';
 import { TarefasModule } from './tarefas/tarefas.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { ModelosDocumentoModule } from './modelos-documento/modelos-documento.module';
+import { DeslocamentosModule } from './deslocamentos/deslocamentos.module';
 
 @Module({
   imports: [
@@ -47,6 +49,8 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     DashboardModule,
     CrmModule,
     CaptacaoModule,
+    ModelosDocumentoModule,
+    DeslocamentosModule,
     SuporteModule,
     FaturamentoModule,
   ],

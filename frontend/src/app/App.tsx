@@ -25,6 +25,8 @@ import UsuariosPage from '../pages/UsuariosPage';
 import PerfisAcessoPage from '../pages/PerfisAcessoPage';
 import BiPage from '../pages/BiPage';
 import LearningPage from '../pages/LearningPage';
+import ModelosPage from '../pages/ModelosPage';
+import DeslocamentosPage from '../pages/DeslocamentosPage';
 
 export default function App() {
   return (
@@ -45,6 +47,8 @@ export default function App() {
         <Route path="financeiro" element={<FinanceiroPage />} />
         <Route path="crm" element={<CrmPage />} />
         <Route path="captacao" element={<FormulariosCaptacaoPage />} />
+        <Route path="modelos" element={<ModelosPage />} />
+        <Route path="deslocamentos" element={<DeslocamentosPage />} />
         <Route path="financeiro/receber" element={<ContasReceberPage />} />
         <Route path="financeiro/pagar" element={<ContasPagarPage />} />
         <Route path="financeiro/tesouraria" element={<TesourariaPage />} />

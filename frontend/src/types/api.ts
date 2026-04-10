@@ -134,14 +134,20 @@ export interface Cliente {
   bairro?: string | null;
   cidade?: string | null;
   estado?: string | null;
+  nomeFazenda?: string | null;
+  distanciaKm?: number | null;
+  precoKmReembolso?: number | null;
   status: StatusCliente;
   createdAt: string;
 }
 
 
 
-export interface ContratoModelo {
+export type TipoModeloDocumento = 'CONTRATO' | 'PROPOSTA' | 'RELATORIO_CONSULTORIA' | 'RELATORIO_DESLOCAMENTO' | 'OUTRO';
+
+export interface ModeloDocumento {
   id: string;
+  tipo: TipoModeloDocumento;
   nome: string;
   descricao?: string | null;
   conteudo: string;
@@ -150,14 +156,22 @@ export interface ContratoModelo {
   createdAt?: string;
 }
 
-export interface PropostaModelo {
+export interface Deslocamento {
   id: string;
-  nome: string;
+  empresaId: string;
+  projetoId: string;
+  clienteId: string;
+  responsavelId?: string | null;
+  dataVisita: string;
+  distanciaKm: number;
+  precoKm: number;
+  valorTotal: number;
   descricao?: string | null;
-  conteudo: string;
-  ativo: boolean;
-  padrao: boolean;
-  createdAt?: string;
+  reembolsado: boolean;
+  projeto?: { id: string; nome: string } | null;
+  cliente?: { id: string; razaoSocial: string; nomeFazenda?: string | null } | null;
+  responsavel?: { id: string; nome: string } | null;
+  createdAt: string;
 }
 
 export interface ContratoCobranca {

@@ -8,8 +8,8 @@ import Modal from '../components/Modal';
 import PageHeader from '../components/PageHeader';
 import type {
   Cliente,
+  ModeloDocumento,
   ProdutoServico,
-  PropostaModelo,
   StatusAssinatura,
   StatusProposta,
 } from '../types/api';
@@ -175,7 +175,7 @@ export default function PropostasPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCobrancasModalOpen, setIsCobrancasModalOpen] = useState(false);
   const [isModelosModalOpen, setIsModelosModalOpen] = useState(false);
-  const [modelos, setModelos] = useState<PropostaModelo[]>([]);
+  const [modelos, setModelos] = useState<ModeloDocumento[]>([]);
   const [editingModeloId, setEditingModeloId] = useState<string | null>(null);
   const [modeloForm, setModeloForm] = useState({ nome: '', descricao: '', conteudo: '', ativo: true, padrao: false });
   const [loading, setLoading] = useState(true);
@@ -192,7 +192,7 @@ export default function PropostasPage() {
         http.get<Cliente[]>('/clientes'),
         http.get<ProdutoServico[]>('/produtos-servicos'),
         http.get<PropostaApi[]>('/propostas'),
-        http.get<PropostaModelo[]>('/propostas/modelos'),
+        http.get<ModeloDocumento[]>('/modelos-documento?tipo=PROPOSTA'),
       ]);
       setClientes(clientesRes.data);
       setProdutos(produtosRes.data);
@@ -423,7 +423,7 @@ export default function PropostasPage() {
     setIsModelosModalOpen(true);
   }
 
-  function startEditModelo(m: PropostaModelo) {
+  function startEditModelo(m: ModeloDocumento) {
     setEditingModeloId(m.id);
     setModeloForm({ nome: m.nome, descricao: m.descricao ?? '', conteudo: m.conteudo, ativo: m.ativo, padrao: m.padrao });
     setIsModelosModalOpen(true);
@@ -436,9 +436,9 @@ export default function PropostasPage() {
     try {
       const payload = { nome: modeloForm.nome.trim(), descricao: modeloForm.descricao || undefined, conteudo: modeloForm.conteudo, ativo: modeloForm.ativo, padrao: modeloForm.padrao };
       if (editingModeloId) {
-        await http.put(`/propostas/modelos/${editingModeloId}`, payload);
+        await http.put(`/modelos-documento/${editingModeloId}`, payload);
       } else {
-        await http.post('/propostas/modelos', payload);
+        await http.post('/modelos-documento', { ...payload, tipo: 'PROPOSTA' });
       }
       setEditingModeloId(null);
       setModeloForm({ nome: '', descricao: '', conteudo: '', ativo: true, padrao: false });
@@ -450,10 +450,10 @@ export default function PropostasPage() {
     }
   }
 
-  async function handleDeleteModelo(m: PropostaModelo) {
+  async function handleDeleteModelo(m: ModeloDocumento) {
     if (!confirm(`Excluir o modelo "${m.nome}"?`)) return;
     try {
-      await http.delete(`/propostas/modelos/${m.id}`);
+      await http.delete(`/modelos-documento/${m.id}`);
       await loadData();
     } catch (err) {
       setError(getApiError(err, 'Falha ao excluir modelo.'));

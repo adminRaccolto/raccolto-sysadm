@@ -26,6 +26,9 @@ const initialForm = {
   bairro: '',
   cidade: '',
   estado: '',
+  nomeFazenda: '',
+  distanciaKm: '',
+  precoKmReembolso: '',
   status: 'ATIVO' as StatusCliente,
 };
 
@@ -115,6 +118,9 @@ export default function ClientesPage() {
       bairro: cliente.bairro || '',
       cidade: cliente.cidade || '',
       estado: cliente.estado || '',
+      nomeFazenda: cliente.nomeFazenda || '',
+      distanciaKm: cliente.distanciaKm != null ? String(cliente.distanciaKm) : '',
+      precoKmReembolso: cliente.precoKmReembolso != null ? String(cliente.precoKmReembolso) : '',
       status: cliente.status,
     });
     setSuccess(null);
@@ -176,6 +182,9 @@ export default function ClientesPage() {
         bairro: form.bairro || undefined,
         cidade: form.cidade || undefined,
         estado: form.estado || undefined,
+        nomeFazenda: form.nomeFazenda || undefined,
+        distanciaKm: form.distanciaKm ? parseFloat(form.distanciaKm) : undefined,
+        precoKmReembolso: form.precoKmReembolso ? parseFloat(form.precoKmReembolso) : undefined,
       };
 
       if (editingId) {
@@ -412,6 +421,19 @@ export default function ClientesPage() {
           <div className="field">
             <label>UF</label>
             <input value={form.estado} maxLength={2} onChange={(e) => setForm((c) => ({ ...c, estado: e.target.value.toUpperCase() }))} />
+          </div>
+
+          <div className="field field--span-2">
+            <label>Nome da fazenda / propriedade</label>
+            <input value={form.nomeFazenda} onChange={(e) => setForm((c) => ({ ...c, nomeFazenda: e.target.value }))} placeholder="Ex.: Fazenda São João" />
+          </div>
+          <div className="field">
+            <label>Distância p/ deslocamento (km)</label>
+            <input type="number" min="0" step="0.1" value={form.distanciaKm} onChange={(e) => setForm((c) => ({ ...c, distanciaKm: e.target.value }))} placeholder="0" />
+          </div>
+          <div className="field">
+            <label>Preço por km (R$)</label>
+            <input type="number" min="0" step="0.01" value={form.precoKmReembolso} onChange={(e) => setForm((c) => ({ ...c, precoKmReembolso: e.target.value }))} placeholder="0,00" />
           </div>
 
           <div className="field field--span-2">
