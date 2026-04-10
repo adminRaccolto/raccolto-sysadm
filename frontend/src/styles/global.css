@@ -444,7 +444,8 @@ button { cursor: pointer; }
 .panel__header         { margin-bottom: 12px; }
 .panel__header h3      { margin: 0 0 2px; font-size: 14px; font-weight: 700; letter-spacing: -0.1px; }
 .panel__header p       { margin: 0; font-size: 12px; color: var(--muted); }
-.panel__header--row    { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.panel__header--row    { display: flex; align-items: center; gap: 12px; }
+.panel__header--row .table-actions-toolbar { margin-left: auto; }
 .panel__header--sticky {
   position: sticky;
   top: var(--topnav-h);
@@ -849,12 +850,7 @@ th {
 
 /* ── Header tools bar ──────────────────────────────────────── */
 .header-tools {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-left: 16px;
+  display: contents;
 }
 
 /* ── Section label ─────────────────────────────────────────── */
