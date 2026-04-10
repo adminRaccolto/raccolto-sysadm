@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
+  Archive,
   BarChart3,
   Bell,
   Briefcase,
@@ -48,6 +49,7 @@ const navEntries: NavEntry[] = [
       { to: '/projetos',       label: 'Projetos',       Icon: Briefcase },
       { to: '/deslocamentos',  label: 'Deslocamentos',  Icon: Car },
       { to: '/modelos',        label: 'Modelos',        Icon: FolderOpen },
+      { to: '/repositorio',    label: 'Repositório',    Icon: Archive },
     ],
   },
   {

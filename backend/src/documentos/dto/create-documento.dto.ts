@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 import { StatusDocumento, TipoDocumento } from '@prisma/client';
 
 export class CreateDocumentoDto {
@@ -32,6 +32,18 @@ export class CreateDocumentoDto {
   @IsOptional()
   @IsString()
   arquivoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  arquivoNomeOriginal?: string;
+
+  @IsOptional()
+  @IsString()
+  arquivoMimeType?: string;
+
+  @IsOptional()
+  @IsInt()
+  arquivoTamanho?: number;
 
   @IsOptional()
   @IsString()

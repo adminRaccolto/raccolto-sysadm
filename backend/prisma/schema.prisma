@@ -594,6 +594,9 @@ model Documento {
   tipo              TipoDocumento    @default(OUTRO)
   descricao         String?
   arquivoUrl        String?
+  arquivoNomeOriginal String?
+  arquivoMimeType   String?
+  arquivoTamanho    Int?
   versao            String?
   status            StatusDocumento  @default(RASCUNHO)
   exigeAssinatura   Boolean          @default(false)

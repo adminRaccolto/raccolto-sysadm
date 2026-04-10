@@ -27,6 +27,7 @@ import BiPage from '../pages/BiPage';
 import LearningPage from '../pages/LearningPage';
 import ModelosPage from '../pages/ModelosPage';
 import DeslocamentosPage from '../pages/DeslocamentosPage';
+import RepositorioPage from '../pages/RepositorioPage';
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="captacao" element={<FormulariosCaptacaoPage />} />
         <Route path="modelos" element={<ModelosPage />} />
         <Route path="deslocamentos" element={<DeslocamentosPage />} />
+        <Route path="repositorio" element={<RepositorioPage />} />
         <Route path="financeiro/receber" element={<ContasReceberPage />} />
         <Route path="financeiro/pagar" element={<ContasPagarPage />} />
         <Route path="financeiro/tesouraria" element={<TesourariaPage />} />
