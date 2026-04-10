@@ -673,7 +673,7 @@ export default function ContratosPage() {
       {success ? <Feedback type="success" message={success} /> : null}
 
       <section className="panel">
-        <div className="panel__header panel__header--row">
+        <div className="panel__header panel__header--row panel__header--sticky">
           <div>
             <h3>Contratos atuais</h3>
             <p>{filteredContratos.length} contrato(s) no filtro atual.</p>

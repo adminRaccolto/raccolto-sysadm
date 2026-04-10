@@ -153,7 +153,7 @@ export default function ProdutosPage() {
       {success ? <Feedback type="success" message={success} /> : null}
 
       <section className="panel">
-        <div className="panel__header panel__header--row">
+        <div className="panel__header panel__header--row panel__header--sticky">
           <div>
             <h3>Catálogo de serviços</h3>
             <p>{produtos.length} item(ns) disponíveis.</p>

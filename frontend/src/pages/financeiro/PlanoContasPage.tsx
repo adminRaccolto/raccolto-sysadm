@@ -153,7 +153,7 @@ export default function PlanoContasPage() {
       {success ? <Feedback type="success" message={success} /> : null}
 
       <section className="panel panel--compact">
-        <div className="panel__header panel__header--row">
+        <div className="panel__header panel__header--row panel__header--sticky">
           <div>
             <h3>Estrutura atual</h3>
             <p>{items.length} conta(s) cadastrada(s) · {lancaveis.length} conta(s) analítica(s) pronta(s) para uso.</p>

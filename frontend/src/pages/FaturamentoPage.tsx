@@ -298,7 +298,7 @@ export default function FaturamentoPage() {
 
       {/* Seletor de competência + alerta de dia de faturamento */}
       <section className="panel">
-        <div className="panel__header panel__header--row">
+        <div className="panel__header panel__header--row panel__header--sticky">
           <div>
             <h3>Competência</h3>
             {info && (
@@ -351,7 +351,7 @@ export default function FaturamentoPage() {
 
       {/* Abas */}
       <section className="panel">
-        <div className="panel__header panel__header--row">
+        <div className="panel__header panel__header--row panel__header--sticky">
           <div className="segmented">
             <button
               className={`segmented__button${tab === 'faturavel' ? ' segmented__button--active' : ''}`}

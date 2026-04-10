@@ -128,7 +128,7 @@ export default function PerfisAcessoPage() {
 
       <section className="two-columns two-columns--left-wide two-columns--compact">
         <form className="panel form-grid panel--compact" onSubmit={handleSubmit}>
-          <div className="panel__header panel__header--row">
+          <div className="panel__header panel__header--row panel__header--sticky">
             <div>
               <h3>{editingId ? 'Editar perfil' : 'Novo perfil'}</h3>
               <p>Essa é a base da administração dinâmica de acessos do Raccolto.</p>

@@ -237,7 +237,7 @@ export default function ContasPagarPage() {
       </section>
 
       <section className="panel panel--compact">
-        <div className="panel__header panel__header--row">
+        <div className="panel__header panel__header--row panel__header--sticky">
           <div>
             <h3>Contas a pagar</h3>
             <p>Selecione linhas para excluir em lote. Clique na linha para ver o detalhe.</p>

@@ -444,7 +444,21 @@ button { cursor: pointer; }
 .panel__header         { margin-bottom: 12px; }
 .panel__header h3      { margin: 0 0 2px; font-size: 14px; font-weight: 700; letter-spacing: -0.1px; }
 .panel__header p       { margin: 0; font-size: 12px; color: var(--muted); }
-.panel__header--row    { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.panel__header--row    { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.panel__header--sticky {
+  position: sticky;
+  top: var(--topnav-h);
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  margin: -16px -16px 12px;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.panel--compact .panel__header--sticky {
+  margin: -12px -12px 12px;
+  padding: 8px 12px;
+}
 .panel__body           { margin-top: 4px; }
 
 .stat-card {
@@ -693,8 +707,11 @@ th {
 .table-actions-toolbar {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .table-actions       { display: flex; gap: 6px; flex-wrap: wrap; }

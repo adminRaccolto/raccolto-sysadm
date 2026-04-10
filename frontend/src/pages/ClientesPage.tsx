@@ -238,7 +238,7 @@ export default function ClientesPage() {
       {success ? <Feedback type="success" message={success} /> : null}
 
       <section className="panel">
-        <div className="panel__header panel__header--row">
+        <div className="panel__header panel__header--row panel__header--sticky">
           <div>
             <h3>Base atual</h3>
             <p>{clientes.length} cliente(s) cadastrados.</p>

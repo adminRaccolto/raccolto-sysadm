@@ -127,7 +127,7 @@ export default function TesourariaPage() {
       {success ? <Feedback type="success" message={success} /> : null}
 
       <section className="panel panel--compact">
-        <div className="panel__header panel__header--row">
+        <div className="panel__header panel__header--row panel__header--sticky">
           <div>
             <h3>Histórico de tesouraria</h3>
             <p>{items.length} lançamento(s) encontrado(s).</p>

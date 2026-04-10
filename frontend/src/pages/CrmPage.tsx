@@ -324,7 +324,7 @@ export default function CrmPage() {
 
       <section className="page-stack">
         <div className="workspace-panel panel panel--tight">
-          <div className="panel__header panel__header--row">
+          <div className="panel__header panel__header--row panel__header--sticky">
             <div>
               <h3>Pipeline comercial</h3>
               <p>{oportunidades.length} oportunidade(s) no CRM.</p>
