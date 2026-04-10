@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import axios from 'axios';
 import { Copy, ExternalLink } from 'lucide-react';
-import { http, API_URL } from '../api/http';
+import { http } from '../api/http';
 import EmptyState from '../components/EmptyState';
 import Feedback from '../components/Feedback';
 import LoadingBlock from '../components/LoadingBlock';
@@ -49,9 +49,6 @@ function publicUrl(slug: string) {
   return `${base}/captacao/${slug}`;
 }
 
-function baseApiUrl() {
-  return API_URL.replace(/\/api$/, '');
-}
 
 export default function FormulariosCaptacaoPage() {
   const [formularios, setFormularios] = useState<FormularioCaptacao[]>([]);
@@ -197,11 +194,7 @@ export default function FormulariosCaptacaoPage() {
         <div className="split-layout__main">
           {loading ? <LoadingBlock /> : null}
           {!loading && formularios.length === 0 ? (
-            <EmptyState
-              title="Nenhum formulário"
-              description="Crie um formulário para cada campanha ou canal de captação."
-              action={<button className="button" onClick={openCreate}>+ Criar formulário</button>}
-            />
+            <EmptyState message="Nenhum formulário. Crie um para cada campanha ou canal de captação." />
           ) : null}
           {!loading && formularios.length > 0 ? (
             <div className="table-wrap">
@@ -319,8 +312,7 @@ export default function FormulariosCaptacaoPage() {
       </div>
 
       {/* Create/Edit Modal */}
-      {showModal ? (
-        <Modal title={editingId ? 'Editar formulário' : 'Novo formulário de captação'} onClose={() => setShowModal(false)}>
+      <Modal open={showModal} title={editingId ? 'Editar formulário' : 'Novo formulário de captação'} onClose={() => setShowModal(false)}>
           {error ? <Feedback type="error" message={error} /> : null}
           <form className="form-grid" onSubmit={(e) => void handleSave(e)}>
             <div className="field">
@@ -431,7 +423,6 @@ export default function FormulariosCaptacaoPage() {
             </div>
           </form>
         </Modal>
-      ) : null}
     </div>
   );
 }
