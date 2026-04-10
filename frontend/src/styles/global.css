@@ -1175,7 +1175,7 @@ th {
 
 .home-hero                  { display: flex; flex-direction: column; gap: 6px; }
 .home-hero__brand           { display: flex; align-items: center; gap: 14px; }
-.home-hero__logo            { width: 48px; height: 48px; border-radius: 11px; object-fit: contain; border: 1px solid var(--border); background: white; }
+.home-hero__logo            { width: 48px; height: 48px; border-radius: 11px; object-fit: contain; border: 1px solid var(--border); background: var(--nav-bg, #1e293b); }
 .home-hero__logo-placeholder{
   width: 48px; height: 48px; border-radius: 11px;
   background: var(--primary); color: white;
