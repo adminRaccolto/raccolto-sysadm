@@ -8,33 +8,31 @@ import LoadingBlock from '../components/LoadingBlock';
 import PageHeader from '../components/PageHeader';
 import SystemNav from '../components/SystemNav';
 import BackButton from '../components/BackButton';
+import Modal from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import type { ContaBancaria, Empresa } from '../types/api';
 
-const emptyCompanyForm = {
-  nome: '',
-  nomeFantasia: '',
-  cnpj: '',
-  email: '',
-  telefone: '',
-  logradouro: '',
-  numero: '',
-  complemento: '',
-  bairro: '',
-  cidade: '',
-  estado: '',
-  cep: '',
-  representanteNome: '',
-  representanteCargo: '',
-};
-
 export default function SistemaPage() {
-  const { refreshMe } = useAuth();
+  const { user, refreshMe, switchCompany } = useAuth();
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
   const [form, setForm] = useState({
-    ...emptyCompanyForm,
+    nome: '',
+    nomeFantasia: '',
+    cnpj: '',
+    email: '',
+    telefone: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    estado: '',
+    cep: '',
+    representanteNome: '',
+    representanteCargo: '',
+    infBancarias: '',
     logoUrl: '',
   });
   const [loading, setLoading] = useState(true);
@@ -42,6 +40,11 @@ export default function SistemaPage() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Nova empresa modal
+  const [novaEmpresaOpen, setNovaEmpresaOpen] = useState(false);
+  const [novaEmpresaForm, setNovaEmpresaForm] = useState({ nome: '', nomeFantasia: '', cnpj: '' });
+  const [savingNova, setSavingNova] = useState(false);
 
   const totalEmpresas = useMemo(() => empresas.length || 1, [empresas.length]);
 
@@ -72,6 +75,7 @@ export default function SistemaPage() {
         cep: empresaResponse.data.cep || '',
         representanteNome: empresaResponse.data.representanteNome || '',
         representanteCargo: empresaResponse.data.representanteCargo || '',
+        infBancarias: (empresaResponse.data as Empresa & { infBancarias?: string }).infBancarias || '',
         logoUrl: empresaResponse.data.logoUrl || '',
       });
     } catch (err) {
@@ -86,9 +90,7 @@ export default function SistemaPage() {
     }
   }
 
-  useEffect(() => {
-    void load();
-  }, []);
+  useEffect(() => { void load(); }, []);
 
   async function handleSalvarEmpresa(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -111,10 +113,11 @@ export default function SistemaPage() {
         cep: form.cep || undefined,
         representanteNome: form.representanteNome || undefined,
         representanteCargo: form.representanteCargo || undefined,
+        infBancarias: form.infBancarias || undefined,
         logoUrl: form.logoUrl || undefined,
       });
       setEmpresa(response.data);
-      setForm((current) => ({ ...current, logoUrl: response.data.logoUrl || current.logoUrl }));
+      setForm((c) => ({ ...c, logoUrl: response.data.logoUrl || c.logoUrl }));
       setSuccess('Identidade da empresa atualizada com sucesso.');
       await refreshMe();
       await load();
@@ -133,10 +136,8 @@ export default function SistemaPage() {
   async function handleUploadLogo(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const data = new FormData();
     data.append('file', file);
-
     setUploadingLogo(true);
     setError(null);
     setSuccess(null);
@@ -145,7 +146,7 @@ export default function SistemaPage() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setEmpresa(response.data);
-      setForm((current) => ({ ...current, logoUrl: response.data.logoUrl || '' }));
+      setForm((c) => ({ ...c, logoUrl: response.data.logoUrl || '' }));
       setSuccess('Logo da empresa atualizada com sucesso.');
       await refreshMe();
       await load();
@@ -162,11 +163,37 @@ export default function SistemaPage() {
     }
   }
 
+  async function handleCriarEmpresa(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSavingNova(true);
+    setError(null);
+    try {
+      await http.post('/empresas', {
+        nome: novaEmpresaForm.nome,
+        nomeFantasia: novaEmpresaForm.nomeFantasia || undefined,
+        cnpj: novaEmpresaForm.cnpj || undefined,
+      });
+      setNovaEmpresaOpen(false);
+      setNovaEmpresaForm({ nome: '', nomeFantasia: '', cnpj: '' });
+      setSuccess('Empresa criada. Troque para ela e complete os dados em Identidade.');
+      await load();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const payload = err.response?.data?.message;
+        setError(Array.isArray(payload) ? payload.join(' | ') : payload || 'Falha ao criar empresa.');
+      } else {
+        setError('Falha ao criar empresa.');
+      }
+    } finally {
+      setSavingNova(false);
+    }
+  }
+
   return (
     <div className="page-stack page-stack--compact">
       <PageHeader
         title="Sistema & suporte"
-        subtitle="Tela principal mais limpa, com foco na identidade da empresa e no acesso rápido às áreas administrativas."
+        subtitle="Identidade da empresa ativa, empresas vinculadas e configurações administrativas."
         actions={<BackButton fallbackPath="/dashboard" />}
       />
       <SystemNav />
@@ -177,13 +204,15 @@ export default function SistemaPage() {
 
       {!loading ? (
         <section className="two-columns two-columns--left-wide two-columns--compact">
+
+          {/* ── COLUNA ESQUERDA: IDENTIDADE ─────────────────────────── */}
           <form className="panel logo-form-grid panel--compact" onSubmit={handleSalvarEmpresa}>
             <div className="panel__header panel__header--row">
               <div>
                 <h3>Identidade da empresa</h3>
-                <p>Nome, contatos, representantes e logo usados nos módulos e documentos do Raccolto.</p>
+                <p>Nome, contatos, representante, dados bancários e logo usados nos documentos.</p>
               </div>
-              <div className="compact-chip">Empresa atual</div>
+              <div className="compact-chip">Empresa ativa</div>
             </div>
 
             <div className="brand-upload-card">
@@ -196,10 +225,10 @@ export default function SistemaPage() {
               )}
               <div className="file-upload-row">
                 <label className="button button--ghost button--small file-upload-button" htmlFor="logo-file-input">
-                  {uploadingLogo ? 'Enviando logo...' : 'Enviar logo'}
+                  {uploadingLogo ? 'Enviando...' : 'Enviar logo'}
                 </label>
                 <input id="logo-file-input" type="file" accept="image/*" onChange={handleUploadLogo} hidden />
-                <span className="file-upload-meta">PNG, JPG ou WEBP. A imagem será salva no servidor do Raccolto.</span>
+                <span className="file-upload-meta">PNG, JPG ou WEBP.</span>
               </div>
             </div>
 
@@ -222,6 +251,10 @@ export default function SistemaPage() {
             <div className="field">
               <label>Telefone</label>
               <input value={form.telefone} onChange={(e) => setForm((c) => ({ ...c, telefone: e.target.value }))} />
+            </div>
+            <div className="field field--span-2">
+              <label>Informações bancárias / PIX</label>
+              <input value={form.infBancarias} onChange={(e) => setForm((c) => ({ ...c, infBancarias: e.target.value }))} placeholder="Ex.: PIX CNPJ · Banco Itaú Ag 0001 C/C 12345-6" />
             </div>
             <div className="field field--span-2">
               <label>Logradouro</label>
@@ -261,25 +294,27 @@ export default function SistemaPage() {
             </div>
             <div className="field field--span-2">
               <label>Logo por URL (opcional)</label>
-              <input value={form.logoUrl} onChange={(e) => setForm((c) => ({ ...c, logoUrl: e.target.value }))} placeholder="Use apenas se quiser apontar para uma URL externa" />
+              <input value={form.logoUrl} onChange={(e) => setForm((c) => ({ ...c, logoUrl: e.target.value }))} placeholder="URL externa" />
             </div>
             <button className="button" type="submit" disabled={savingEmpresa}>
-              {savingEmpresa ? 'Salvando...' : 'Salvar identidade visual'}
+              {savingEmpresa ? 'Salvando...' : 'Salvar identidade'}
             </button>
           </form>
 
+          {/* ── COLUNA DIREITA ──────────────────────────────────────── */}
           <div className="page-stack page-stack--compact">
+
+            {/* Resumo */}
             <div className="panel panel--compact">
               <div className="panel__header">
-                <h3>Resumo administrativo</h3>
-                <p>Panorama rápido do contexto atual, sem excesso de blocos na tela principal.</p>
+                <h3>Resumo</h3>
               </div>
               {empresa ? (
                 <div className="table-wrap">
                   <table>
                     <tbody>
-                      <tr><th>Empresa atual</th><td>{empresa.nomeFantasia || empresa.nome}</td></tr>
-                      <tr><th>Total de empresas</th><td>{totalEmpresas}</td></tr>
+                      <tr><th>Empresa ativa</th><td>{empresa.nomeFantasia || empresa.nome}</td></tr>
+                      <tr><th>Empresas vinculadas</th><td>{totalEmpresas}</td></tr>
                       <tr><th>Usuários</th><td>{empresa._count?.usuarios ?? '—'}</td></tr>
                       <tr><th>Clientes</th><td>{empresa._count?.clientes ?? '—'}</td></tr>
                       <tr><th>Contratos</th><td>{empresa._count?.contratos ?? '—'}</td></tr>
@@ -292,37 +327,70 @@ export default function SistemaPage() {
               )}
             </div>
 
+            {/* Empresas vinculadas */}
+            <div className="panel panel--compact">
+              <div className="panel__header panel__header--row">
+                <div>
+                  <h3>Empresas vinculadas</h3>
+                  <p>{empresas.length} empresa(s) no seu acesso.</p>
+                </div>
+                <button className="button button--ghost button--small" type="button" onClick={() => setNovaEmpresaOpen(true)}>
+                  + Nova empresa
+                </button>
+              </div>
+              {empresas.length === 0 ? <EmptyState message="Nenhuma empresa disponível." /> : null}
+              {empresas.length > 0 ? (
+                <div className="stack-list stack-list--compact">
+                  {empresas.map((emp) => {
+                    const atual = user?.empresaId === emp.id;
+                    return (
+                      <div key={emp.id} className="list-card list-card--compact">
+                        <div>
+                          <strong>{emp.nomeFantasia || emp.nome}</strong>
+                          {emp.nomeFantasia ? <p className="muted">{emp.nome}</p> : null}
+                          <small className="muted">
+                            Clientes: {emp._count?.clientes ?? 0} · Contratos: {emp._count?.contratos ?? 0}
+                          </small>
+                        </div>
+                        <div className="table-actions">
+                          {atual
+                            ? <span className="compact-chip">Ativa</span>
+                            : <button className="button button--ghost button--small" type="button" onClick={() => void switchCompany(emp.id)}>Trocar</button>
+                          }
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Atalhos administrativos */}
             <div className="panel panel--compact">
               <div className="panel__header">
-                <h3>Atalhos do módulo</h3>
-                <p>Use o menu suspenso ou os atalhos abaixo para abrir as telas administrativas.</p>
+                <h3>Administração</h3>
               </div>
               <div className="stack-list stack-list--compact">
-                <Link className="list-card list-card--compact list-card--link" to="/empresas">
-                  <div>
-                    <strong>Empresas</strong>
-                    <p className="muted">Cadastre novas empresas e faça a troca de contexto.</p>
-                  </div>
-                </Link>
                 <Link className="list-card list-card--compact list-card--link" to="/usuarios">
                   <div>
                     <strong>Usuários</strong>
-                    <p className="muted">Gerencie acessos por pessoa e por empresa.</p>
+                    <p className="muted">Gerencie acessos por pessoa e empresa.</p>
                   </div>
                 </Link>
                 <Link className="list-card list-card--compact list-card--link" to="/perfis-acesso">
                   <div>
                     <strong>Perfis & permissões</strong>
-                    <p className="muted">Defina a matriz dinâmica de permissões do sistema.</p>
+                    <p className="muted">Defina a matriz dinâmica de permissões.</p>
                   </div>
                 </Link>
               </div>
             </div>
 
+            {/* Contas bancárias */}
             <div className="panel panel--compact">
               <div className="panel__header">
-                <h3>Contas bancárias cadastradas</h3>
-                <p>{contasBancarias.length} conta(s) disponível(is) para a operação.</p>
+                <h3>Contas bancárias</h3>
+                <p>{contasBancarias.length} conta(s) cadastrada(s).</p>
               </div>
               {contasBancarias.length ? (
                 <div className="table-wrap">
@@ -332,7 +400,7 @@ export default function SistemaPage() {
                         <th>Conta</th>
                         <th>Banco</th>
                         <th>Tipo</th>
-                        <th>Saldo atual</th>
+                        <th>Saldo</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -348,12 +416,41 @@ export default function SistemaPage() {
                   </table>
                 </div>
               ) : (
-                <EmptyState message="Nenhuma conta bancária cadastrada ainda." />
+                <EmptyState message="Nenhuma conta bancária cadastrada." />
               )}
             </div>
+
           </div>
         </section>
       ) : null}
+
+      {/* ── MODAL: NOVA EMPRESA ─────────────────────────────────────────── */}
+      <Modal
+        open={novaEmpresaOpen}
+        title="Nova empresa"
+        subtitle="Informe o nome para criar a empresa. Troque para ela e complete os dados em Identidade."
+        onClose={() => { if (!savingNova) { setNovaEmpresaOpen(false); } }}
+      >
+        <form className="form-grid" onSubmit={(e) => void handleCriarEmpresa(e)}>
+          <div className="field field--span-2">
+            <label>Nome da empresa</label>
+            <input value={novaEmpresaForm.nome} onChange={(e) => setNovaEmpresaForm((f) => ({ ...f, nome: e.target.value }))} required />
+          </div>
+          <div className="field">
+            <label>Nome fantasia</label>
+            <input value={novaEmpresaForm.nomeFantasia} onChange={(e) => setNovaEmpresaForm((f) => ({ ...f, nomeFantasia: e.target.value }))} />
+          </div>
+          <div className="field">
+            <label>CNPJ</label>
+            <input value={novaEmpresaForm.cnpj} onChange={(e) => setNovaEmpresaForm((f) => ({ ...f, cnpj: e.target.value }))} />
+          </div>
+          <div className="field field--span-2">
+            <button className="button" type="submit" disabled={savingNova}>
+              {savingNova ? 'Criando...' : 'Criar empresa'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
