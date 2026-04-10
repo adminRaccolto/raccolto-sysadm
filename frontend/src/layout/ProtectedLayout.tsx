@@ -71,6 +71,7 @@ export default function ProtectedLayout() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [groupPos, setGroupPos] = useState<{ top: number; left: number } | null>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -102,14 +103,14 @@ export default function ProtectedLayout() {
     function handler(e: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
       if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
-      if (navRef.current && !navRef.current.contains(e.target as Node)) setOpenGroup(null);
+      if (navRef.current && !navRef.current.contains(e.target as Node)) { setOpenGroup(null); setGroupPos(null); }
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   // Close group dropdown on route change
-  useEffect(() => { setOpenGroup(null); }, [location.pathname]);
+  useEffect(() => { setOpenGroup(null); setGroupPos(null); }, [location.pathname]);
 
   function handleLogout() {
     logout();
@@ -171,14 +172,23 @@ export default function ProtectedLayout() {
                 <button
                   type="button"
                   className={`topnav__link topnav__link--group${active ? ' topnav__link--active' : ''}`}
-                  onClick={() => setOpenGroup(open ? null : group.label)}
+                  onClick={(e) => {
+                    if (open) {
+                      setOpenGroup(null);
+                      setGroupPos(null);
+                    } else {
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setGroupPos({ top: rect.bottom + 6, left: rect.left });
+                      setOpenGroup(group.label);
+                    }
+                  }}
                 >
                   <group.Icon size={16} strokeWidth={2} />
                   <span>{group.label}</span>
                   <ChevronDown size={12} strokeWidth={2} className={`topnav__chevron${open ? ' topnav__chevron--open' : ''}`} />
                 </button>
-                {open && (
-                  <div className="topnav__group-panel">
+                {open && groupPos && (
+                  <div className="topnav__group-panel" style={{ top: groupPos.top, left: groupPos.left }}>
                     {group.items.map((item) => (
                       <NavLink
                         key={item.to}
