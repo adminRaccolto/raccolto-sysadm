@@ -24,6 +24,66 @@ export class PropostasService {
     };
   }
 
+  // ── Modelos de proposta ──────────────────────────────────────────────────
+
+  async listModelos(empresaId: string) {
+    return this.prisma.propostaModelo.findMany({
+      where: { empresaId },
+      orderBy: [{ padrao: 'desc' }, { nome: 'asc' }],
+    });
+  }
+
+  async createModelo(empresaId: string, data: { nome: string; descricao?: string; conteudo: string; ativo?: boolean; padrao?: boolean }) {
+    const nome = data.nome.trim();
+    const existente = await this.prisma.propostaModelo.findFirst({ where: { empresaId, nome } });
+    if (existente) throw new BadRequestException('Já existe um modelo de proposta com este nome.');
+
+    return this.prisma.$transaction(async (tx) => {
+      if (data.padrao) {
+        await tx.propostaModelo.updateMany({ where: { empresaId, padrao: true }, data: { padrao: false } });
+      }
+      return tx.propostaModelo.create({
+        data: { empresaId, nome, descricao: data.descricao?.trim() || null, conteudo: data.conteudo, ativo: data.ativo ?? true, padrao: data.padrao ?? false },
+      });
+    });
+  }
+
+  async updateModelo(empresaId: string, id: string, data: { nome?: string; descricao?: string; conteudo?: string; ativo?: boolean; padrao?: boolean }) {
+    const atual = await this.prisma.propostaModelo.findFirst({ where: { id, empresaId } });
+    if (!atual) throw new BadRequestException('Modelo de proposta não encontrado.');
+
+    const nome = data.nome !== undefined ? data.nome.trim() : undefined;
+    if (nome && nome !== atual.nome) {
+      const existente = await this.prisma.propostaModelo.findFirst({ where: { empresaId, nome, id: { not: id } } });
+      if (existente) throw new BadRequestException('Já existe um modelo de proposta com este nome.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (data.padrao) {
+        await tx.propostaModelo.updateMany({ where: { empresaId, padrao: true, id: { not: id } }, data: { padrao: false } });
+      }
+      return tx.propostaModelo.update({
+        where: { id },
+        data: {
+          ...(nome !== undefined ? { nome } : {}),
+          ...(data.descricao !== undefined ? { descricao: data.descricao?.trim() || null } : {}),
+          ...(data.conteudo !== undefined ? { conteudo: data.conteudo } : {}),
+          ...(data.ativo !== undefined ? { ativo: data.ativo } : {}),
+          ...(data.padrao !== undefined ? { padrao: data.padrao } : {}),
+        },
+      });
+    });
+  }
+
+  async removeModelo(empresaId: string, id: string) {
+    const atual = await this.prisma.propostaModelo.findFirst({ where: { id, empresaId } });
+    if (!atual) throw new BadRequestException('Modelo de proposta não encontrado.');
+    await this.prisma.propostaModelo.delete({ where: { id } });
+    return { message: 'Modelo de proposta excluído com sucesso.' };
+  }
+
+  // ── Propostas ────────────────────────────────────────────────────────────
+
   async findAll(empresaId: string) {
     return this.prisma.proposta.findMany({
       where: { empresaId },

@@ -240,6 +240,7 @@ model Empresa {
   usuarioEmpresas UsuarioEmpresa[]
   oportunidadesCrm OportunidadeCrm[]
   formulariosCaptacao FormularioCaptacao[]
+  propostaModelos PropostaModelo[]
   comentariosTarefa TarefaComentario[]
   comentariosOportunidade OportunidadeCrmComentario[]
   contratoModelos ContratoModelo[]
@@ -962,6 +963,22 @@ model Usuario {
 
   @@index([empresaId])
   @@index([clienteId])
+}
+
+model PropostaModelo {
+  id          String   @id @default(cuid())
+  empresaId   String
+  nome        String
+  descricao   String?
+  conteudo    String
+  ativo       Boolean  @default(true)
+  padrao      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, nome])
+  @@index([empresaId])
 }
 
 model FormularioCaptacao {

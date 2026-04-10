@@ -9,6 +9,7 @@ import PageHeader from '../components/PageHeader';
 import type {
   Cliente,
   ProdutoServico,
+  PropostaModelo,
   StatusAssinatura,
   StatusProposta,
 } from '../types/api';
@@ -173,6 +174,10 @@ export default function PropostasPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCobrancasModalOpen, setIsCobrancasModalOpen] = useState(false);
+  const [isModelosModalOpen, setIsModelosModalOpen] = useState(false);
+  const [modelos, setModelos] = useState<PropostaModelo[]>([]);
+  const [editingModeloId, setEditingModeloId] = useState<string | null>(null);
+  const [modeloForm, setModeloForm] = useState({ nome: '', descricao: '', conteudo: '', ativo: true, padrao: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -183,14 +188,16 @@ export default function PropostasPage() {
     setLoading(true);
     setError(null);
     try {
-      const [clientesRes, produtosRes, propostasRes] = await Promise.all([
+      const [clientesRes, produtosRes, propostasRes, modelosRes] = await Promise.all([
         http.get<Cliente[]>('/clientes'),
         http.get<ProdutoServico[]>('/produtos-servicos'),
         http.get<PropostaApi[]>('/propostas'),
+        http.get<PropostaModelo[]>('/propostas/modelos'),
       ]);
       setClientes(clientesRes.data);
       setProdutos(produtosRes.data);
       setPropostas(propostasRes.data);
+      setModelos(modelosRes.data ?? []);
       setSelectedId((cur) => {
         if (!propostasRes.data.length) return null;
         if (cur && propostasRes.data.some((p) => p.id === cur)) return cur;
@@ -410,6 +417,49 @@ export default function PropostasPage() {
   const podeEditar = (p: PropostaApi) => p.status === 'RASCUNHO';
   const podeEnviar = (p: PropostaApi) => p.status === 'RASCUNHO' || p.status === 'RECUSADA';
 
+  function openModelosModal() {
+    setEditingModeloId(null);
+    setModeloForm({ nome: '', descricao: '', conteudo: '', ativo: true, padrao: false });
+    setIsModelosModalOpen(true);
+  }
+
+  function startEditModelo(m: PropostaModelo) {
+    setEditingModeloId(m.id);
+    setModeloForm({ nome: m.nome, descricao: m.descricao ?? '', conteudo: m.conteudo, ativo: m.ativo, padrao: m.padrao });
+    setIsModelosModalOpen(true);
+  }
+
+  async function handleSaveModelo(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = { nome: modeloForm.nome.trim(), descricao: modeloForm.descricao || undefined, conteudo: modeloForm.conteudo, ativo: modeloForm.ativo, padrao: modeloForm.padrao };
+      if (editingModeloId) {
+        await http.put(`/propostas/modelos/${editingModeloId}`, payload);
+      } else {
+        await http.post('/propostas/modelos', payload);
+      }
+      setEditingModeloId(null);
+      setModeloForm({ nome: '', descricao: '', conteudo: '', ativo: true, padrao: false });
+      await loadData();
+    } catch (err) {
+      setError(getApiError(err, 'Falha ao salvar modelo de proposta.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteModelo(m: PropostaModelo) {
+    if (!confirm(`Excluir o modelo "${m.nome}"?`)) return;
+    try {
+      await http.delete(`/propostas/modelos/${m.id}`);
+      await loadData();
+    } catch (err) {
+      setError(getApiError(err, 'Falha ao excluir modelo.'));
+    }
+  }
+
   return (
     <div className="page-stack">
       <PageHeader
@@ -448,6 +498,7 @@ export default function PropostasPage() {
               ))}
             </div>
             <div className="table-actions-toolbar">
+              <button className="button button--ghost button--small" type="button" onClick={openModelosModal}>Modelos</button>
               <button className="button button--ghost button--small" type="button" onClick={openNewModal}>
                 Nova proposta
               </button>
@@ -762,6 +813,33 @@ export default function PropostasPage() {
           </div>
 
           <div className="field field--span-2">
+            <div className="table-actions-toolbar" style={{ marginBottom: 4 }}>
+              <label style={{ margin: 0 }}>Texto da proposta</label>
+              {modelos.length > 0 ? (
+                <select
+                  style={{ flex: 'none', width: 'auto' }}
+                  value=""
+                  onChange={(e) => {
+                    const m = modelos.find((m) => m.id === e.target.value);
+                    if (m) setForm((c) => ({ ...c, textoPropostaBase: m.conteudo }));
+                  }}
+                >
+                  <option value="">Aplicar modelo…</option>
+                  {modelos.filter((m) => m.ativo).map((m) => (
+                    <option key={m.id} value={m.id}>{m.nome}{m.padrao ? ' (padrão)' : ''}</option>
+                  ))}
+                </select>
+              ) : null}
+            </div>
+            <textarea
+              rows={8}
+              value={form.textoPropostaBase}
+              onChange={(e) => setForm((f) => ({ ...f, textoPropostaBase: e.target.value }))}
+              placeholder="Texto principal da proposta. Selecione um modelo acima ou escreva livremente."
+            />
+          </div>
+
+          <div className="field field--span-2">
             <button className="button" type="submit" disabled={saving}>
               {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Criar proposta'}
             </button>
@@ -848,6 +926,86 @@ export default function PropostasPage() {
           <button className="button button--ghost button--small" type="button" onClick={() => setIsCobrancasModalOpen(false)}>
             Concluir
           </button>
+        </div>
+      </Modal>
+
+      {/* Modal modelos de proposta */}
+      <Modal
+        open={isModelosModalOpen}
+        title={editingModeloId ? 'Editar modelo de proposta' : 'Modelos de proposta'}
+        subtitle="Crie textos base reutilizáveis e aplique-os ao criar uma proposta."
+        onClose={() => { if (saving) return; setIsModelosModalOpen(false); setEditingModeloId(null); }}
+      >
+        <div className="page-stack">
+          <div className="table-actions-toolbar">
+            <button className="button button--ghost button--small" type="button" onClick={() => { setEditingModeloId(null); setModeloForm({ nome: '', descricao: '', conteudo: '', ativo: true, padrao: false }); }}>
+              Novo modelo
+            </button>
+          </div>
+
+          {modelos.length > 0 ? (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Descrição</th>
+                    <th>Status</th>
+                    <th>Padrão</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {modelos.map((m) => (
+                    <tr key={m.id}>
+                      <td>{m.nome}</td>
+                      <td>{m.descricao ?? '—'}</td>
+                      <td>{m.ativo ? 'Ativo' : 'Inativo'}</td>
+                      <td>{m.padrao ? 'Sim' : 'Não'}</td>
+                      <td>
+                        <div className="table-actions-toolbar">
+                          <button className="button button--ghost button--small" type="button" onClick={() => startEditModelo(m)}>Editar</button>
+                          <button className="button button--danger button--small" type="button" onClick={() => void handleDeleteModelo(m)}>Excluir</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          <form className="form-grid" onSubmit={(e) => void handleSaveModelo(e)}>
+            <div className="field">
+              <label>Nome</label>
+              <input value={modeloForm.nome} onChange={(e) => setModeloForm((c) => ({ ...c, nome: e.target.value }))} required />
+            </div>
+            <div className="field">
+              <label>Descrição</label>
+              <input value={modeloForm.descricao} onChange={(e) => setModeloForm((c) => ({ ...c, descricao: e.target.value }))} />
+            </div>
+            <div className="field field--checkbox">
+              <label><input type="checkbox" checked={modeloForm.ativo} onChange={(e) => setModeloForm((c) => ({ ...c, ativo: e.target.checked }))} /> Ativo</label>
+            </div>
+            <div className="field field--checkbox">
+              <label><input type="checkbox" checked={modeloForm.padrao} onChange={(e) => setModeloForm((c) => ({ ...c, padrao: e.target.checked }))} /> Modelo padrão</label>
+            </div>
+            <div className="field field--span-2">
+              <label>Conteúdo do modelo</label>
+              <textarea
+                value={modeloForm.conteudo}
+                onChange={(e) => setModeloForm((c) => ({ ...c, conteudo: e.target.value }))}
+                rows={10}
+                placeholder="Texto base da proposta. Use variáveis como {{cliente_nome}}, {{valor_total}}, {{objeto}}, etc."
+                required
+              />
+            </div>
+            <div className="field field--span-2">
+              <button className="button" type="submit" disabled={saving}>
+                {saving ? 'Salvando...' : editingModeloId ? 'Salvar modelo' : 'Criar modelo'}
+              </button>
+            </div>
+          </form>
         </div>
       </Modal>
     </div>

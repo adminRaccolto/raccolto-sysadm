@@ -150,6 +150,16 @@ export interface ContratoModelo {
   createdAt?: string;
 }
 
+export interface PropostaModelo {
+  id: string;
+  nome: string;
+  descricao?: string | null;
+  conteudo: string;
+  ativo: boolean;
+  padrao: boolean;
+  createdAt?: string;
+}
+
 export interface ContratoCobranca {
   id?: string;
   ordem: number;

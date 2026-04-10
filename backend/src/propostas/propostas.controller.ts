@@ -12,6 +12,30 @@ import { PropostasService } from './propostas.service';
 export class PropostasController {
   constructor(private readonly propostasService: PropostasService) {}
 
+  // ── Modelos ──────────────────────────────────────────────────────────────
+
+  @Get('modelos')
+  listModelos(@CurrentUser() user: AuthenticatedUser) {
+    return this.propostasService.listModelos(user.empresaId);
+  }
+
+  @Post('modelos')
+  createModelo(@CurrentUser() user: AuthenticatedUser, @Body() body: { nome: string; descricao?: string; conteudo: string; ativo?: boolean; padrao?: boolean }) {
+    return this.propostasService.createModelo(user.empresaId, body);
+  }
+
+  @Put('modelos/:id')
+  updateModelo(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: { nome?: string; descricao?: string; conteudo?: string; ativo?: boolean; padrao?: boolean }) {
+    return this.propostasService.updateModelo(user.empresaId, id, body);
+  }
+
+  @Delete('modelos/:id')
+  removeModelo(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.propostasService.removeModelo(user.empresaId, id);
+  }
+
+  // ── Propostas ────────────────────────────────────────────────────────────
+
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.propostasService.findAll(user.empresaId);
