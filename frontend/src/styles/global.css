@@ -500,6 +500,13 @@ button { cursor: pointer; }
 /* ── Eyebrow / badges ─────────────────────────────────────── */
 .brand-card__eyebrow,
 .eyebrow,
+.auth-hero__brand-logo {
+  max-width: 180px;
+  max-height: 80px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
 .auth-hero__badge {
   display: inline-flex;
   align-items: center;

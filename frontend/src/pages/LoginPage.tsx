@@ -118,7 +118,11 @@ export default function LoginPage() {
   return (
     <div className="auth-shell">
       <section className="auth-hero">
-        <div className="auth-hero__badge">Raccolto Web</div>
+        {import.meta.env.VITE_BRAND_LOGO_URL ? (
+          <img src={import.meta.env.VITE_BRAND_LOGO_URL as string} alt="Logo" className="auth-hero__brand-logo" />
+        ) : (
+          <div className="auth-hero__badge">Raccolto Web</div>
+        )}
         <h1>Selecione a empresa antes do login e acesse o ambiente correto.</h1>
         <p>{heroText}</p>
         <div className="auth-hero__highlights">
