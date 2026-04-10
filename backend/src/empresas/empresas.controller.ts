@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, Put, UploadedFile, UseInterceptors, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PerfilUsuario } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -12,6 +12,8 @@ import { StorageService } from '../storage/storage.service';
 
 @Controller('empresas')
 export class EmpresasController {
+  private readonly logger = new Logger(EmpresasController.name);
+
   constructor(
     private readonly empresasService: EmpresasService,
     private readonly storageService: StorageService,
@@ -42,13 +44,19 @@ export class EmpresasController {
   ) {
     if (!file) throw new BadRequestException('Nenhum arquivo de logo foi enviado.');
 
-    const url = await this.storageService.uploadFile(
-      file.buffer,
-      file.originalname,
-      file.mimetype,
-      'branding',
-    );
-    return this.empresasService.updateCurrentLogo(user.empresaId, url);
+    try {
+      const url = await this.storageService.uploadFile(
+        file.buffer,
+        file.originalname,
+        file.mimetype,
+        'branding',
+      );
+      return this.empresasService.updateCurrentLogo(user.empresaId, url);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Falha no upload de logo: ${msg}`);
+      throw new InternalServerErrorException(`Falha no upload: ${msg}`);
+    }
   }
 
   @Roles(PerfilUsuario.ADMIN)
