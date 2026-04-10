@@ -61,4 +61,8 @@ export class UpdateEmpresaDto {
   @IsOptional()
   @IsString()
   logoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  infBancarias?: string;
 }

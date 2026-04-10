@@ -97,6 +97,7 @@ export interface Empresa {
   representanteNome?: string | null;
   representanteCargo?: string | null;
   logoUrl?: string | null;
+  infBancarias?: string | null;
   status?: string;
   _count?: {
     usuarios: number;
@@ -162,16 +163,28 @@ export interface Deslocamento {
   projetoId: string;
   clienteId: string;
   responsavelId?: string | null;
-  dataVisita: string;
+  data: string;
   distanciaKm: number;
   precoKm: number;
   valorTotal: number;
   descricao?: string | null;
+  observacoes?: string | null;
+  docFiscal?: string | null;
+  pedagios?: number | null;
+  refeicao?: number | null;
   reembolsado: boolean;
   projeto?: { id: string; nome: string } | null;
-  cliente?: { id: string; razaoSocial: string; nomeFazenda?: string | null } | null;
+  cliente?: { id: string; razaoSocial: string; nomeFantasia?: string | null; nomeFazenda?: string | null } | null;
   responsavel?: { id: string; nome: string } | null;
   createdAt: string;
+}
+
+export interface RelatorioDeslocamento {
+  projetoId: string;
+  dataInicio: string;
+  dataFim: string;
+  adiantamento?: number;
+  anotacoes?: string;
 }
 
 export interface ContratoCobranca {

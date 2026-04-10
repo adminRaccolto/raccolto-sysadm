@@ -10,7 +10,7 @@ import SystemNav from '../components/SystemNav';
 import { useAuth } from '../contexts/AuthContext';
 import type { Empresa } from '../types/api';
 
-const initialForm = { nome: '', nomeFantasia: '', cnpj: '', email: '', telefone: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '', cep: '', representanteNome: '', representanteCargo: '' };
+const initialForm = { nome: '', nomeFantasia: '', cnpj: '', email: '', telefone: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '', cep: '', representanteNome: '', representanteCargo: '', infBancarias: '' };
 
 export default function EmpresasPage() {
   const { user, switchCompany } = useAuth();
@@ -58,6 +58,7 @@ export default function EmpresasPage() {
         cep: form.cep || undefined,
         representanteNome: form.representanteNome || undefined,
         representanteCargo: form.representanteCargo || undefined,
+        infBancarias: form.infBancarias || undefined,
       });
       setForm(initialForm);
       setSuccess('Empresa criada e vinculada ao seu acesso.');
@@ -142,6 +143,10 @@ export default function EmpresasPage() {
           <div className="field">
             <label>Cargo do representante</label>
             <input value={form.representanteCargo} onChange={(e) => setForm((c) => ({ ...c, representanteCargo: e.target.value }))} />
+          </div>
+          <div className="field field--span-2">
+            <label>Informações bancárias / PIX</label>
+            <input value={form.infBancarias} onChange={(e) => setForm((c) => ({ ...c, infBancarias: e.target.value }))} placeholder="Ex.: PIX CNPJ · Banco Itaú Ag 0001 C/C 12345-6" />
           </div>
           <button className="button" type="submit" disabled={saving}>{saving ? 'Salvando...' : 'Cadastrar empresa'}</button>
         </form>

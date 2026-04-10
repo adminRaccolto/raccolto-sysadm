@@ -43,6 +43,7 @@ export class EmpresasService {
           representanteNome: data.representanteNome?.trim() || null,
           representanteCargo: data.representanteCargo?.trim() || null,
           logoUrl: data.logoUrl?.trim() || null,
+          infBancarias: data.infBancarias?.trim() || null,
         },
       });
 
@@ -133,6 +134,7 @@ export class EmpresasService {
         representanteNome: data.representanteNome !== undefined ? data.representanteNome?.trim() || null : undefined,
         representanteCargo: data.representanteCargo !== undefined ? data.representanteCargo?.trim() || null : undefined,
         logoUrl: data.logoUrl !== undefined ? data.logoUrl?.trim() || null : undefined,
+        infBancarias: data.infBancarias !== undefined ? data.infBancarias?.trim() || null : undefined,
       },
       include: { _count: { select: { usuarios: true, clientes: true, contratos: true, projetos: true } } },
     });

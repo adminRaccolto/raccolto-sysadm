@@ -211,6 +211,7 @@ model Empresa {
   representanteNome  String?
   representanteCargo String?
   logoUrl      String?
+  infBancarias String?
   status       StatusEmpresa    @default(ATIVA)
   // Configuração fiscal para NFS-e
   issAliquota               Float?   @default(5.0)
@@ -606,6 +607,7 @@ model Documento {
   dataConclusao     DateTime?
   observacaoInterna String?
   observacaoCliente String?
+  autentiqueDocId   String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   empresa           Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -996,6 +998,9 @@ model Deslocamento {
   valorTotal     Float
   descricao      String?
   observacoes    String?
+  docFiscal      String?
+  pedagios       Float?
+  refeicao       Float?
   reembolsado    Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

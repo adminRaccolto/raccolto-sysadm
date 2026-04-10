@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrioridadeNotificacao, Prisma, StatusAssinatura } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
-import { AutentiqueService } from './autentique.service';
+import { AutentiqueService } from '../autentique/autentique.service';
 import { ModelosDocumentoService } from '../modelos-documento/modelos-documento.service';
 import { ContratoCobrancaDto, CreateContratoDto } from './dto/create-contrato.dto';
 
@@ -333,9 +333,10 @@ export class ContratosService {
       || contrato.titulo;
     const signatarioNome = contrato.contatoClienteNome || contrato.cliente.contatoPrincipal || contrato.clienteRazaoSocial || 'Cliente';
 
+    const pdfBuffer = await this.autentiqueService.gerarPdfContrato(contrato.titulo, textoContrato);
     const { docId, signUrl } = await this.autentiqueService.enviarDocumento({
       nome: contrato.titulo,
-      textoContrato,
+      pdfBuffer,
       signatarioNome,
       signatarioEmail,
     });

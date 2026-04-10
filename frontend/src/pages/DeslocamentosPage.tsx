@@ -6,21 +6,38 @@ import Feedback from '../components/Feedback';
 import LoadingBlock from '../components/LoadingBlock';
 import Modal from '../components/Modal';
 import PageHeader from '../components/PageHeader';
-import type { Cliente, Deslocamento, Projeto, UsuarioResumo } from '../types/api';
+import type { Cliente, Deslocamento, Documento, Projeto, UsuarioResumo } from '../types/api';
 import { formatCurrency, formatDate } from '../utils/format';
 
 const initialForm = {
   projetoId: '',
   clienteId: '',
   responsavelId: '',
-  dataVisita: '',
+  data: '',
   distanciaKm: '',
   precoKm: '',
   descricao: '',
+  docFiscal: '',
+  pedagios: '',
+  refeicao: '',
   reembolsado: false,
 };
 
+const initialRelatorioForm = {
+  projetoId: '',
+  dataInicio: '',
+  dataFim: '',
+  adiantamento: '',
+  anotacoes: '',
+};
+
+const initialAssinarForm = {
+  signatarioNome: '',
+  signatarioEmail: '',
+};
+
 type DeslocamentoForm = typeof initialForm;
+type RelatorioForm = typeof initialRelatorioForm;
 
 function getApiError(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err)) {
@@ -30,34 +47,52 @@ function getApiError(err: unknown, fallback: string): string {
   return fallback;
 }
 
+function statusBadgeClass(status: string) {
+  const map: Record<string, string> = {
+    RASCUNHO: 'badge--muted',
+    AGUARDANDO_ASSINATURA: 'badge--warning',
+    ASSINADO: 'badge--success',
+    ARQUIVADO: 'badge--muted',
+  };
+  return `badge ${map[status] ?? 'badge--muted'}`;
+}
+
 export default function DeslocamentosPage() {
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResumo[]>([]);
   const [deslocamentos, setDeslocamentos] = useState<Deslocamento[]>([]);
+  const [relatorios, setRelatorios] = useState<Documento[]>([]);
   const [filtroProjeto, setFiltroProjeto] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [gerando, setGerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRelatorioOpen, setIsRelatorioOpen] = useState(false);
+  const [isAssinarOpen, setIsAssinarOpen] = useState<string | null>(null); // documentoId
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DeslocamentoForm>(initialForm);
+  const [relatorioForm, setRelatorioForm] = useState<RelatorioForm>(initialRelatorioForm);
+  const [assinarForm, setAssinarForm] = useState(initialAssinarForm);
 
   async function loadData() {
     setLoading(true);
     setError(null);
     try {
-      const [projetosRes, clientesRes, usuariosRes, deslocamentosRes] = await Promise.all([
+      const [projetosRes, clientesRes, usuariosRes, deslocamentosRes, relatoriosRes] = await Promise.all([
         http.get<Projeto[]>('/projetos'),
         http.get<Cliente[]>('/clientes'),
         http.get<UsuarioResumo[]>('/usuarios'),
         http.get<Deslocamento[]>('/deslocamentos'),
+        http.get<Documento[]>('/documentos?tipo=RELATORIO_DESLOCAMENTO'),
       ]);
       setProjetos(projetosRes.data);
       setClientes(clientesRes.data);
       setUsuarios(usuariosRes.data);
       setDeslocamentos(deslocamentosRes.data);
+      setRelatorios(relatoriosRes.data);
     } catch (err) {
       setError(getApiError(err, 'Falha ao carregar deslocamentos.'));
     } finally {
@@ -88,10 +123,13 @@ export default function DeslocamentosPage() {
       projetoId: d.projetoId,
       clienteId: d.clienteId,
       responsavelId: d.responsavelId || '',
-      dataVisita: d.dataVisita.slice(0, 10),
+      data: d.data.slice(0, 10),
       distanciaKm: String(d.distanciaKm),
       precoKm: String(d.precoKm),
       descricao: d.descricao || '',
+      docFiscal: d.docFiscal || '',
+      pedagios: d.pedagios != null ? String(d.pedagios) : '',
+      refeicao: d.refeicao != null ? String(d.refeicao) : '',
       reembolsado: d.reembolsado,
     });
     setEditingId(d.id);
@@ -107,7 +145,6 @@ export default function DeslocamentosPage() {
     setForm(initialForm);
   }
 
-  // Auto-fill cliente and km price when project changes
   function handleProjetoChange(projetoId: string) {
     const projeto = projetos.find((p) => p.id === projetoId);
     const clienteId = projeto?.clienteId || '';
@@ -130,10 +167,13 @@ export default function DeslocamentosPage() {
         projetoId: form.projetoId,
         clienteId: form.clienteId,
         responsavelId: form.responsavelId || undefined,
-        dataVisita: form.dataVisita,
+        data: form.data,
         distanciaKm: parseFloat(form.distanciaKm),
         precoKm: parseFloat(form.precoKm),
         descricao: form.descricao || undefined,
+        docFiscal: form.docFiscal || undefined,
+        pedagios: form.pedagios ? parseFloat(form.pedagios) : undefined,
+        refeicao: form.refeicao ? parseFloat(form.refeicao) : undefined,
         reembolsado: form.reembolsado,
       };
       if (editingId) {
@@ -173,6 +213,67 @@ export default function DeslocamentosPage() {
     }
   }
 
+  async function handleGerarRelatorio(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setGerando(true);
+    setError(null);
+    try {
+      await http.post('/deslocamentos/relatorio/gerar', {
+        projetoId: relatorioForm.projetoId,
+        dataInicio: relatorioForm.dataInicio,
+        dataFim: relatorioForm.dataFim,
+        adiantamento: relatorioForm.adiantamento ? parseFloat(relatorioForm.adiantamento) : 0,
+        anotacoes: relatorioForm.anotacoes || '',
+      });
+      setSuccess('Relatório gerado e salvo no Repositório.');
+      setIsRelatorioOpen(false);
+      setRelatorioForm(initialRelatorioForm);
+      await loadData();
+    } catch (err) {
+      setError(getApiError(err, 'Falha ao gerar relatório.'));
+    } finally {
+      setGerando(false);
+    }
+  }
+
+  async function handleEnviarAssinatura(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!isAssinarOpen) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await http.post<{ signUrl: string }>(
+        `/deslocamentos/relatorio/${isAssinarOpen}/assinar`,
+        assinarForm,
+      );
+      setSuccess(`Documento enviado! Link de assinatura: ${res.data.signUrl}`);
+      setIsAssinarOpen(null);
+      setAssinarForm(initialAssinarForm);
+      await loadData();
+    } catch (err) {
+      setError(getApiError(err, 'Falha ao enviar para assinatura.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSincronizar(documentoId: string) {
+    setError(null);
+    try {
+      const res = await http.post<{ assinado: boolean; signedUrl?: string }>(
+        `/deslocamentos/relatorio/${documentoId}/sincronizar`,
+      );
+      if (res.data.assinado) {
+        setSuccess('Documento assinado! Conta a receber criada automaticamente.');
+      } else {
+        setSuccess('Documento ainda não foi assinado.');
+      }
+      await loadData();
+    } catch (err) {
+      setError(getApiError(err, 'Falha ao sincronizar assinatura.'));
+    }
+  }
+
   const valorTotal = parseFloat(form.distanciaKm || '0') * parseFloat(form.precoKm || '0');
 
   return (
@@ -189,6 +290,7 @@ export default function DeslocamentosPage() {
       {error ? <Feedback type="error" message={error} /> : null}
       {success ? <Feedback type="success" message={success} /> : null}
 
+      {/* ── DESLOCAMENTOS ───────────────────────────────────────────────── */}
       <section className="panel">
         <div className="panel__header panel__header--row panel__header--sticky">
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -208,9 +310,14 @@ export default function DeslocamentosPage() {
               </small>
             )}
           </div>
-          <button className="button button--ghost button--small" type="button" onClick={openNew}>
-            Registrar
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="button button--ghost button--small" type="button" onClick={() => { setRelatorioForm(initialRelatorioForm); setIsRelatorioOpen(true); }}>
+              Gerar Relatório
+            </button>
+            <button className="button button--ghost button--small" type="button" onClick={openNew}>
+              Registrar
+            </button>
+          </div>
         </div>
 
         {loading ? <LoadingBlock label="Carregando deslocamentos..." /> : null}
@@ -229,6 +336,8 @@ export default function DeslocamentosPage() {
                   <th>Cliente / Fazenda</th>
                   <th>km</th>
                   <th>Valor</th>
+                  <th>Pedágios</th>
+                  <th>Refeição</th>
                   <th>Reembolso</th>
                   <th></th>
                 </tr>
@@ -236,17 +345,19 @@ export default function DeslocamentosPage() {
               <tbody>
                 {filtered.map((d) => (
                   <tr key={d.id}>
-                    <td>{formatDate(d.dataVisita)}</td>
+                    <td>{formatDate(d.data)}</td>
                     <td>
                       <strong>{d.projeto?.nome || '—'}</strong>
                       {d.responsavel ? <div className="table-subline">{d.responsavel.nome}</div> : null}
                     </td>
                     <td>
-                      {d.cliente?.razaoSocial || '—'}
+                      {d.cliente?.nomeFantasia || d.cliente?.razaoSocial || '—'}
                       {d.cliente?.nomeFazenda ? <div className="table-subline">{d.cliente.nomeFazenda}</div> : null}
                     </td>
                     <td>{d.distanciaKm.toFixed(1)} km</td>
                     <td>{formatCurrency(d.valorTotal)}</td>
+                    <td>{d.pedagios ? formatCurrency(d.pedagios) : '—'}</td>
+                    <td>{d.refeicao ? formatCurrency(d.refeicao) : '—'}</td>
                     <td>
                       <button
                         type="button"
@@ -276,6 +387,74 @@ export default function DeslocamentosPage() {
         ) : null}
       </section>
 
+      {/* ── RELATÓRIOS GERADOS ──────────────────────────────────────────── */}
+      {relatorios.length > 0 && (
+        <section className="panel">
+          <div className="panel__header">
+            <h3 className="panel__title">Relatórios de Deslocamento</h3>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Relatório</th>
+                  <th>Projeto</th>
+                  <th>Descrição</th>
+                  <th>Status</th>
+                  <th>Criado em</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {relatorios.map((rel) => (
+                  <tr key={rel.id}>
+                    <td>
+                      {rel.arquivoUrl ? (
+                        <a href={rel.arquivoUrl} target="_blank" rel="noopener noreferrer" className="button button--ghost button--small">
+                          Abrir PDF
+                        </a>
+                      ) : <span className="table-subline">—</span>}
+                    </td>
+                    <td>{rel.projeto?.nome || '—'}</td>
+                    <td><small>{rel.descricao || '—'}</small></td>
+                    <td><span className={statusBadgeClass(rel.status)}>{rel.status.replace(/_/g, ' ')}</span></td>
+                    <td>{formatDate(rel.createdAt)}</td>
+                    <td>
+                      <div className="table-actions-toolbar">
+                        {rel.status === 'RASCUNHO' && (
+                          <button
+                            className="button button--ghost button--small"
+                            type="button"
+                            onClick={() => { setAssinarForm(initialAssinarForm); setIsAssinarOpen(rel.id); }}
+                          >
+                            Enviar p/ Assinatura
+                          </button>
+                        )}
+                        {rel.status === 'AGUARDANDO_ASSINATURA' && (
+                          <button
+                            className="button button--ghost button--small"
+                            type="button"
+                            onClick={() => void handleSincronizar(rel.id)}
+                          >
+                            Verificar Assinatura
+                          </button>
+                        )}
+                        {rel.status === 'ASSINADO' && rel.arquivoUrl && (
+                          <a href={rel.arquivoUrl} target="_blank" rel="noopener noreferrer" className="button button--ghost button--small">
+                            PDF Assinado
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* ── MODAL: REGISTRAR/EDITAR DESLOCAMENTO ────────────────────────── */}
       <Modal
         open={isModalOpen}
         title={editingId ? 'Editar deslocamento' : 'Registrar deslocamento'}
@@ -317,17 +496,31 @@ export default function DeslocamentosPage() {
 
           <div className="field">
             <label>Data da visita</label>
-            <input type="date" value={form.dataVisita} onChange={(e) => setForm((c) => ({ ...c, dataVisita: e.target.value }))} required />
+            <input type="date" value={form.data} onChange={(e) => setForm((c) => ({ ...c, data: e.target.value }))} required />
           </div>
+          <div className="field">
+            <label>Doc. Fiscal</label>
+            <input value={form.docFiscal} onChange={(e) => setForm((c) => ({ ...c, docFiscal: e.target.value }))} placeholder="Número do documento fiscal" />
+          </div>
+
           <div className="field">
             <label>Distância (km)</label>
             <input type="number" min="0" step="0.1" value={form.distanciaKm} onChange={(e) => setForm((c) => ({ ...c, distanciaKm: e.target.value }))} required />
           </div>
-
           <div className="field">
             <label>Preço por km (R$)</label>
             <input type="number" min="0" step="0.01" value={form.precoKm} onChange={(e) => setForm((c) => ({ ...c, precoKm: e.target.value }))} required />
           </div>
+
+          <div className="field">
+            <label>Pedágios (R$)</label>
+            <input type="number" min="0" step="0.01" value={form.pedagios} onChange={(e) => setForm((c) => ({ ...c, pedagios: e.target.value }))} placeholder="0,00" />
+          </div>
+          <div className="field">
+            <label>Refeição (R$)</label>
+            <input type="number" min="0" step="0.01" value={form.refeicao} onChange={(e) => setForm((c) => ({ ...c, refeicao: e.target.value }))} placeholder="0,00" />
+          </div>
+
           <div className="field">
             <label>Valor total calculado</label>
             <input value={isNaN(valorTotal) ? '—' : formatCurrency(valorTotal)} readOnly style={{ background: 'var(--color-surface-2, #f3f4f6)', cursor: 'default' }} />
@@ -348,6 +541,85 @@ export default function DeslocamentosPage() {
           <div className="field field--span-2">
             <button className="button" type="submit" disabled={saving}>
               {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Registrar deslocamento'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: GERAR RELATÓRIO ───────────────────────────────────────── */}
+      <Modal
+        open={isRelatorioOpen}
+        title="Gerar Relatório de Deslocamento"
+        subtitle="Selecione o projeto e o período. O relatório será gerado em PDF e salvo no Repositório."
+        onClose={() => { if (!gerando) { setIsRelatorioOpen(false); setError(null); } }}
+      >
+        <form className="form-grid" onSubmit={(e) => void handleGerarRelatorio(e)}>
+          <div className="field field--span-2">
+            <label>Projeto</label>
+            <select value={relatorioForm.projetoId} onChange={(e) => setRelatorioForm((f) => ({ ...f, projetoId: e.target.value }))} required>
+              <option value="">Selecione o projeto</option>
+              {projetos.map((p) => (
+                <option key={p.id} value={p.id}>{p.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Data início do período</label>
+            <input type="date" value={relatorioForm.dataInicio} onChange={(e) => setRelatorioForm((f) => ({ ...f, dataInicio: e.target.value }))} required />
+          </div>
+          <div className="field">
+            <label>Data fim do período</label>
+            <input type="date" value={relatorioForm.dataFim} onChange={(e) => setRelatorioForm((f) => ({ ...f, dataFim: e.target.value }))} required />
+          </div>
+
+          <div className="field">
+            <label>Adiantamentos recebidos (R$)</label>
+            <input type="number" min="0" step="0.01" value={relatorioForm.adiantamento} onChange={(e) => setRelatorioForm((f) => ({ ...f, adiantamento: e.target.value }))} placeholder="0,00" />
+          </div>
+          <div className="field field--span-2">
+            <label>Anotações</label>
+            <input value={relatorioForm.anotacoes} onChange={(e) => setRelatorioForm((f) => ({ ...f, anotacoes: e.target.value }))} placeholder="Observações adicionais" />
+          </div>
+
+          <div className="field field--span-2">
+            <button className="button" type="submit" disabled={gerando}>
+              {gerando ? 'Gerando PDF...' : 'Gerar Relatório'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: ENVIAR PARA ASSINATURA ────────────────────────────────── */}
+      <Modal
+        open={!!isAssinarOpen}
+        title="Enviar para Assinatura"
+        subtitle="O relatório será enviado ao Autentique. O signatário receberá um link por e-mail."
+        onClose={() => { if (!saving) { setIsAssinarOpen(null); setError(null); } }}
+      >
+        <form className="form-grid" onSubmit={(e) => void handleEnviarAssinatura(e)}>
+          <div className="field field--span-2">
+            <label>Nome do signatário</label>
+            <input
+              value={assinarForm.signatarioNome}
+              onChange={(e) => setAssinarForm((f) => ({ ...f, signatarioNome: e.target.value }))}
+              placeholder="Nome do cliente ou responsável"
+              required
+            />
+          </div>
+          <div className="field field--span-2">
+            <label>E-mail do signatário</label>
+            <input
+              type="email"
+              value={assinarForm.signatarioEmail}
+              onChange={(e) => setAssinarForm((f) => ({ ...f, signatarioEmail: e.target.value }))}
+              placeholder="email@cliente.com.br"
+              required
+            />
+          </div>
+          <div className="field field--span-2">
+            <button className="button" type="submit" disabled={saving}>
+              {saving ? 'Enviando...' : 'Enviar para Assinatura'}
             </button>
           </div>
         </form>
