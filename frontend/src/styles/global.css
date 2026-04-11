@@ -1106,7 +1106,12 @@ th {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
 }
-.modal-shell--xl { width: min(1140px, calc(100vw - 32px)); }
+.modal-shell--xl {
+  width: min(1200px, calc(100vw - 24px));
+  max-height: calc(100vh - 16px);
+}
+.modal-shell--xl .modal-shell__header { padding: 11px 18px; }
+.modal-shell--xl .modal-shell__body   { padding: 10px 16px 12px; }
 .modal-shell__header {
   display: flex; justify-content: space-between;
   gap: 14px; align-items: flex-start;

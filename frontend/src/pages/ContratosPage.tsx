@@ -780,7 +780,7 @@ export default function ContratosPage() {
         subtitle={clienteAtual ? `Dados da parte contratante herdados automaticamente de ${clienteAtual.razaoSocial}.` : 'Selecione um cliente e estruture o contrato.'}
         onClose={closeModal}
       >
-        <form className="form-grid form-grid--3" onSubmit={handleSubmit}>
+        <form className="form-grid form-grid--3 form-grid--compact" onSubmit={handleSubmit}>
           {/* Row: Cliente (1) + Produto/serviço (1) + Status (1) */}
           <div className="field">
             <label>Cliente</label>
@@ -808,18 +808,6 @@ export default function ContratosPage() {
               <option value="SUSPENSO">Suspenso</option>
               <option value="ENCERRADO">Encerrado</option>
             </select>
-          </div>
-
-          {/* Row: Dados herdados (3) */}
-          <div className="field field--span-3">
-            <label>Dados herdados do cliente</label>
-            <div className="selection-note" style={{ lineHeight: 1.6 }}>
-              <strong>{clienteAtual?.razaoSocial || 'Cliente não selecionado'}</strong>
-              {clienteAtual?.cpfCnpj ? <> · Doc: {clienteAtual.cpfCnpj}</> : null}
-              {clienteAtual?.email ? <> · {clienteAtual.email}</> : null}
-              {clienteAtual?.contatoPrincipal ? <> · {clienteAtual.contatoPrincipal}</> : null}
-              {clienteAtual ? <> · {formatClienteEndereco(clienteAtual)}</> : null}
-            </div>
           </div>
 
           {/* Row: Contato cliente (1) + E-mail (1) + Telefone (1) */}
@@ -859,7 +847,7 @@ export default function ContratosPage() {
           {/* Row: Objeto (2) + Tipo de contrato (1) */}
           <div className="field field--span-2">
             <label>Objeto</label>
-            <textarea value={form.objeto} onChange={(e) => setForm((c) => ({ ...c, objeto: e.target.value }))} rows={2} />
+            <input value={form.objeto} onChange={(e) => setForm((c) => ({ ...c, objeto: e.target.value }))} />
           </div>
           <div className="field">
             <label>Tipo de contrato</label>
@@ -969,13 +957,13 @@ export default function ContratosPage() {
               <button className="button button--ghost button--small" type="button" onClick={aplicarTextoPadrao}>Aplicar modelo</button>
               <button className="button button--ghost button--small" type="button" onClick={() => baixarMinutaHtml(form.titulo, form.textoContratoBase || construirTextoPadrao(form, clienteAtual, user?.empresa ?? null))}>Baixar minuta editável</button>
             </div>
-            <textarea value={form.textoContratoBase} onChange={(e) => setForm((c) => ({ ...c, textoContratoBase: e.target.value }))} rows={5} />
+            <textarea value={form.textoContratoBase} onChange={(e) => setForm((c) => ({ ...c, textoContratoBase: e.target.value }))} rows={2} />
           </div>
 
           {/* Row: Observações (3) */}
           <div className="field field--span-3">
             <label>Observações</label>
-            <textarea value={form.observacoes} onChange={(e) => setForm((c) => ({ ...c, observacoes: e.target.value }))} rows={2} />
+            <textarea value={form.observacoes} onChange={(e) => setForm((c) => ({ ...c, observacoes: e.target.value }))} rows={1} />
           </div>
 
           <div className="field field--span-3">
