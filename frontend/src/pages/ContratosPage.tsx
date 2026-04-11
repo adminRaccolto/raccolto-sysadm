@@ -780,7 +780,8 @@ export default function ContratosPage() {
         subtitle={clienteAtual ? `Dados da parte contratante herdados automaticamente de ${clienteAtual.razaoSocial}.` : 'Selecione um cliente e estruture o contrato.'}
         onClose={closeModal}
       >
-        <form className="form-grid" onSubmit={handleSubmit}>
+        <form className="form-grid form-grid--3" onSubmit={handleSubmit}>
+          {/* Row: Cliente (1) + Produto/serviço (1) + Status (1) */}
           <div className="field">
             <label>Cliente</label>
             <select value={form.clienteId} onChange={(e) => handleClienteChange(e.target.value)} required>
@@ -799,23 +800,31 @@ export default function ContratosPage() {
               ))}
             </select>
           </div>
+          <div className="field">
+            <label>Status</label>
+            <select value={form.status} onChange={(e) => setForm((c) => ({ ...c, status: e.target.value as StatusContrato }))}>
+              <option value="RASCUNHO">Rascunho</option>
+              <option value="ATIVO">Ativo</option>
+              <option value="SUSPENSO">Suspenso</option>
+              <option value="ENCERRADO">Encerrado</option>
+            </select>
+          </div>
 
-          <div className="field field--span-2">
+          {/* Row: Dados herdados (3) */}
+          <div className="field field--span-3">
             <label>Dados herdados do cliente</label>
-            <div className="selection-note" style={{ minHeight: 72 }}>
-              <strong>{clienteAtual?.razaoSocial || 'Cliente não selecionado'}</strong><br />
-              {clienteAtual?.nomeFantasia ? <>Nome fantasia: {clienteAtual.nomeFantasia}<br /></> : null}
-              {clienteAtual?.cpfCnpj ? <>Documento: {clienteAtual.cpfCnpj}<br /></> : null}
-              {clienteAtual?.inscricaoEstadual ? <>IE: {clienteAtual.inscricaoEstadual}<br /></> : null}
-              {clienteAtual?.email ? <>E-mail: {clienteAtual.email}<br /></> : null}
-              {clienteAtual?.contatoPrincipal ? <>Contato: {clienteAtual.contatoPrincipal}<br /></> : null}
-              {clienteAtual?.whatsapp ? <>WhatsApp: {clienteAtual.whatsapp}<br /></> : null}
-              Endereço: {formatClienteEndereco(clienteAtual)}
+            <div className="selection-note" style={{ lineHeight: 1.6 }}>
+              <strong>{clienteAtual?.razaoSocial || 'Cliente não selecionado'}</strong>
+              {clienteAtual?.cpfCnpj ? <> · Doc: {clienteAtual.cpfCnpj}</> : null}
+              {clienteAtual?.email ? <> · {clienteAtual.email}</> : null}
+              {clienteAtual?.contatoPrincipal ? <> · {clienteAtual.contatoPrincipal}</> : null}
+              {clienteAtual ? <> · {formatClienteEndereco(clienteAtual)}</> : null}
             </div>
           </div>
 
-          <div className="field field--span-2">
-            <label>Nome do contato do cliente</label>
+          {/* Row: Contato cliente (1) + E-mail (1) + Telefone (1) */}
+          <div className="field">
+            <label>Contato do cliente</label>
             <input value={form.contatoClienteNome} onChange={(e) => setForm((c) => ({ ...c, contatoClienteNome: e.target.value }))} placeholder="Nome do responsável" />
           </div>
           <div className="field">
@@ -827,6 +836,13 @@ export default function ContratosPage() {
             <input value={form.contatoClienteTelefone} onChange={(e) => setForm((c) => ({ ...c, contatoClienteTelefone: e.target.value }))} placeholder="(11) 99999-9999" />
           </div>
 
+          {/* Row: Título (3) */}
+          <div className="field field--span-3">
+            <label>Título</label>
+            <input value={form.titulo} onChange={(e) => setForm((c) => ({ ...c, titulo: e.target.value }))} required />
+          </div>
+
+          {/* Row: Nº contrato (1) + Código interno (1) + Responsável interno (1) */}
           <div className="field">
             <label>Número do contrato</label>
             <input value={form.numeroContrato} onChange={(e) => setForm((c) => ({ ...c, numeroContrato: e.target.value }))} />
@@ -835,23 +851,22 @@ export default function ContratosPage() {
             <label>Código interno</label>
             <input value={form.codigo} onChange={(e) => setForm((c) => ({ ...c, codigo: e.target.value }))} />
           </div>
-          <div className="field field--span-2">
-            <label>Título</label>
-            <input value={form.titulo} onChange={(e) => setForm((c) => ({ ...c, titulo: e.target.value }))} required />
-          </div>
-          <div className="field field--span-2">
-            <label>Objeto</label>
-            <textarea value={form.objeto} onChange={(e) => setForm((c) => ({ ...c, objeto: e.target.value }))} rows={3} />
-          </div>
-          <div className="field">
-            <label>Tipo de contrato</label>
-            <input value={form.tipoContrato} onChange={(e) => setForm((c) => ({ ...c, tipoContrato: e.target.value }))} />
-          </div>
           <div className="field">
             <label>Responsável interno</label>
             <input value={form.responsavelInterno} onChange={(e) => setForm((c) => ({ ...c, responsavelInterno: e.target.value }))} />
           </div>
 
+          {/* Row: Objeto (2) + Tipo de contrato (1) */}
+          <div className="field field--span-2">
+            <label>Objeto</label>
+            <textarea value={form.objeto} onChange={(e) => setForm((c) => ({ ...c, objeto: e.target.value }))} rows={2} />
+          </div>
+          <div className="field">
+            <label>Tipo de contrato</label>
+            <input value={form.tipoContrato} onChange={(e) => setForm((c) => ({ ...c, tipoContrato: e.target.value }))} />
+          </div>
+
+          {/* Row: Valor total (1) + Forma de pagamento (1) + Periodicidade (1) */}
           <div className="field">
             <label>Valor total</label>
             <input value={form.valor} onChange={(e) => setForm((c) => ({ ...c, valor: maskCurrencyInputBRL(e.target.value) }))} placeholder="R$ 0,00" />
@@ -868,6 +883,8 @@ export default function ContratosPage() {
               ))}
             </select>
           </div>
+
+          {/* Row: Qtd parcelas (1) + Primeiro vencimento (1) + Valor por parcela (1) */}
           <div className="field">
             <label>Quantidade de parcelas</label>
             <input type="number" min={1} value={form.quantidadeParcelas} onChange={(e) => setForm((c) => ({ ...c, quantidadeParcelas: e.target.value }))} />
@@ -880,15 +897,8 @@ export default function ContratosPage() {
             <label>Valor sugerido por parcela</label>
             <input value={form.valorParcela} onChange={(e) => setForm((c) => ({ ...c, valorParcela: maskCurrencyInputBRL(e.target.value) }))} placeholder="R$ 0,00" />
           </div>
-          <div className="field field--span-2">
-            <label>Grade de cobrança</label>
-            <div className="selection-note">
-              {form.cobrancas.length ? `${form.cobrancas.length} cobrança(s) configurada(s).` : 'Nenhuma grade gerada ainda.'}
-              <div className="table-actions-toolbar" style={{ marginTop: 8 }}>
-                <button className="button button--ghost button--small" type="button" onClick={abrirModalCobrancas}>Configurar cobranças</button>
-              </div>
-            </div>
-          </div>
+
+          {/* Row: Data início (1) + Data fim (1) + Grade de cobrança (1) */}
           <div className="field">
             <label>Data de início</label>
             <input type="date" value={form.dataInicio} onChange={(e) => setForm((c) => ({ ...c, dataInicio: e.target.value }))} required />
@@ -898,25 +908,15 @@ export default function ContratosPage() {
             <input type="date" value={form.dataFim} onChange={(e) => setForm((c) => ({ ...c, dataFim: e.target.value }))} />
           </div>
           <div className="field">
-            <label>Status</label>
-            <select value={form.status} onChange={(e) => setForm((c) => ({ ...c, status: e.target.value as StatusContrato }))}>
-              <option value="RASCUNHO">Rascunho</option>
-              <option value="ATIVO">Ativo</option>
-              <option value="SUSPENSO">Suspenso</option>
-              <option value="ENCERRADO">Encerrado</option>
-            </select>
+            <label>Grade de cobrança</label>
+            <div className="selection-note" style={{ padding: '6px 10px' }}>
+              {form.cobrancas.length ? `${form.cobrancas.length} cobrança(s)` : 'Nenhuma gerada'}
+              <button className="button button--ghost button--small" type="button" style={{ marginLeft: 8 }} onClick={abrirModalCobrancas}>Configurar</button>
+            </div>
           </div>
-          <div className="field">
-            <label>Status da assinatura</label>
-            <input
-              value={form.statusAssinatura.replace(/_/g, ' ')}
-              readOnly
-              disabled
-              title="O status é gerenciado automaticamente pelo fluxo de assinatura digital"
-              style={{ background: 'var(--surface-soft)', color: 'var(--muted)', cursor: 'not-allowed' }}
-            />
-          </div>
-          <div className="field">
+
+          {/* Row: Modelo (2) + Status assinatura (1) */}
+          <div className="field field--span-2">
             <label>Modelo de contrato</label>
             <div className="table-actions-toolbar">
               <select value={form.modeloContratoId} onChange={(e) => {
@@ -931,6 +931,18 @@ export default function ContratosPage() {
               <button className="button button--ghost button--small" type="button" onClick={openModelosModal}>Modelos</button>
             </div>
           </div>
+          <div className="field">
+            <label>Status da assinatura</label>
+            <input
+              value={form.statusAssinatura.replace(/_/g, ' ')}
+              readOnly
+              disabled
+              title="O status é gerenciado automaticamente pelo fluxo de assinatura digital"
+              style={{ background: 'var(--surface-soft)', color: 'var(--muted)', cursor: 'not-allowed' }}
+            />
+          </div>
+
+          {/* Row: checkboxes (3) */}
           <div className="field field--checkbox">
             <label>
               <input type="checkbox" checked={form.renovacaoAutomatica} onChange={(e) => setForm((c) => ({ ...c, renovacaoAutomatica: e.target.checked }))} />
@@ -943,25 +955,30 @@ export default function ContratosPage() {
               Gerar projeto automaticamente
             </label>
           </div>
-          <div className="field field--checkbox field--span-2">
+          <div className="field field--checkbox">
             <label>
               <input type="checkbox" checked={form.gerarFinanceiroAutomatico} onChange={(e) => setForm((c) => ({ ...c, gerarFinanceiroAutomatico: e.target.checked }))} />
-              Gerar financeiro automaticamente conforme grade
+              Gerar financeiro conforme grade
             </label>
           </div>
-          <div className="field field--span-2">
+
+          {/* Row: Texto base (3) */}
+          <div className="field field--span-3">
             <label>Texto base do contrato</label>
-            <div className="table-actions-toolbar" style={{ marginBottom: 8 }}>
+            <div className="table-actions-toolbar" style={{ marginBottom: 6 }}>
               <button className="button button--ghost button--small" type="button" onClick={aplicarTextoPadrao}>Aplicar modelo</button>
               <button className="button button--ghost button--small" type="button" onClick={() => baixarMinutaHtml(form.titulo, form.textoContratoBase || construirTextoPadrao(form, clienteAtual, user?.empresa ?? null))}>Baixar minuta editável</button>
             </div>
-            <textarea value={form.textoContratoBase} onChange={(e) => setForm((c) => ({ ...c, textoContratoBase: e.target.value }))} rows={10} />
+            <textarea value={form.textoContratoBase} onChange={(e) => setForm((c) => ({ ...c, textoContratoBase: e.target.value }))} rows={5} />
           </div>
-          <div className="field field--span-2">
+
+          {/* Row: Observações (3) */}
+          <div className="field field--span-3">
             <label>Observações</label>
-            <textarea value={form.observacoes} onChange={(e) => setForm((c) => ({ ...c, observacoes: e.target.value }))} rows={3} />
+            <textarea value={form.observacoes} onChange={(e) => setForm((c) => ({ ...c, observacoes: e.target.value }))} rows={2} />
           </div>
-          <div className="field field--span-2">
+
+          <div className="field field--span-3">
             <button className="button" type="submit" disabled={saving}>
               {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar contrato'}
             </button>
