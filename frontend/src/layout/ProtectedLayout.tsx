@@ -6,11 +6,14 @@ import {
   Bell,
   Briefcase,
   Car,
+  CheckSquare,
   ChevronDown,
   FileSignature,
   FileText,
+  FolderKanban,
   FolderOpen,
   GraduationCap,
+  KanbanSquare,
   LayoutDashboard,
   LogOut,
   Package,
@@ -44,9 +47,15 @@ const navEntries: NavEntry[] = [
     ],
   },
   {
+    type: 'group', label: 'Projetos', Icon: KanbanSquare,
+    items: [
+      { to: '/projetos',                label: 'Todos os Projetos', Icon: FolderKanban },
+      { to: '/projetos/minhas-tarefas', label: 'Minhas Tarefas',   Icon: CheckSquare },
+    ],
+  },
+  {
     type: 'group', label: 'Operacional', Icon: Briefcase,
     items: [
-      { to: '/projetos',       label: 'Projetos',       Icon: Briefcase },
       { to: '/deslocamentos',  label: 'Deslocamentos',  Icon: Car },
       { to: '/modelos',        label: 'Modelos',        Icon: FolderOpen },
       { to: '/repositorio',    label: 'Repositório',    Icon: Archive },

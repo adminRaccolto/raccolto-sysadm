@@ -157,6 +157,8 @@ enum TipoContaBancaria {
   POUPANCA
   CAIXA
   APLICACAO
+  TRANSITORIA
+  INVESTIMENTO
   OUTRA
 }
 
@@ -254,7 +256,10 @@ model Empresa {
   formulariosCaptacao FormularioCaptacao[]
   modelosDocumento ModeloDocumento[]
   deslocamentos Deslocamento[]
+  funcionarios  Funcionario[]
   comentariosTarefa TarefaComentario[]
+  projetoEtapas ProjetoEtapa[]
+  tarefaLabels  TarefaLabel[]
   comentariosOportunidade OportunidadeCrmComentario[]
   faturamentos Faturamento[]
 }
@@ -526,6 +531,7 @@ model Projeto {
   entregaveis               Entregavel[]
   documentos                Documento[]
   deslocamentos             Deslocamento[]
+  etapas                    ProjetoEtapa[]
 
   @@index([empresaId])
   @@index([clienteId])
@@ -538,6 +544,7 @@ model Tarefa {
   id                     String             @id @default(cuid())
   empresaId              String
   projetoId              String
+  etapaId                String?
   atribuicaoTipo         TipoAtribuicaoTarefa @default(ANALISTA)
   responsavelUsuarioId   String?
   responsavelClienteId   String?
@@ -550,6 +557,9 @@ model Tarefa {
   subtarefasJson         Json?
   prioridade             PrioridadeTarefa   @default(MEDIA)
   prazo                  DateTime?
+  estimativaHoras        Float?
+  horasRegistradas       Float              @default(0)
+  ordem                  Int                @default(0)
   status                 StatusTarefa       @default(NAO_INICIADA)
   visivelCliente         Boolean            @default(false)
   concluidaEm            DateTime?
@@ -557,13 +567,17 @@ model Tarefa {
   updatedAt              DateTime           @updatedAt
   empresa                Empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   projeto                Projeto            @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  etapa                  ProjetoEtapa?      @relation(fields: [etapaId], references: [id], onDelete: SetNull)
   responsavelUsuario     Usuario?           @relation("TarefaResponsavelUsuario", fields: [responsavelUsuarioId], references: [id], onDelete: SetNull)
   responsavelCliente     Cliente?           @relation("TarefaResponsavelCliente", fields: [responsavelClienteId], references: [id], onDelete: SetNull)
   documentos             Documento[]
   comentarios            TarefaComentario[]
+  labels                 TarefaLabelVinculo[]
+  atividades             TarefaAtividade[]
 
   @@index([empresaId])
   @@index([projetoId])
+  @@index([etapaId])
   @@index([responsavelUsuarioId])
   @@index([responsavelClienteId])
   @@index([prazo])
@@ -788,6 +802,58 @@ model TarefaComentario {
   @@index([autorUsuarioId])
 }
 
+model ProjetoEtapa {
+  id         String    @id @default(cuid())
+  empresaId  String
+  projetoId  String
+  nome       String
+  meta       String?
+  dataInicio DateTime
+  dataFim    DateTime
+  status     String    @default("PLANEJADA")
+  ordem      Int       @default(0)
+  createdAt  DateTime  @default(now())
+  empresa    Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  projeto    Projeto   @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  tarefas    Tarefa[]
+
+  @@index([projetoId])
+  @@index([empresaId])
+}
+
+model TarefaLabel {
+  id        String               @id @default(cuid())
+  empresaId String
+  nome      String
+  cor       String               @default("#6366f1")
+  empresa   Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  vinculos  TarefaLabelVinculo[]
+
+  @@index([empresaId])
+}
+
+model TarefaLabelVinculo {
+  tarefaId String
+  labelId  String
+  tarefa   Tarefa      @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  label    TarefaLabel @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([tarefaId, labelId])
+}
+
+model TarefaAtividade {
+  id        String   @id @default(cuid())
+  tarefaId  String
+  empresaId String
+  autorNome String
+  tipo      String
+  detalhe   String?
+  createdAt DateTime @default(now())
+  tarefa    Tarefa   @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+
+  @@index([tarefaId])
+}
+
 model OportunidadeCrmComentario {
   id              String          @id @default(cuid())
   empresaId        String
@@ -828,21 +894,68 @@ model ContaGerencial {
   @@index([contaPaiId])
 }
 
+model Banco {
+  id        String   @id @default(cuid())
+  codigo    String   @unique
+  nome      String
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  contas    ContaBancaria[]
+}
+
 model ContaBancaria {
-  id            String            @id @default(cuid())
-  empresaId      String
-  nome           String
-  banco          String?
-  agencia        String?
-  numeroConta    String?
-  tipo           TipoContaBancaria @default(CORRENTE)
-  saldoInicial   Float             @default(0)
-  saldoAtual     Float             @default(0)
-  ativo          Boolean           @default(true)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  empresa        Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  lancamentos    LancamentoTesouraria[]
+  id               String            @id @default(cuid())
+  empresaId        String
+  bancoId          String?
+  nome             String
+  banco            String?           // texto livre legado
+  agencia          String?
+  numeroConta      String?
+  chavePix         String?
+  tipo             TipoContaBancaria @default(CORRENTE)
+  saldoInicial     Float             @default(0)
+  saldoAtual       Float             @default(0)
+  incluiFluxoCaixa Boolean           @default(true)
+  ativo            Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  empresa          Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  bancoRef         Banco?            @relation(fields: [bancoId], references: [id], onDelete: SetNull)
+  lancamentos      LancamentoTesouraria[]
+
+  @@index([empresaId])
+}
+
+model Funcionario {
+  id                    String    @id @default(cuid())
+  empresaId             String
+  nome                  String
+  cpf                   String?
+  email                 String?
+  telefone              String?
+  cargo                 String?
+  vinculo               String    @default("CLT") // CLT | PJ | FREELANCER | ESTAGIO
+  salario               Float?
+  dataAdmissao          DateTime?
+  dataDemissao          DateTime?
+  dataNascimento        DateTime?
+  logradouro            String?
+  numero                String?
+  complemento           String?
+  bairro                String?
+  cidade                String?
+  estado                String?
+  cep                   String?
+  contaBancariaNome     String?
+  contaBancariaAgencia  String?
+  contaBancariaConta    String?
+  contaBancariaBanco    String?
+  contaBancariaPix      String?
+  ativo                 Boolean   @default(true)
+  observacoes           String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  empresa               Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@index([empresaId])
 }

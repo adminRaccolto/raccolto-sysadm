@@ -264,70 +264,33 @@ export class ProjetosService {
       throw new ForbiddenException('Cliente sem vínculo operacional definido.');
     }
 
-    const projeto = await this.prisma.projeto.findFirst({
-      where:
-        user.perfil === PerfilUsuario.CLIENTE
-          ? {
-              id,
-              empresaId: user.empresaId,
-              clienteId: user.clienteId!,
-              visivelCliente: true,
-            }
-          : {
-              id,
-              empresaId: user.empresaId,
-            },
-      include: {
-        ...this.defaultInclude(),
-        tarefas: {
-          where:
-            user.perfil === PerfilUsuario.CLIENTE
-              ? { visivelCliente: true }
-              : undefined,
-          orderBy: [{ prazo: 'asc' }, { createdAt: 'desc' }],
-        },
-        entregaveis: {
-          where:
-            user.perfil === PerfilUsuario.CLIENTE
-              ? { visivelCliente: true }
-              : undefined,
-          orderBy: [{ dataPrevista: 'asc' }, { createdAt: 'desc' }],
-        },
-        documentos: {
-          where:
-            user.perfil === PerfilUsuario.CLIENTE
-              ? { visivelCliente: true }
-              : undefined,
-          orderBy: [{ updatedAt: 'desc' }],
-        },
-      },
-    });
+    const isCliente = user.perfil === PerfilUsuario.CLIENTE;
+    const where = isCliente
+      ? { id, empresaId: user.empresaId, clienteId: user.clienteId!, visivelCliente: true as const }
+      : { id, empresaId: user.empresaId };
 
-    if (!projeto) {
-      throw new BadRequestException('Projeto não encontrado.');
-    }
+    const projetoRaw = await this.prisma.projeto.findFirst({ where });
+    if (!projetoRaw) throw new BadRequestException('Projeto não encontrado.');
+
+    const projeto = await this.loadProjetoDetalhado(projetoRaw.id, isCliente);
+    if (!projeto) throw new BadRequestException('Projeto não encontrado.');
 
     const hoje = new Date();
-    const tarefasAIniciar = (projeto.tarefas ?? []).filter((item) => item.status === StatusTarefa.NAO_INICIADA).length;
-    const tarefasAtrasadas = (projeto.tarefas ?? []).filter(
-      (item) =>
-        item.prazo &&
-        new Date(item.prazo) < hoje &&
-        ([StatusTarefa.NAO_INICIADA, StatusTarefa.EM_ANDAMENTO, StatusTarefa.AGUARDANDO] as StatusTarefa[]).includes(item.status as StatusTarefa),
+    const tarefas = (projeto as any).tarefas ?? [];
+    const tarefasAIniciar = tarefas.filter((t: any) => t.status === StatusTarefa.NAO_INICIADA).length;
+    const tarefasAtrasadas = tarefas.filter(
+      (t: any) => t.prazo && new Date(t.prazo) < hoje &&
+        [StatusTarefa.NAO_INICIADA, StatusTarefa.EM_ANDAMENTO, StatusTarefa.AGUARDANDO].includes(t.status),
     ).length;
-    const totalTarefas = (projeto.tarefas ?? []).length;
-    const concluidas = (projeto.tarefas ?? []).filter((item) => item.status === StatusTarefa.CONCLUIDA).length;
-    const percentualConclusao = totalTarefas > 0 ? Math.round((concluidas / totalTarefas) * 100) : projeto.percentualAndamento ?? 0;
+    const totalTarefas = tarefas.length;
+    const concluidas = tarefas.filter((t: any) => t.status === StatusTarefa.CONCLUIDA).length;
+    const percentualConclusao = totalTarefas > 0
+      ? Math.round((concluidas / totalTarefas) * 100)
+      : (projeto as any).percentualAndamento ?? 0;
 
-    return {
-      ...projeto,
-      painel: {
-        tarefasAIniciar,
-        tarefasAtrasadas,
-        percentualConclusao,
-        totalTarefas,
-      },
-    };
+    return Object.assign({}, projeto, {
+      painel: { tarefasAIniciar, tarefasAtrasadas, percentualConclusao, totalTarefas },
+    });
   }
 
   private async resolveClienteInterno(empresaId: string) {
@@ -494,6 +457,35 @@ export class ProjetosService {
         entregaveis,
       },
     };
+  }
+
+  private async loadProjetoDetalhado(id: string, isCliente: boolean) {
+    if (isCliente) {
+      return this.prisma.projeto.findFirst({
+        where: { id },
+        include: {
+          cliente: true, contrato: true, produtoServico: true,
+          responsavel: { select: { id: true, nome: true, email: true, perfil: true } },
+          _count: { select: { tarefas: true, entregaveis: true, documentos: true } },
+          tarefas: { where: { visivelCliente: true }, include: { responsavelUsuario: { select: { id: true, nome: true, email: true, perfil: true } }, labels: { include: { label: true } } }, orderBy: [{ ordem: 'asc' }, { prazo: 'asc' }, { createdAt: 'desc' }] },
+          entregaveis: { where: { visivelCliente: true }, orderBy: [{ dataPrevista: 'asc' }, { createdAt: 'desc' }] },
+          documentos: { where: { visivelCliente: true }, orderBy: [{ updatedAt: 'desc' }] },
+          etapas: { orderBy: { ordem: 'asc' } },
+        },
+      });
+    }
+    return this.prisma.projeto.findFirst({
+      where: { id },
+      include: {
+        cliente: true, contrato: true, produtoServico: true,
+        responsavel: { select: { id: true, nome: true, email: true, perfil: true } },
+        _count: { select: { tarefas: true, entregaveis: true, documentos: true } },
+        tarefas: { include: { responsavelUsuario: { select: { id: true, nome: true, email: true, perfil: true } }, labels: { include: { label: true } } }, orderBy: [{ ordem: 'asc' }, { prazo: 'asc' }, { createdAt: 'desc' }] },
+        entregaveis: { orderBy: [{ dataPrevista: 'asc' }, { createdAt: 'desc' }] },
+        documentos: { orderBy: [{ updatedAt: 'desc' }] },
+        etapas: { orderBy: { ordem: 'asc' } },
+      },
+    });
   }
 
   private defaultInclude() {

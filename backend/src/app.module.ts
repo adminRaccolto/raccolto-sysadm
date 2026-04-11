@@ -26,6 +26,8 @@ import { TarefasModule } from './tarefas/tarefas.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { ModelosDocumentoModule } from './modelos-documento/modelos-documento.module';
 import { DeslocamentosModule } from './deslocamentos/deslocamentos.module';
+import { BancosModule } from './bancos/bancos.module';
+import { FuncionariosModule } from './funcionarios/funcionarios.module';
 
 @Module({
   imports: [
@@ -51,6 +53,8 @@ import { DeslocamentosModule } from './deslocamentos/deslocamentos.module';
     CaptacaoModule,
     ModelosDocumentoModule,
     DeslocamentosModule,
+    BancosModule,
+    FuncionariosModule,
     SuporteModule,
     FaturamentoModule,
   ],

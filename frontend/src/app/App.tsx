@@ -19,6 +19,7 @@ import ContasPagarPage from '../pages/financeiro/ContasPagarPage';
 import TesourariaPage from '../pages/financeiro/TesourariaPage';
 import PlanoContasPage from '../pages/financeiro/PlanoContasPage';
 import ProjetoWorkspacePage from '../pages/ProjetoWorkspacePage';
+import MinhasTarefasPage from '../pages/projetos/MinhasTarefasPage';
 import TaskDetailPage from '../pages/TaskDetailPage';
 import EmpresasPage from '../pages/EmpresasPage';
 import UsuariosPage from '../pages/UsuariosPage';
@@ -28,6 +29,9 @@ import LearningPage from '../pages/LearningPage';
 import ModelosPage from '../pages/ModelosPage';
 import DeslocamentosPage from '../pages/DeslocamentosPage';
 import RepositorioPage from '../pages/RepositorioPage';
+import BancosPage from '../pages/sistema/BancosPage';
+import ContasBancariasPage from '../pages/sistema/ContasBancariasPage';
+import FuncionariosPage from '../pages/sistema/FuncionariosPage';
 
 export default function App() {
   return (
@@ -43,6 +47,7 @@ export default function App() {
         <Route path="faturamento" element={<FaturamentoPage />} />
         <Route path="contratos" element={<ContratosPage />} />
         <Route path="projetos" element={<ProjetosPage />} />
+        <Route path="projetos/minhas-tarefas" element={<MinhasTarefasPage />} />
         <Route path="projetos/:id" element={<ProjetoWorkspacePage />} />
         <Route path="projetos/:id/tarefas/:tarefaId" element={<TaskDetailPage />} />
         <Route path="financeiro" element={<FinanceiroPage />} />
@@ -59,6 +64,9 @@ export default function App() {
         <Route path="usuarios" element={<UsuariosPage />} />
         <Route path="perfis-acesso" element={<PerfisAcessoPage />} />
         <Route path="sistema" element={<SistemaPage />} />
+        <Route path="sistema/bancos" element={<BancosPage />} />
+        <Route path="sistema/contas" element={<ContasBancariasPage />} />
+        <Route path="sistema/funcionarios" element={<FuncionariosPage />} />
         <Route path="bi" element={<BiPage />} />
         <Route path="aprendizado" element={<LearningPage />} />
       </Route>

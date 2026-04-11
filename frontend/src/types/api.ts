@@ -58,7 +58,7 @@ export type StatusRecebivel = 'ABERTO' | 'PARCIALMENTE_RECEBIDO' | 'RECEBIDO' | 
 
 export type StatusContaPagar = 'ABERTO' | 'PAGO' | 'VENCIDO' | 'CANCELADO';
 export type TipoContaGerencial = 'RECEITA' | 'CUSTO' | 'DESPESA' | 'INVESTIMENTO' | 'TESOURARIA';
-export type TipoContaBancaria = 'CORRENTE' | 'POUPANCA' | 'CAIXA' | 'APLICACAO' | 'OUTRA';
+export type TipoContaBancaria = 'CORRENTE' | 'POUPANCA' | 'CAIXA' | 'APLICACAO' | 'TRANSITORIA' | 'INVESTIMENTO' | 'OUTRA';
 export type TipoLancamentoTesouraria = 'ENTRADA' | 'SAIDA' | 'TRANSFERENCIA' | 'AJUSTE';
 export type TipoDocumento =
   | 'CONTRATO'
@@ -264,6 +264,37 @@ export interface ProjetoPainel {
   totalTarefas: number;
 }
 
+export type StatusEtapa = 'PLANEJADA' | 'ATIVA' | 'CONCLUIDA' | 'CANCELADA';
+
+export interface ProjetoEtapa {
+  id: string;
+  projetoId: string;
+  nome: string;
+  meta?: string | null;
+  dataInicio: string;
+  dataFim: string;
+  status: StatusEtapa;
+  ordem: number;
+  createdAt: string;
+  _count?: { tarefas: number };
+}
+
+export interface TarefaLabel {
+  id: string;
+  empresaId: string;
+  nome: string;
+  cor: string;
+}
+
+export interface TarefaAtividade {
+  id: string;
+  tarefaId: string;
+  autorNome: string;
+  tipo: string;
+  detalhe?: string | null;
+  createdAt: string;
+}
+
 export interface Projeto {
   id: string;
   clienteId: string;
@@ -290,6 +321,7 @@ export interface Projeto {
   contaGerencialId?: string | null;
   responsavel?: UsuarioResumo | null;
   painel?: ProjetoPainel;
+  etapas?: ProjetoEtapa[];
   _count?: {
     tarefas: number;
     entregaveis: number;
@@ -309,6 +341,7 @@ export interface HistoricoComentario {
 export interface Tarefa {
   id: string;
   projetoId: string;
+  etapaId?: string | null;
   atribuicaoTipo: TipoAtribuicaoTarefa;
   responsavelUsuarioId?: string | null;
   responsavelClienteId?: string | null;
@@ -321,6 +354,9 @@ export interface Tarefa {
   subtarefasJson?: Array<{ titulo?: string; concluida?: boolean }> | null;
   prioridade: PrioridadeTarefa;
   prazo?: string | null;
+  estimativaHoras?: number | null;
+  horasRegistradas?: number;
+  ordem?: number;
   status: StatusTarefa;
   visivelCliente: boolean;
   concluidaEm?: string | null;
@@ -331,6 +367,9 @@ export interface Tarefa {
     visivelCliente?: boolean;
     interno?: boolean;
   };
+  etapa?: { id: string; nome: string; status: string } | null;
+  labels?: Array<{ label: TarefaLabel }>;
+  atividades?: TarefaAtividade[];
   responsavelUsuario?: UsuarioResumo | null;
   responsavelCliente?: {
     id: string;
@@ -383,16 +422,57 @@ export interface ContaGerencial {
   };
 }
 
+export interface Banco {
+  id: string;
+  codigo: string;
+  nome: string;
+  ativo: boolean;
+}
+
 export interface ContaBancaria {
   id: string;
+  bancoId?: string | null;
+  bancoRef?: Banco | null;
   nome: string;
   banco?: string | null;
   agencia?: string | null;
   numeroConta?: string | null;
+  chavePix?: string | null;
   tipo: TipoContaBancaria;
   saldoInicial: number;
   saldoAtual: number;
+  incluiFluxoCaixa: boolean;
   ativo: boolean;
+}
+
+export interface Funcionario {
+  id: string;
+  empresaId: string;
+  nome: string;
+  cpf?: string | null;
+  email?: string | null;
+  telefone?: string | null;
+  cargo?: string | null;
+  vinculo: string;
+  salario?: number | null;
+  dataAdmissao?: string | null;
+  dataDemissao?: string | null;
+  dataNascimento?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  cep?: string | null;
+  contaBancariaNome?: string | null;
+  contaBancariaAgencia?: string | null;
+  contaBancariaConta?: string | null;
+  contaBancariaBanco?: string | null;
+  contaBancariaPix?: string | null;
+  ativo: boolean;
+  observacoes?: string | null;
+  createdAt: string;
 }
 
 export interface ContaPagar {
