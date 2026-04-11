@@ -206,7 +206,7 @@ export default function ProjetoWorkspacePage() {
   const [showDocumentoDrawer, setShowDocumentoDrawer] = useState(false);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   // pre-fill etapaId when adding task from backlog group
-  const [taskDrawerEtapaId, setTaskDrawerEtapaId] = useState<string>('');
+  const [, setTaskDrawerEtapaId] = useState<string>('');
 
   async function loadData() {
     if (!id) return;
