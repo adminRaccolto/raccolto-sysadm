@@ -745,29 +745,6 @@ export default function ProjetoWorkspacePage() {
             )}
           </div>
 
-          {showEtapaDrawer ? (
-            <aside className="side-drawer">
-              <form className="panel form-grid form-grid--wide" onSubmit={handleEtapaSubmit}>
-                <div className="panel__header panel__header--row">
-                  <div><h3>{etapaForm.id ? 'Editar fase' : 'Nova fase'}</h3></div>
-                  <button className="button button--ghost button--small" type="button" onClick={() => { setShowEtapaDrawer(false); resetEtapaForm(); }}>Fechar</button>
-                </div>
-                <div className="field field--span-2"><label>Nome da fase</label><input value={etapaForm.nome} onChange={(e) => setEtapaForm((c) => ({ ...c, nome: e.target.value }))} required /></div>
-                <div className="field field--span-2"><label>Meta / objetivo</label><textarea rows={2} value={etapaForm.meta} onChange={(e) => setEtapaForm((c) => ({ ...c, meta: e.target.value }))} /></div>
-                <div className="field"><label>Data de início</label><input type="date" value={etapaForm.dataInicio} onChange={(e) => setEtapaForm((c) => ({ ...c, dataInicio: e.target.value }))} required /></div>
-                <div className="field"><label>Data de fim</label><input type="date" value={etapaForm.dataFim} onChange={(e) => setEtapaForm((c) => ({ ...c, dataFim: e.target.value }))} required /></div>
-                <div className="field"><label>Status</label>
-                  <select value={etapaForm.status} onChange={(e) => setEtapaForm((c) => ({ ...c, status: e.target.value as StatusEtapa }))}>
-                    <option value="PLANEJADA">Planejada</option>
-                    <option value="ATIVA">Ativa</option>
-                    <option value="CONCLUIDA">Concluída</option>
-                    <option value="CANCELADA">Cancelada</option>
-                  </select>
-                </div>
-                <button className="button" type="submit" disabled={savingEtapa}>{savingEtapa ? 'Salvando...' : etapaForm.id ? 'Salvar fase' : 'Criar fase'}</button>
-              </form>
-            </aside>
-          ) : null}
         </section>
       ) : null}
 
@@ -869,21 +846,6 @@ export default function ProjetoWorkspacePage() {
             )}
           </div>
 
-          {showTaskDrawer ? (
-            <aside className="side-drawer">
-              <TaskDrawerForm
-                taskForm={taskForm}
-                setTaskForm={setTaskForm}
-                etapas={etapas}
-                usuarios={usuarios}
-                clientes={clientes}
-                projeto={projeto}
-                saving={savingTask}
-                onSubmit={handleTaskSubmit}
-                onClose={() => { setShowTaskDrawer(false); resetTaskForm(); }}
-              />
-            </aside>
-          ) : null}
         </section>
       ) : null}
 
@@ -1026,21 +988,6 @@ export default function ProjetoWorkspacePage() {
             ) : null}
           </div>
 
-          {showTaskDrawer ? (
-            <aside className="side-drawer">
-              <TaskDrawerForm
-                taskForm={taskForm}
-                setTaskForm={setTaskForm}
-                etapas={etapas}
-                usuarios={usuarios}
-                clientes={clientes}
-                projeto={projeto}
-                saving={savingTask}
-                onSubmit={handleTaskSubmit}
-                onClose={() => { setShowTaskDrawer(false); resetTaskForm(); }}
-              />
-            </aside>
-          ) : null}
         </section>
       ) : null}
 
@@ -1080,27 +1027,6 @@ export default function ProjetoWorkspacePage() {
             )}
           </div>
 
-          {showEntregavelDrawer ? (
-            <aside className="side-drawer">
-              <form className="panel form-grid form-grid--wide" onSubmit={handleEntregavelSubmit}>
-                <div className="panel__header panel__header--row">
-                  <div><h3>{entregavelForm.id ? 'Editar entregável' : 'Novo entregável'}</h3></div>
-                  <button className="button button--ghost button--small" type="button" onClick={() => { setShowEntregavelDrawer(false); resetEntregavelForm(); }}>Fechar</button>
-                </div>
-                <div className="field field--span-2"><label>Título</label><input value={entregavelForm.titulo} onChange={(e) => setEntregavelForm((c) => ({ ...c, titulo: e.target.value }))} required /></div>
-                <div className="field"><label>Tipo</label><select value={entregavelForm.tipo} onChange={(e) => setEntregavelForm((c) => ({ ...c, tipo: e.target.value as TipoEntregavel }))}><option value="RELATORIO">Relatório</option><option value="PLANILHA">Planilha</option><option value="APRESENTACAO">Apresentação</option><option value="PARECER">Parecer</option><option value="DIAGNOSTICO">Diagnóstico</option><option value="PLANO_DE_ACAO">Plano de ação</option><option value="ATA">Ata</option><option value="DOCUMENTO">Documento</option><option value="OUTRO">Outro</option></select></div>
-                <div className="field"><label>Status</label><select value={entregavelForm.status} onChange={(e) => setEntregavelForm((c) => ({ ...c, status: e.target.value as StatusEntregavel }))}><option value="PLANEJADO">Planejado</option><option value="EM_PRODUCAO">Em produção</option><option value="EM_REVISAO">Em revisão</option><option value="AGUARDANDO_APROVACAO">Aguardando aprovação</option><option value="CONCLUIDO">Concluído</option><option value="CANCELADO">Cancelado</option></select></div>
-                <div className="field"><label>Data prevista</label><input type="date" value={entregavelForm.dataPrevista} onChange={(e) => setEntregavelForm((c) => ({ ...c, dataPrevista: e.target.value }))} /></div>
-                <div className="field field--checkbox"><label><input type="checkbox" checked={projeto.interno ? false : entregavelForm.visivelCliente} disabled={projeto.interno} onChange={(e) => setEntregavelForm((c) => ({ ...c, visivelCliente: e.target.checked }))} />Visível para cliente</label></div>
-                <div className="field field--span-2"><label>Descrição</label><textarea rows={3} value={entregavelForm.descricao} onChange={(e) => setEntregavelForm((c) => ({ ...c, descricao: e.target.value }))} /></div>
-                <div className="field field--span-2"><label>Anexo (URL)</label><input value={entregavelForm.anexoUrl} onChange={(e) => setEntregavelForm((c) => ({ ...c, anexoUrl: e.target.value }))} placeholder="https://..." /></div>
-                <div className="field field--span-2"><label>Comentário</label><textarea rows={2} value={entregavelForm.comentarioResumo} onChange={(e) => setEntregavelForm((c) => ({ ...c, comentarioResumo: e.target.value }))} /></div>
-                <div className="field field--span-2"><label>Observação interna</label><textarea rows={2} value={entregavelForm.observacaoInterna} onChange={(e) => setEntregavelForm((c) => ({ ...c, observacaoInterna: e.target.value }))} /></div>
-                <div className="field field--span-2"><label>Observação ao cliente</label><textarea rows={2} value={entregavelForm.observacaoCliente} onChange={(e) => setEntregavelForm((c) => ({ ...c, observacaoCliente: e.target.value }))} /></div>
-                <button className="button" type="submit" disabled={savingEntregavel}>{savingEntregavel ? 'Salvando...' : entregavelForm.id ? 'Salvar entregável' : 'Criar entregável'}</button>
-              </form>
-            </aside>
-          ) : null}
         </section>
       ) : null}
 
@@ -1139,35 +1065,108 @@ export default function ProjetoWorkspacePage() {
               </div>
             )}
           </div>
-          {showDocumentoDrawer ? (
-            <aside className="side-drawer">
-              <form className="panel form-grid form-grid--wide" onSubmit={handleDocumentoSubmit}>
-                <div className="panel__header panel__header--row">
-                  <div><h3>{documentoForm.id ? 'Editar documento' : 'Novo documento'}</h3></div>
-                  <button className="button button--ghost button--small" type="button" onClick={() => { setShowDocumentoDrawer(false); resetDocumentoForm(); }}>Fechar</button>
-                </div>
-                <div className="field field--span-2"><label>Nome</label><input value={documentoForm.nome} onChange={(e) => setDocumentoForm((c) => ({ ...c, nome: e.target.value }))} required /></div>
-                <div className="field"><label>Tipo</label><select value={documentoForm.tipo} onChange={(e) => setDocumentoForm((c) => ({ ...c, tipo: e.target.value as TipoDocumento }))}><option value="CONTRATO">Contrato</option><option value="RELATORIO_CONSULTORIA">Relatório consultoria</option><option value="RELATORIO_DESLOCAMENTO">Relatório deslocamento</option><option value="REEMBOLSO">Reembolso</option><option value="TERMO_ENTREGA">Termo de entrega</option><option value="APROVACAO">Aprovação</option><option value="ENTREGAVEL">Entregável</option><option value="OUTRO">Outro</option></select></div>
-                <div className="field"><label>Status</label><select value={documentoForm.status} onChange={(e) => setDocumentoForm((c) => ({ ...c, status: e.target.value as StatusDocumento }))}><option value="RASCUNHO">Rascunho</option><option value="ENVIADO">Enviado</option><option value="AGUARDANDO_ASSINATURA">Aguardando assinatura</option><option value="APROVADO">Aprovado</option><option value="ASSINADO">Assinado</option><option value="ARQUIVADO">Arquivado</option><option value="CANCELADO">Cancelado</option></select></div>
-                <div className="field field--span-2"><label>Descrição</label><textarea rows={3} value={documentoForm.descricao} onChange={(e) => setDocumentoForm((c) => ({ ...c, descricao: e.target.value }))} /></div>
-                <div className="field field--span-2 file-upload-row">
-                  <label>Anexo do documento</label>
-                  <input type="file" onChange={(e) => setArquivoDocumentoLocal(e.target.files?.[0] || null)} />
-                  {arquivoDocumentoLocal ? <div className="file-upload-meta">Arquivo selecionado: {arquivoDocumentoLocal.name}</div> : null}
-                  {documentoForm.arquivoUrl ? <div className="file-upload-meta">Arquivo atual: <a href={documentoForm.arquivoUrl} target="_blank" rel="noreferrer">abrir anexo</a></div> : null}
-                </div>
-                <div className="field field--span-2"><label>Arquivo por URL (opcional)</label><input value={documentoForm.arquivoUrl} onChange={(e) => setDocumentoForm((c) => ({ ...c, arquivoUrl: e.target.value }))} placeholder="https://..." /></div>
-                <div className="field"><label>Versão</label><input value={documentoForm.versao} onChange={(e) => setDocumentoForm((c) => ({ ...c, versao: e.target.value }))} /></div>
-                <div className="field field--checkbox"><label><input type="checkbox" checked={projeto.interno ? false : documentoForm.visivelCliente} disabled={projeto.interno} onChange={(e) => setDocumentoForm((c) => ({ ...c, visivelCliente: e.target.checked }))} />Visível para cliente</label></div>
-                <div className="field field--checkbox"><label><input type="checkbox" checked={documentoForm.exigeAssinatura} onChange={(e) => setDocumentoForm((c) => ({ ...c, exigeAssinatura: e.target.checked }))} />Exige assinatura</label></div>
-                <div className="field field--checkbox"><label><input type="checkbox" checked={documentoForm.exigeAprovacao} onChange={(e) => setDocumentoForm((c) => ({ ...c, exigeAprovacao: e.target.checked }))} />Exige aprovação</label></div>
-                <div className="field field--span-2"><label>Observação interna</label><textarea rows={2} value={documentoForm.observacaoInterna} onChange={(e) => setDocumentoForm((c) => ({ ...c, observacaoInterna: e.target.value }))} /></div>
-                <div className="field field--span-2"><label>Observação ao cliente</label><textarea rows={2} value={documentoForm.observacaoCliente} onChange={(e) => setDocumentoForm((c) => ({ ...c, observacaoCliente: e.target.value }))} /></div>
-                <button className="button" type="submit" disabled={savingDocumento || uploadingDocumentoLocal}>{savingDocumento || uploadingDocumentoLocal ? 'Salvando...' : documentoForm.id ? 'Salvar documento' : 'Criar documento'}</button>
-              </form>
-            </aside>
-          ) : null}
         </section>
+      ) : null}
+
+      {/* ── OVERLAYS (all drawers rendered as fixed overlays) ─────────────── */}
+
+      {showTaskDrawer ? (
+        <div className="drawer-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowTaskDrawer(false); resetTaskForm(); } }}>
+          <aside className="side-drawer">
+            <TaskDrawerForm
+              taskForm={taskForm}
+              setTaskForm={setTaskForm}
+              etapas={etapas}
+              usuarios={usuarios}
+              clientes={clientes}
+              projeto={projeto}
+              saving={savingTask}
+              onSubmit={handleTaskSubmit}
+              onClose={() => { setShowTaskDrawer(false); resetTaskForm(); }}
+            />
+          </aside>
+        </div>
+      ) : null}
+
+      {showEtapaDrawer ? (
+        <div className="drawer-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowEtapaDrawer(false); resetEtapaForm(); } }}>
+          <aside className="side-drawer">
+            <form className="panel form-grid form-grid--wide" onSubmit={handleEtapaSubmit}>
+              <div className="panel__header panel__header--row">
+                <div><h3>{etapaForm.id ? 'Editar fase' : 'Nova fase'}</h3></div>
+                <button className="button button--ghost button--small" type="button" onClick={() => { setShowEtapaDrawer(false); resetEtapaForm(); }}>Fechar</button>
+              </div>
+              <div className="field field--span-2"><label>Nome da fase</label><input value={etapaForm.nome} onChange={(e) => setEtapaForm((c) => ({ ...c, nome: e.target.value }))} required /></div>
+              <div className="field field--span-2"><label>Meta / objetivo</label><textarea rows={2} value={etapaForm.meta} onChange={(e) => setEtapaForm((c) => ({ ...c, meta: e.target.value }))} /></div>
+              <div className="field"><label>Data de início</label><input type="date" value={etapaForm.dataInicio} onChange={(e) => setEtapaForm((c) => ({ ...c, dataInicio: e.target.value }))} required /></div>
+              <div className="field"><label>Data de fim</label><input type="date" value={etapaForm.dataFim} onChange={(e) => setEtapaForm((c) => ({ ...c, dataFim: e.target.value }))} required /></div>
+              <div className="field"><label>Status</label>
+                <select value={etapaForm.status} onChange={(e) => setEtapaForm((c) => ({ ...c, status: e.target.value as StatusEtapa }))}>
+                  <option value="PLANEJADA">Planejada</option>
+                  <option value="ATIVA">Ativa</option>
+                  <option value="CONCLUIDA">Concluída</option>
+                  <option value="CANCELADA">Cancelada</option>
+                </select>
+              </div>
+              <button className="button" type="submit" disabled={savingEtapa}>{savingEtapa ? 'Salvando...' : etapaForm.id ? 'Salvar fase' : 'Criar fase'}</button>
+            </form>
+          </aside>
+        </div>
+      ) : null}
+
+      {showEntregavelDrawer ? (
+        <div className="drawer-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowEntregavelDrawer(false); resetEntregavelForm(); } }}>
+          <aside className="side-drawer">
+            <form className="panel form-grid form-grid--wide" onSubmit={handleEntregavelSubmit}>
+              <div className="panel__header panel__header--row">
+                <div><h3>{entregavelForm.id ? 'Editar entregável' : 'Novo entregável'}</h3></div>
+                <button className="button button--ghost button--small" type="button" onClick={() => { setShowEntregavelDrawer(false); resetEntregavelForm(); }}>Fechar</button>
+              </div>
+              <div className="field field--span-2"><label>Título</label><input value={entregavelForm.titulo} onChange={(e) => setEntregavelForm((c) => ({ ...c, titulo: e.target.value }))} required /></div>
+              <div className="field"><label>Tipo</label><select value={entregavelForm.tipo} onChange={(e) => setEntregavelForm((c) => ({ ...c, tipo: e.target.value as TipoEntregavel }))}><option value="RELATORIO">Relatório</option><option value="PLANILHA">Planilha</option><option value="APRESENTACAO">Apresentação</option><option value="PARECER">Parecer</option><option value="DIAGNOSTICO">Diagnóstico</option><option value="PLANO_DE_ACAO">Plano de ação</option><option value="ATA">Ata</option><option value="DOCUMENTO">Documento</option><option value="OUTRO">Outro</option></select></div>
+              <div className="field"><label>Status</label><select value={entregavelForm.status} onChange={(e) => setEntregavelForm((c) => ({ ...c, status: e.target.value as StatusEntregavel }))}><option value="PLANEJADO">Planejado</option><option value="EM_PRODUCAO">Em produção</option><option value="EM_REVISAO">Em revisão</option><option value="AGUARDANDO_APROVACAO">Aguardando aprovação</option><option value="CONCLUIDO">Concluído</option><option value="CANCELADO">Cancelado</option></select></div>
+              <div className="field"><label>Data prevista</label><input type="date" value={entregavelForm.dataPrevista} onChange={(e) => setEntregavelForm((c) => ({ ...c, dataPrevista: e.target.value }))} /></div>
+              <div className="field field--checkbox"><label><input type="checkbox" checked={projeto.interno ? false : entregavelForm.visivelCliente} disabled={projeto.interno} onChange={(e) => setEntregavelForm((c) => ({ ...c, visivelCliente: e.target.checked }))} />Visível para cliente</label></div>
+              <div className="field field--span-2"><label>Descrição</label><textarea rows={3} value={entregavelForm.descricao} onChange={(e) => setEntregavelForm((c) => ({ ...c, descricao: e.target.value }))} /></div>
+              <div className="field field--span-2"><label>Anexo (URL)</label><input value={entregavelForm.anexoUrl} onChange={(e) => setEntregavelForm((c) => ({ ...c, anexoUrl: e.target.value }))} placeholder="https://..." /></div>
+              <div className="field field--span-2"><label>Comentário</label><textarea rows={2} value={entregavelForm.comentarioResumo} onChange={(e) => setEntregavelForm((c) => ({ ...c, comentarioResumo: e.target.value }))} /></div>
+              <div className="field field--span-2"><label>Observação interna</label><textarea rows={2} value={entregavelForm.observacaoInterna} onChange={(e) => setEntregavelForm((c) => ({ ...c, observacaoInterna: e.target.value }))} /></div>
+              <div className="field field--span-2"><label>Observação ao cliente</label><textarea rows={2} value={entregavelForm.observacaoCliente} onChange={(e) => setEntregavelForm((c) => ({ ...c, observacaoCliente: e.target.value }))} /></div>
+              <button className="button" type="submit" disabled={savingEntregavel}>{savingEntregavel ? 'Salvando...' : entregavelForm.id ? 'Salvar entregável' : 'Criar entregável'}</button>
+            </form>
+          </aside>
+        </div>
+      ) : null}
+
+      {showDocumentoDrawer ? (
+        <div className="drawer-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowDocumentoDrawer(false); resetDocumentoForm(); } }}>
+          <aside className="side-drawer">
+            <form className="panel form-grid form-grid--wide" onSubmit={handleDocumentoSubmit}>
+              <div className="panel__header panel__header--row">
+                <div><h3>{documentoForm.id ? 'Editar documento' : 'Novo documento'}</h3></div>
+                <button className="button button--ghost button--small" type="button" onClick={() => { setShowDocumentoDrawer(false); resetDocumentoForm(); }}>Fechar</button>
+              </div>
+              <div className="field field--span-2"><label>Nome</label><input value={documentoForm.nome} onChange={(e) => setDocumentoForm((c) => ({ ...c, nome: e.target.value }))} required /></div>
+              <div className="field"><label>Tipo</label><select value={documentoForm.tipo} onChange={(e) => setDocumentoForm((c) => ({ ...c, tipo: e.target.value as TipoDocumento }))}><option value="CONTRATO">Contrato</option><option value="RELATORIO_CONSULTORIA">Relatório consultoria</option><option value="RELATORIO_DESLOCAMENTO">Relatório deslocamento</option><option value="REEMBOLSO">Reembolso</option><option value="TERMO_ENTREGA">Termo de entrega</option><option value="APROVACAO">Aprovação</option><option value="ENTREGAVEL">Entregável</option><option value="OUTRO">Outro</option></select></div>
+              <div className="field"><label>Status</label><select value={documentoForm.status} onChange={(e) => setDocumentoForm((c) => ({ ...c, status: e.target.value as StatusDocumento }))}><option value="RASCUNHO">Rascunho</option><option value="ENVIADO">Enviado</option><option value="AGUARDANDO_ASSINATURA">Aguardando assinatura</option><option value="APROVADO">Aprovado</option><option value="ASSINADO">Assinado</option><option value="ARQUIVADO">Arquivado</option><option value="CANCELADO">Cancelado</option></select></div>
+              <div className="field field--span-2"><label>Descrição</label><textarea rows={3} value={documentoForm.descricao} onChange={(e) => setDocumentoForm((c) => ({ ...c, descricao: e.target.value }))} /></div>
+              <div className="field field--span-2 file-upload-row">
+                <label>Anexo do documento</label>
+                <input type="file" onChange={(e) => setArquivoDocumentoLocal(e.target.files?.[0] || null)} />
+                {arquivoDocumentoLocal ? <div className="file-upload-meta">Arquivo selecionado: {arquivoDocumentoLocal.name}</div> : null}
+                {documentoForm.arquivoUrl ? <div className="file-upload-meta">Arquivo atual: <a href={documentoForm.arquivoUrl} target="_blank" rel="noreferrer">abrir anexo</a></div> : null}
+              </div>
+              <div className="field field--span-2"><label>Arquivo por URL (opcional)</label><input value={documentoForm.arquivoUrl} onChange={(e) => setDocumentoForm((c) => ({ ...c, arquivoUrl: e.target.value }))} placeholder="https://..." /></div>
+              <div className="field"><label>Versão</label><input value={documentoForm.versao} onChange={(e) => setDocumentoForm((c) => ({ ...c, versao: e.target.value }))} /></div>
+              <div className="field field--checkbox"><label><input type="checkbox" checked={projeto.interno ? false : documentoForm.visivelCliente} disabled={projeto.interno} onChange={(e) => setDocumentoForm((c) => ({ ...c, visivelCliente: e.target.checked }))} />Visível para cliente</label></div>
+              <div className="field field--checkbox"><label><input type="checkbox" checked={documentoForm.exigeAssinatura} onChange={(e) => setDocumentoForm((c) => ({ ...c, exigeAssinatura: e.target.checked }))} />Exige assinatura</label></div>
+              <div className="field field--checkbox"><label><input type="checkbox" checked={documentoForm.exigeAprovacao} onChange={(e) => setDocumentoForm((c) => ({ ...c, exigeAprovacao: e.target.checked }))} />Exige aprovação</label></div>
+              <div className="field field--span-2"><label>Observação interna</label><textarea rows={2} value={documentoForm.observacaoInterna} onChange={(e) => setDocumentoForm((c) => ({ ...c, observacaoInterna: e.target.value }))} /></div>
+              <div className="field field--span-2"><label>Observação ao cliente</label><textarea rows={2} value={documentoForm.observacaoCliente} onChange={(e) => setDocumentoForm((c) => ({ ...c, observacaoCliente: e.target.value }))} /></div>
+              <button className="button" type="submit" disabled={savingDocumento || uploadingDocumentoLocal}>{savingDocumento || uploadingDocumentoLocal ? 'Salvando...' : documentoForm.id ? 'Salvar documento' : 'Criar documento'}</button>
+            </form>
+          </aside>
+        </div>
       ) : null}
     </div>
   );
