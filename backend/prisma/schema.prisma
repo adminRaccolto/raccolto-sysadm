@@ -213,12 +213,23 @@ model Empresa {
   logoUrl      String?
   infBancarias String?
   status       StatusEmpresa    @default(ATIVA)
-  // Configuração fiscal para NFS-e
+  // Configuração da empresa
+  regimeTributario          String?  // SIMPLES | LUCRO_PRESUMIDO | LUCRO_REAL | MEI
+  inscricaoEstadual         String?
+  inscricaoMunicipal        String?
+  certificadoDigitalValidade String?
+  certificadoDigitalStatus  String?
+  certificadoDigitalUrl     String?  // URL do .pfx no R2
+  certificadoDigitalSenha   String?  // senha do certificado (criptografar no futuro)
+  // Configuração fiscal NFS-e
   issAliquota               Float?   @default(5.0)
   itemListaServico          String?  // ex: "17.06" (LC 116/2003)
   codigoTributacaoMunicipio String?
   cnaeServico               String?
   enotasEmpresaId           String?  // ID da empresa no eNotas
+  enotasToken               String?
+  nfseAtivo                 Boolean  @default(false)
+  nfseAmbiente              String   @default("homologacao")
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   usuarios     Usuario[]

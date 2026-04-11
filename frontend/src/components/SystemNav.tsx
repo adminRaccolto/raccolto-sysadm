@@ -1,8 +1,7 @@
 import { NavLink } from 'react-router-dom';
 
 const items = [
-  { to: '/sistema', label: 'Identidade & Saúde' },
-  { to: '/empresas', label: 'Empresas' },
+  { to: '/sistema', label: 'Empresa' },
   { to: '/usuarios', label: 'Usuários' },
   { to: '/perfis-acesso', label: 'Perfis & Permissões' },
 ];

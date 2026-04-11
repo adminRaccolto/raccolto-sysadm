@@ -135,6 +135,23 @@ export class EmpresasService {
         representanteCargo: data.representanteCargo !== undefined ? data.representanteCargo?.trim() || null : undefined,
         logoUrl: data.logoUrl !== undefined ? data.logoUrl?.trim() || null : undefined,
         infBancarias: data.infBancarias !== undefined ? data.infBancarias?.trim() || null : undefined,
+        // Configuração da empresa
+        regimeTributario: data.regimeTributario !== undefined ? data.regimeTributario?.trim() || null : undefined,
+        inscricaoEstadual: data.inscricaoEstadual !== undefined ? data.inscricaoEstadual?.trim() || null : undefined,
+        inscricaoMunicipal: data.inscricaoMunicipal !== undefined ? data.inscricaoMunicipal?.trim() || null : undefined,
+        certificadoDigitalValidade: data.certificadoDigitalValidade !== undefined ? data.certificadoDigitalValidade?.trim() || null : undefined,
+        certificadoDigitalStatus: data.certificadoDigitalStatus !== undefined ? data.certificadoDigitalStatus?.trim() || null : undefined,
+        certificadoDigitalUrl: data.certificadoDigitalUrl !== undefined ? data.certificadoDigitalUrl?.trim() || null : undefined,
+        certificadoDigitalSenha: data.certificadoDigitalSenha !== undefined ? data.certificadoDigitalSenha?.trim() || null : undefined,
+        // Configuração fiscal
+        issAliquota: data.issAliquota !== undefined ? data.issAliquota : undefined,
+        itemListaServico: data.itemListaServico !== undefined ? data.itemListaServico?.trim() || null : undefined,
+        codigoTributacaoMunicipio: data.codigoTributacaoMunicipio !== undefined ? data.codigoTributacaoMunicipio?.trim() || null : undefined,
+        cnaeServico: data.cnaeServico !== undefined ? data.cnaeServico?.trim() || null : undefined,
+        enotasEmpresaId: data.enotasEmpresaId !== undefined ? data.enotasEmpresaId?.trim() || null : undefined,
+        enotasToken: data.enotasToken !== undefined ? data.enotasToken?.trim() || null : undefined,
+        nfseAtivo: data.nfseAtivo !== undefined ? data.nfseAtivo : undefined,
+        nfseAmbiente: data.nfseAmbiente !== undefined ? data.nfseAmbiente?.trim() || 'homologacao' : undefined,
       },
       include: { _count: { select: { usuarios: true, clientes: true, contratos: true, projetos: true } } },
     });

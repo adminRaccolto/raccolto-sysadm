@@ -60,6 +60,34 @@ export class EmpresasController {
   }
 
   @Roles(PerfilUsuario.ADMIN)
+  @Post('me/certificado')
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }))
+  async uploadCertificado(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('senha') senha?: string,
+  ) {
+    if (!file) throw new BadRequestException('Nenhum arquivo de certificado enviado.');
+    try {
+      const url = await this.storageService.uploadFile(
+        file.buffer,
+        file.originalname,
+        file.mimetype,
+        'certificados',
+      );
+      return this.empresasService.updateCurrent(user.empresaId, {
+        certificadoDigitalUrl: url,
+        certificadoDigitalStatus: 'Enviado',
+        ...(senha ? { certificadoDigitalSenha: senha } : {}),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Falha no upload de certificado: ${msg}`);
+      throw new InternalServerErrorException(`Falha no upload: ${msg}`);
+    }
+  }
+
+  @Roles(PerfilUsuario.ADMIN)
   @Post()
   async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateEmpresaDto) {
     return this.empresasService.create(body, user.id);
