@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Feedback from '../components/Feedback';
@@ -52,15 +52,6 @@ export default function LoginPage() {
     void loadEmpresas();
   }, []);
 
-  const empresaSelecionada = empresas.find((item) => item.id === empresaSelecionadaId) ?? null;
-
-  const heroText = useMemo(
-    () =>
-      mode === 'login'
-        ? 'Selecione a empresa primeiro e depois entre com seu usuário. O acesso é validado dentro do contexto empresarial escolhido.'
-        : 'Use o primeiro acesso apenas quando o banco estiver vazio para criar a empresa inicial e o usuário administrador.',
-    [mode],
-  );
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,44 +108,56 @@ export default function LoginPage() {
 
   return (
     <div className="auth-shell">
+      {/* ── Hero (esquerda) ───────────────────────────────────── */}
       <section className="auth-hero">
-        {import.meta.env.VITE_BRAND_LOGO_URL ? (
-          <img src={import.meta.env.VITE_BRAND_LOGO_URL as string} alt="Logo" className="auth-hero__brand-logo" />
-        ) : (
-          <div className="auth-hero__badge">Raccolto Web</div>
-        )}
-        <h1>Selecione a empresa antes do login e acesse o ambiente correto.</h1>
-        <p>{heroText}</p>
-        <div className="auth-hero__highlights">
-          <div>
-            <strong>Empresa primeiro</strong>
-            <span>O acesso já nasce no contexto correto e segregado por empresa.</span>
-          </div>
-          <div>
-            <strong>Segurança</strong>
-            <span>Usuários só entram nas empresas às quais estão vinculados.</span>
-          </div>
-          <div>
-            <strong>Operação</strong>
-            <span>Clientes, contratos, projetos e notificações dentro da empresa certa.</span>
+        <div>
+          {import.meta.env.VITE_BRAND_LOGO_URL ? (
+            <img src={import.meta.env.VITE_BRAND_LOGO_URL as string} alt="Logo" className="auth-hero__brand-logo" />
+          ) : (
+            <div className="auth-hero__badge">Raccolto</div>
+          )}
+        </div>
+
+        <div className="auth-hero__body">
+          <h1>Gestão inteligente de clientes, contratos e projetos.</h1>
+          <p>Tudo que sua equipe precisa para operar com agilidade — num só lugar, separado por empresa.</p>
+          <div className="auth-hero__highlights">
+            <div>
+              <div>
+                <strong>Contexto por empresa</strong>
+                <span>Acesso já nasce segregado. Cada usuário vê apenas o que é seu.</span>
+              </div>
+            </div>
+            <div>
+              <div>
+                <strong>Contratos e assinatura digital</strong>
+                <span>Do rascunho à assinatura com integração Autentique.</span>
+              </div>
+            </div>
+            <div>
+              <div>
+                <strong>Projetos e tarefas</strong>
+                <span>Kanban, fases, entregáveis e documentos por projeto.</span>
+              </div>
+            </div>
           </div>
         </div>
+
+        <p className="auth-hero__footer">© {new Date().getFullYear()} Raccolto · Todos os direitos reservados</p>
       </section>
 
+      {/* ── Painel de login (direita) ─────────────────────────── */}
       <section className="auth-panel">
+        <p className="auth-panel__title">Bem-vindo de volta</p>
+        <p className="auth-panel__subtitle">
+          {mode === 'login' ? 'Selecione a empresa e entre com seu acesso.' : 'Configure o ambiente inicial da plataforma.'}
+        </p>
+
         <div className="auth-tabs">
-          <button
-            type="button"
-            className={mode === 'login' ? 'auth-tab auth-tab--active' : 'auth-tab'}
-            onClick={() => setMode('login')}
-          >
+          <button type="button" className={mode === 'login' ? 'auth-tab auth-tab--active' : 'auth-tab'} onClick={() => setMode('login')}>
             Entrar
           </button>
-          <button
-            type="button"
-            className={mode === 'bootstrap' ? 'auth-tab auth-tab--active' : 'auth-tab'}
-            onClick={() => setMode('bootstrap')}
-          >
+          <button type="button" className={mode === 'bootstrap' ? 'auth-tab auth-tab--active' : 'auth-tab'} onClick={() => setMode('bootstrap')}>
             Primeiro acesso
           </button>
         </div>
@@ -163,17 +166,15 @@ export default function LoginPage() {
         {success ? <Feedback type="success" message={success} /> : null}
 
         {mode === 'login' ? (
-          <div className="compact-gap">
-            <div className="panel compact-gap">
-              <div className="panel__header">
-                <h3>1. Selecione a empresa</h3>
-                <p>Escolha a empresa para abrir o contexto correto antes do login.</p>
-              </div>
-              {loadingEmpresas ? <p className="muted">Carregando empresas...</p> : null}
-              {!loadingEmpresas && empresas.length === 0 ? (
-                <p className="muted">Nenhuma empresa encontrada. Use o primeiro acesso para criar a empresa inicial.</p>
-              ) : null}
-              <div className="company-picker-grid">
+          <>
+            {/* Seleção de empresa */}
+            <p className="auth-company-step">1 · Selecione a empresa</p>
+            {loadingEmpresas ? (
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>Carregando...</p>
+            ) : empresas.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>Nenhuma empresa encontrada. Use o primeiro acesso.</p>
+            ) : (
+              <div className="company-picker-grid" style={{ marginBottom: 20 }}>
                 {empresas.map((empresa) => (
                   <button
                     key={empresa.id}
@@ -195,97 +196,57 @@ export default function LoginPage() {
                   </button>
                 ))}
               </div>
-            </div>
+            )}
 
-            <form className="panel form-grid" onSubmit={handleLogin}>
-              <div className="panel__header">
-                <h3>2. Entre na empresa selecionada</h3>
-                <p>{empresaSelecionada ? `Acesso para ${empresaSelecionada.nomeFantasia || empresaSelecionada.nome}.` : 'Escolha a empresa acima para continuar.'}</p>
-              </div>
-
-              <div className="field">
-                <label>Empresa selecionada</label>
-                <input value={empresaSelecionada ? empresaSelecionada.nomeFantasia || empresaSelecionada.nome : 'Nenhuma empresa selecionada'} disabled />
-              </div>
-
-              <div className="field">
+            {/* Formulário de login */}
+            <p className="auth-company-step">2 · Acesse sua conta</p>
+            <form onSubmit={handleLogin}>
+              <div className="auth-field">
                 <label htmlFor="email">E-mail</label>
                 <input
                   id="email"
+                  type="email"
+                  autoComplete="email"
                   value={loginForm.email}
-                  onChange={(event) =>
-                    setLoginForm((current) => ({ ...current, email: event.target.value }))
-                  }
-                  placeholder="admin@raccolto.com"
+                  onChange={(e) => setLoginForm((c) => ({ ...c, email: e.target.value }))}
+                  placeholder="seu@email.com"
                 />
               </div>
-
-              <div className="field">
+              <div className="auth-field">
                 <label htmlFor="senha">Senha</label>
                 <input
                   id="senha"
                   type="password"
+                  autoComplete="current-password"
                   value={loginForm.senha}
-                  onChange={(event) =>
-                    setLoginForm((current) => ({ ...current, senha: event.target.value }))
-                  }
-                  placeholder="••••••"
+                  onChange={(e) => setLoginForm((c) => ({ ...c, senha: e.target.value }))}
+                  placeholder="••••••••"
                 />
               </div>
-
-              <button className="button" type="submit" disabled={loading || !empresaSelecionadaId}>
-                {loading ? 'Entrando...' : 'Entrar no Raccolto'}
+              <button className="auth-submit" type="submit" disabled={loading || !empresaSelecionadaId}>
+                {loading ? 'Entrando...' : 'Entrar'}
               </button>
             </form>
-          </div>
+          </>
         ) : (
-          <form className="panel form-grid" onSubmit={handleBootstrap}>
-            <div className="field">
+          <form onSubmit={handleBootstrap}>
+            <div className="auth-field">
               <label htmlFor="nome">Seu nome</label>
-              <input
-                id="nome"
-                value={bootstrapForm.nome}
-                onChange={(event) =>
-                  setBootstrapForm((current) => ({ ...current, nome: event.target.value }))
-                }
-              />
+              <input id="nome" value={bootstrapForm.nome} onChange={(e) => setBootstrapForm((c) => ({ ...c, nome: e.target.value }))} />
             </div>
-
-            <div className="field">
+            <div className="auth-field">
               <label htmlFor="emailBootstrap">E-mail administrador</label>
-              <input
-                id="emailBootstrap"
-                value={bootstrapForm.email}
-                onChange={(event) =>
-                  setBootstrapForm((current) => ({ ...current, email: event.target.value }))
-                }
-              />
+              <input id="emailBootstrap" type="email" value={bootstrapForm.email} onChange={(e) => setBootstrapForm((c) => ({ ...c, email: e.target.value }))} />
             </div>
-
-            <div className="field">
+            <div className="auth-field">
               <label htmlFor="senhaBootstrap">Senha</label>
-              <input
-                id="senhaBootstrap"
-                type="password"
-                value={bootstrapForm.senha}
-                onChange={(event) =>
-                  setBootstrapForm((current) => ({ ...current, senha: event.target.value }))
-                }
-              />
+              <input id="senhaBootstrap" type="password" value={bootstrapForm.senha} onChange={(e) => setBootstrapForm((c) => ({ ...c, senha: e.target.value }))} />
             </div>
-
-            <div className="field">
+            <div className="auth-field">
               <label htmlFor="empresaNome">Nome da empresa</label>
-              <input
-                id="empresaNome"
-                value={bootstrapForm.empresaNome}
-                onChange={(event) =>
-                  setBootstrapForm((current) => ({ ...current, empresaNome: event.target.value }))
-                }
-              />
+              <input id="empresaNome" value={bootstrapForm.empresaNome} onChange={(e) => setBootstrapForm((c) => ({ ...c, empresaNome: e.target.value }))} />
             </div>
-
-            <button className="button" type="submit" disabled={loading}>
+            <button className="auth-submit" type="submit" disabled={loading}>
               {loading ? 'Criando ambiente...' : 'Criar primeiro acesso'}
             </button>
           </form>
