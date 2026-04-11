@@ -820,6 +820,7 @@ model ProjetoEtapa {
   projetoId  String
   nome       String
   meta       String?
+  cor        String    @default("#6366f1")
   dataInicio DateTime
   dataFim    DateTime
   status     String    @default("PLANEJADA")
