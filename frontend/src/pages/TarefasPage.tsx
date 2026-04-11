@@ -34,7 +34,7 @@ const initialForm = {
   visivelCliente: false,
 };
 
-const kanbanOrder: StatusTarefa[] = ['NAO_INICIADA', 'EM_ANDAMENTO', 'AGUARDANDO', 'CONCLUIDA', 'CANCELADA'];
+const kanbanOrder: StatusTarefa[] = ['NAO_INICIADA', 'INICIADA', 'AGUARDANDO_APROVACAO', 'CONCLUIDA', 'CANCELADA'];
 
 export default function TarefasPage() {
   const [projetos, setProjetos] = useState<Projeto[]>([]);
@@ -263,9 +263,9 @@ export default function TarefasPage() {
           <div className="field">
             <label>Status</label>
             <select value={form.status} onChange={(e) => setForm((c) => ({ ...c, status: e.target.value as StatusTarefa }))}>
-              <option value="NAO_INICIADA">Não iniciada</option>
-              <option value="EM_ANDAMENTO">Em andamento</option>
-              <option value="AGUARDANDO">Aguardando</option>
+              <option value="NAO_INICIADA">Não Iniciada</option>
+              <option value="INICIADA">Iniciada</option>
+              <option value="AGUARDANDO_APROVACAO">Aguardando Aprovação</option>
               <option value="CONCLUIDA">Concluída</option>
               <option value="CANCELADA">Cancelada</option>
             </select>

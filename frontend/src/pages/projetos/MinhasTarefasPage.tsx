@@ -11,8 +11,8 @@ import { formatDate } from '../../utils/format';
 
 const STATUS_LABELS: Record<StatusTarefa, string> = {
   NAO_INICIADA: 'A Iniciar',
-  EM_ANDAMENTO: 'Em Andamento',
-  AGUARDANDO: 'Aguardando',
+  INICIADA: 'Iniciada',
+  AGUARDANDO_APROVACAO: 'Aguardando Aprovação',
   CONCLUIDA: 'Concluída',
   CANCELADA: 'Cancelada',
 };
@@ -109,7 +109,7 @@ export default function MinhasTarefasPage() {
 
       {/* Summary chips */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-        {(['NAO_INICIADA', 'EM_ANDAMENTO', 'AGUARDANDO'] as StatusTarefa[]).map((s) => {
+        {(['NAO_INICIADA', 'INICIADA', 'AGUARDANDO_APROVACAO'] as StatusTarefa[]).map((s) => {
           const cnt = tarefas.filter((t) => t.status === s).length;
           return (
             <button
@@ -217,7 +217,7 @@ function GrupoTarefas({ titulo, tarefas, corTitulo }: { titulo: string; tarefas:
                 </td>
                 <td style={{ fontSize: 12, color: 'var(--muted)' }}>{t.etapa?.nome ?? '—'}</td>
                 <td>
-                  <span className={`badge ${t.status === 'CONCLUIDA' ? 'badge--success' : t.status === 'EM_ANDAMENTO' ? 'badge--primary' : 'badge--muted'}`}>
+                  <span className={`badge ${t.status === 'CONCLUIDA' ? 'badge--success' : t.status === 'INICIADA' ? 'badge--primary' : t.status === 'AGUARDANDO_APROVACAO' ? 'badge--warning' : 'badge--muted'}`}>
                     {STATUS_LABELS[t.status]}
                   </span>
                 </td>
