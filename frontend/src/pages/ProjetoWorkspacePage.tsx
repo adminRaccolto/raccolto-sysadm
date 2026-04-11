@@ -607,38 +607,30 @@ export default function ProjetoWorkspacePage() {
       {error ? <Feedback type="error" message={error} /> : null}
       {success ? <Feedback type="success" message={success} /> : null}
 
-      {/* Hero */}
-      <section className="hero-panel compact-gap">
-        <div>
-          <div className="eyebrow">Workspace do Projeto</div>
-          <h3>{projeto.nome}</h3>
-          <p>{projeto.descricao || 'Sem descrição cadastrada para este projeto.'}</p>
+      {/* Hero + Stats */}
+      <section className="panel" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div className="eyebrow">Workspace do Projeto</div>
+            <h3 style={{ margin: '2px 0 4px' }}>{projeto.nome}</h3>
+            <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>{projeto.descricao || `${projeto.interno ? 'Projeto interno' : projeto.cliente?.razaoSocial || ''} · ${labelize(projeto.status)} · ${formatDate(projeto.dataInicio)} → ${formatDate(projeto.dataFimPrevista)}`}</p>
+          </div>
         </div>
-        <div className="hero-panel__aside">
-          <span>Contexto operacional</span>
-          <ul>
-            <li><strong>Cliente:</strong> {projeto.interno ? 'Projeto interno' : projeto.cliente?.razaoSocial || '—'}</li>
-            <li><strong>Status:</strong> {labelize(projeto.status)}</li>
-            <li><strong>Prazo:</strong> {formatDate(projeto.dataInicio)} → {formatDate(projeto.dataFimPrevista)}</li>
-          </ul>
+        <div className="project-summary-grid">
+          <div className="stat-card"><span className="stat-card__label">Abertas</span><strong className="stat-card__value">{projeto.painel?.tarefasAbertas ?? 0}</strong></div>
+          <div className="stat-card" style={projeto.painel?.tarefasAtrasadas ? { borderColor: '#ef4444' } : {}}>
+            <span className="stat-card__label">Atrasadas</span>
+            <strong className="stat-card__value" style={projeto.painel?.tarefasAtrasadas ? { color: '#ef4444' } : {}}>{projeto.painel?.tarefasAtrasadas ?? 0}</strong>
+          </div>
+          <div className="stat-card"><span className="stat-card__label">Pend. Aprovação</span><strong className="stat-card__value">{projeto.painel?.tarefasPendentesAprovacao ?? 0}</strong></div>
+          <div className="stat-card"><span className="stat-card__label">Concluídas</span><strong className="stat-card__value">{projeto.painel?.tarefasConcluidas ?? 0}</strong></div>
+          <div className="stat-card"><span className="stat-card__label">Canceladas</span><strong className="stat-card__value">{projeto.painel?.tarefasCanceladas ?? 0}</strong></div>
+          <div className="stat-card">
+            <span className="stat-card__label">Progresso</span>
+            <strong className="stat-card__value">{projeto.painel?.percentualConclusao ?? projeto.percentualAndamento ?? 0}%</strong>
+          </div>
         </div>
       </section>
-
-      {/* Stats */}
-      <div className="project-summary-grid">
-        <div className="stat-card"><span className="stat-card__label">Abertas</span><strong className="stat-card__value">{projeto.painel?.tarefasAbertas ?? 0}</strong></div>
-        <div className="stat-card" style={projeto.painel?.tarefasAtrasadas ? { borderColor: '#ef4444' } : {}}>
-          <span className="stat-card__label">Atrasadas</span>
-          <strong className="stat-card__value" style={projeto.painel?.tarefasAtrasadas ? { color: '#ef4444' } : {}}>{projeto.painel?.tarefasAtrasadas ?? 0}</strong>
-        </div>
-        <div className="stat-card"><span className="stat-card__label">Pend. Aprovação</span><strong className="stat-card__value">{projeto.painel?.tarefasPendentesAprovacao ?? 0}</strong></div>
-        <div className="stat-card"><span className="stat-card__label">Concluídas</span><strong className="stat-card__value">{projeto.painel?.tarefasConcluidas ?? 0}</strong></div>
-        <div className="stat-card"><span className="stat-card__label">Canceladas</span><strong className="stat-card__value">{projeto.painel?.tarefasCanceladas ?? 0}</strong></div>
-        <div className="stat-card">
-          <span className="stat-card__label">Progresso</span>
-          <strong className="stat-card__value">{projeto.painel?.percentualConclusao ?? projeto.percentualAndamento ?? 0}%</strong>
-        </div>
-      </div>
 
       {/* Tabs */}
       <div className="segmented segmented--tabs">
