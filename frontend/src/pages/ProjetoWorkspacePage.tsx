@@ -602,13 +602,26 @@ export default function ProjetoWorkspacePage() {
         title={projeto.nome}
         subtitle={`${projeto.interno ? 'Projeto interno' : projeto.cliente?.razaoSocial || 'Projeto'} · ${labelize(projeto.status)} · ${formatDate(projeto.dataInicio)} → ${formatDate(projeto.dataFimPrevista)}`}
         actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span className="mini-stat">Abertas <strong>{projeto.painel?.tarefasAbertas ?? 0}</strong></span>
-              <span className="mini-stat" style={projeto.painel?.tarefasAtrasadas ? { color: '#ef4444' } : {}}>Atrasadas <strong>{projeto.painel?.tarefasAtrasadas ?? 0}</strong></span>
-              <span className="mini-stat">Aprovação <strong>{projeto.painel?.tarefasPendentesAprovacao ?? 0}</strong></span>
-              <span className="mini-stat">Concluídas <strong>{projeto.painel?.tarefasConcluidas ?? 0}</strong></span>
-              <span className="mini-stat">{projeto.painel?.percentualConclusao ?? projeto.percentualAndamento ?? 0}%</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="mini-stat-card">
+              <span className="mini-stat-card__label">Abertas</span>
+              <span className="mini-stat-card__value">{projeto.painel?.tarefasAbertas ?? 0}</span>
+            </div>
+            <div className="mini-stat-card" style={projeto.painel?.tarefasAtrasadas ? { borderColor: '#fca5a5' } : {}}>
+              <span className="mini-stat-card__label">Atrasadas</span>
+              <span className="mini-stat-card__value" style={projeto.painel?.tarefasAtrasadas ? { color: '#ef4444' } : {}}>{projeto.painel?.tarefasAtrasadas ?? 0}</span>
+            </div>
+            <div className="mini-stat-card">
+              <span className="mini-stat-card__label">Aprovação</span>
+              <span className="mini-stat-card__value">{projeto.painel?.tarefasPendentesAprovacao ?? 0}</span>
+            </div>
+            <div className="mini-stat-card">
+              <span className="mini-stat-card__label">Concluídas</span>
+              <span className="mini-stat-card__value">{projeto.painel?.tarefasConcluidas ?? 0}</span>
+            </div>
+            <div className="mini-stat-card">
+              <span className="mini-stat-card__label">Progresso</span>
+              <span className="mini-stat-card__value">{projeto.painel?.percentualConclusao ?? projeto.percentualAndamento ?? 0}%</span>
             </div>
             <Link className="button button--ghost" to="/projetos">← Projetos</Link>
           </div>
