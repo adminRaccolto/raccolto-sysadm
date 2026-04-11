@@ -592,6 +592,7 @@ button { cursor: pointer; }
 /* ── Form elements ─────────────────────────────────────────── */
 .form-grid         { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
 .form-grid--compact{ gap: 8px; }
+.form-grid--4      { grid-template-columns: repeat(4, minmax(0,1fr)); }
 .logo-form-grid    { display: grid; gap: 10px; }
 
 .field { display: grid; gap: 4px; }
@@ -649,6 +650,8 @@ textarea:focus {
 }
 
 .field--span-2    { grid-column: span 2; }
+.field--span-3    { grid-column: span 3; }
+.field--span-4    { grid-column: span 4; }
 .field--checkbox  { align-content: end; }
 .field--checkbox label {
   display: flex;
@@ -1397,7 +1400,8 @@ th {
   .home-hero__greeting { padding-left: 0; }
   .two-columns, .list-grid { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
-  .field--span-2 { grid-column: span 1; }
+  .form-grid--4 { grid-template-columns: 1fr; }
+  .field--span-2, .field--span-3, .field--span-4 { grid-column: span 1; }
   .page-header { flex-direction: column; }
   .hero-panel { flex-direction: column; }
   .detail-grid { grid-template-columns: 1fr; }

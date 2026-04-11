@@ -142,7 +142,15 @@ const documentoInitialForm: DocumentoForm = {
   observacaoCliente: '',
 };
 
-const kanbanOrder: StatusTarefa[] = ['NAO_INICIADA', 'EM_ANDAMENTO', 'AGUARDANDO', 'CONCLUIDA', 'CANCELADA'];
+const kanbanOrder: StatusTarefa[] = ['NAO_INICIADA', 'INICIADA', 'AGUARDANDO_APROVACAO', 'CONCLUIDA', 'CANCELADA'];
+
+const STATUS_TAREFA_LABELS: Record<StatusTarefa, string> = {
+  NAO_INICIADA: 'Não Iniciada',
+  INICIADA: 'Iniciada',
+  AGUARDANDO_APROVACAO: 'Aguardando Aprovação',
+  CONCLUIDA: 'Concluída',
+  CANCELADA: 'Cancelada',
+};
 
 const PRIORIDADE_COR: Record<string, string> = {
   CRITICA: '#ef4444',
@@ -618,11 +626,18 @@ export default function ProjetoWorkspacePage() {
 
       {/* Stats */}
       <div className="project-summary-grid">
-        <div className="stat-card"><span className="stat-card__label">A iniciar</span><strong className="stat-card__value">{projeto.painel?.tarefasAIniciar ?? 0}</strong></div>
-        <div className="stat-card"><span className="stat-card__label">Atrasadas</span><strong className="stat-card__value">{projeto.painel?.tarefasAtrasadas ?? 0}</strong></div>
-        <div className="stat-card"><span className="stat-card__label">Progresso</span><strong className="stat-card__value">{projeto.painel?.percentualConclusao ?? 0}%</strong></div>
-        <div className="stat-card"><span className="stat-card__label">Fases</span><strong className="stat-card__value">{etapas.length}</strong></div>
-        <div className="stat-card"><span className="stat-card__label">Entregáveis</span><strong className="stat-card__value">{projeto.entregaveis.length}</strong></div>
+        <div className="stat-card"><span className="stat-card__label">Abertas</span><strong className="stat-card__value">{projeto.painel?.tarefasAbertas ?? 0}</strong></div>
+        <div className="stat-card" style={projeto.painel?.tarefasAtrasadas ? { borderColor: '#ef4444' } : {}}>
+          <span className="stat-card__label">Atrasadas</span>
+          <strong className="stat-card__value" style={projeto.painel?.tarefasAtrasadas ? { color: '#ef4444' } : {}}>{projeto.painel?.tarefasAtrasadas ?? 0}</strong>
+        </div>
+        <div className="stat-card"><span className="stat-card__label">Pend. Aprovação</span><strong className="stat-card__value">{projeto.painel?.tarefasPendentesAprovacao ?? 0}</strong></div>
+        <div className="stat-card"><span className="stat-card__label">Concluídas</span><strong className="stat-card__value">{projeto.painel?.tarefasConcluidas ?? 0}</strong></div>
+        <div className="stat-card"><span className="stat-card__label">Canceladas</span><strong className="stat-card__value">{projeto.painel?.tarefasCanceladas ?? 0}</strong></div>
+        <div className="stat-card">
+          <span className="stat-card__label">Progresso</span>
+          <strong className="stat-card__value">{projeto.painel?.percentualConclusao ?? projeto.percentualAndamento ?? 0}%</strong>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -826,8 +841,8 @@ export default function ProjetoWorkspacePage() {
                                     </div>
                                   </td>
                                   <td>
-                                    <span className={`badge ${t.status === 'CONCLUIDA' ? 'badge--success' : t.status === 'EM_ANDAMENTO' ? 'badge--primary' : 'badge--muted'}`} style={{ fontSize: 11 }}>
-                                      {labelize(t.status)}
+                                    <span className={`badge ${t.status === 'CONCLUIDA' ? 'badge--success' : t.status === 'INICIADA' ? 'badge--primary' : t.status === 'AGUARDANDO_APROVACAO' ? 'badge--warning' : 'badge--muted'}`} style={{ fontSize: 11 }}>
+                                      {STATUS_TAREFA_LABELS[t.status] ?? t.status}
                                     </span>
                                   </td>
                                   <td style={{ fontSize: 12, color: 'var(--muted)' }}>{nomeAtribuido(t)}</td>
@@ -932,7 +947,7 @@ export default function ProjetoWorkspacePage() {
                         </td>
                         <td style={{ fontSize: 12, color: 'var(--muted)' }}>{item.etapa?.nome ?? '—'}</td>
                         <td style={{ fontSize: 12 }}>{nomeAtribuido(item)}</td>
-                        <td><span className={`badge ${item.status === 'CONCLUIDA' ? 'badge--success' : item.status === 'EM_ANDAMENTO' ? 'badge--primary' : 'badge--muted'}`}>{labelize(item.status)}</span></td>
+                        <td><span className={`badge ${item.status === 'CONCLUIDA' ? 'badge--success' : item.status === 'INICIADA' ? 'badge--primary' : item.status === 'AGUARDANDO_APROVACAO' ? 'badge--warning' : 'badge--muted'}`}>{STATUS_TAREFA_LABELS[item.status] ?? item.status}</span></td>
                         <td style={{ fontSize: 12, color: 'var(--muted)' }}>{formatDate(item.prazo)}</td>
                         <td style={{ fontSize: 12, color: 'var(--muted)' }}>
                           {item.estimativaHoras ? `${item.horasRegistradas ?? 0}h / ${item.estimativaHoras}h` : item.horasRegistradas ? `${item.horasRegistradas}h` : '—'}
@@ -1236,9 +1251,9 @@ function TaskDrawerForm({
       <div className="field">
         <label>Status</label>
         <select value={taskForm.status} onChange={(e) => setTaskForm((c) => ({ ...c, status: e.target.value as StatusTarefa }))}>
-          <option value="NAO_INICIADA">Não iniciada</option>
-          <option value="EM_ANDAMENTO">Em andamento</option>
-          <option value="AGUARDANDO">Aguardando</option>
+          <option value="NAO_INICIADA">Não Iniciada</option>
+          <option value="INICIADA">Iniciada</option>
+          <option value="AGUARDANDO_APROVACAO">Aguardando Aprovação</option>
           <option value="CONCLUIDA">Concluída</option>
           <option value="CANCELADA">Cancelada</option>
         </select>

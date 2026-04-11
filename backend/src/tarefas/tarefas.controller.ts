@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { PerfilUsuario } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -133,6 +134,27 @@ export class TarefasController {
     @Body() body: RegistrarHorasDto,
   ) {
     return this.tarefasService.registrarHoras(user.empresaId, id, body.horas);
+  }
+
+  @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA)
+  @Post(':id/anexos')
+  @UseInterceptors(FileInterceptor('file'))
+  async adicionarAnexo(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.tarefasService.adicionarAnexo(user, id, file);
+  }
+
+  @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA)
+  @Delete(':id/anexos/:anexoId')
+  async removerAnexo(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('anexoId') anexoId: string,
+  ) {
+    return this.tarefasService.removerAnexo(user.empresaId, id, anexoId);
   }
 
   @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA)

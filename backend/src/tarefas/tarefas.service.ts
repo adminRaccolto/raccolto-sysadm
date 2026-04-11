@@ -13,12 +13,20 @@ import { AuthenticatedUser } from '../common/interfaces/authenticated-user.inter
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTarefaDto } from './dto/create-tarefa.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
+import { StorageService } from '../storage/storage.service';
+
+const STATUSES_ABERTAS = [
+  StatusTarefa.NAO_INICIADA,
+  StatusTarefa.INICIADA,
+  StatusTarefa.AGUARDANDO_APROVACAO,
+] as StatusTarefa[];
 
 @Injectable()
 export class TarefasService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificacoesService: NotificacoesService,
+    private readonly storageService: StorageService,
   ) {}
 
   async create(empresaId: string, data: CreateTarefaDto, autorNome?: string) {
@@ -47,6 +55,8 @@ export class TarefasService {
         horasRegistradas: data.horasRegistradas ?? 0,
         ordem: data.ordem ?? 0,
         status,
+        aprovadorTipo: data.aprovadorTipo ?? null,
+        aprovadorUsuarioId: data.aprovadorUsuarioId ?? null,
         visivelCliente: projeto.interno ? false : data.visivelCliente ?? false,
         concluidaEm: status === StatusTarefa.CONCLUIDA ? new Date() : null,
       },
@@ -95,6 +105,8 @@ export class TarefasService {
         horasRegistradas: data.horasRegistradas !== undefined ? data.horasRegistradas : undefined,
         ordem: data.ordem !== undefined ? data.ordem : undefined,
         status,
+        aprovadorTipo: data.aprovadorTipo !== undefined ? data.aprovadorTipo || null : undefined,
+        aprovadorUsuarioId: data.aprovadorUsuarioId !== undefined ? data.aprovadorUsuarioId || null : undefined,
         visivelCliente: data.visivelCliente !== undefined ? (projeto.interno ? false : data.visivelCliente) : undefined,
         concluidaEm:
           status === StatusTarefa.CONCLUIDA
@@ -110,8 +122,8 @@ export class TarefasService {
     if (autorNome) {
       if (data.status && data.status !== atual.status) {
         const labels: Record<string, string> = {
-          NAO_INICIADA: 'Não Iniciada', EM_ANDAMENTO: 'Em Andamento',
-          AGUARDANDO: 'Aguardando', CONCLUIDA: 'Concluída', CANCELADA: 'Cancelada',
+          NAO_INICIADA: 'Não Iniciada', INICIADA: 'Iniciada',
+          AGUARDANDO_APROVACAO: 'Aguardando Aprovação', CONCLUIDA: 'Concluída', CANCELADA: 'Cancelada',
         };
         await this.registrarAtividade(id, empresaId, autorNome, 'STATUS_ALTERADO',
           `Status alterado de "${labels[atual.status] ?? atual.status}" para "${labels[data.status] ?? data.status}"`);
@@ -170,7 +182,7 @@ export class TarefasService {
           empresaId: user.empresaId,
           responsavelClienteId: user.clienteId ?? undefined,
           visivelCliente: true,
-          status: { in: [StatusTarefa.NAO_INICIADA, StatusTarefa.EM_ANDAMENTO, StatusTarefa.AGUARDANDO] },
+          status: { in: STATUSES_ABERTAS },
         },
         include: {
           ...this.defaultInclude(),
@@ -184,7 +196,7 @@ export class TarefasService {
       where: {
         empresaId: user.empresaId,
         responsavelUsuarioId: user.id,
-        status: { in: [StatusTarefa.NAO_INICIADA, StatusTarefa.EM_ANDAMENTO, StatusTarefa.AGUARDANDO] },
+        status: { in: STATUSES_ABERTAS },
       },
       include: {
         ...this.defaultInclude(),
@@ -271,6 +283,35 @@ export class TarefasService {
     if (!tarefa) throw new BadRequestException('Tarefa não encontrada.');
     await this.prisma.tarefaLabelVinculo.deleteMany({ where: { tarefaId, labelId } });
     return { message: 'Label removida.' };
+  }
+
+  async adicionarAnexo(user: AuthenticatedUser, tarefaId: string, file: Express.Multer.File) {
+    const tarefa = await this.prisma.tarefa.findFirst({ where: { id: tarefaId, empresaId: user.empresaId } });
+    if (!tarefa) throw new BadRequestException('Tarefa não encontrada.');
+    if (!file) throw new BadRequestException('Arquivo não enviado.');
+
+    const url = await this.storageService.uploadFile(file.buffer, file.originalname, file.mimetype, 'tarefas');
+    const anexo = await this.prisma.tarefaAnexo.create({
+      data: {
+        tarefaId,
+        nome: file.originalname,
+        url,
+        tipo: file.mimetype,
+        tamanho: file.size,
+        autorNome: user.nome,
+      },
+    });
+    await this.registrarAtividade(tarefaId, user.empresaId, user.nome, 'ANEXO_ADICIONADO', file.originalname);
+    return anexo;
+  }
+
+  async removerAnexo(empresaId: string, tarefaId: string, anexoId: string) {
+    const tarefa = await this.prisma.tarefa.findFirst({ where: { id: tarefaId, empresaId } });
+    if (!tarefa) throw new BadRequestException('Tarefa não encontrada.');
+    const anexo = await this.prisma.tarefaAnexo.findFirst({ where: { id: anexoId, tarefaId } });
+    if (!anexo) throw new BadRequestException('Anexo não encontrado.');
+    await this.prisma.tarefaAnexo.delete({ where: { id: anexoId } });
+    return { message: 'Anexo removido.' };
   }
 
   async registrarHoras(empresaId: string, tarefaId: string, horas: number) {
@@ -405,8 +446,10 @@ export class TarefasService {
   private fullInclude() {
     return {
       ...this.defaultInclude(),
-      etapa: { select: { id: true, nome: true, status: true } },
+      etapa: { select: { id: true, nome: true, status: true, cor: true } },
       labels: { include: { label: true } },
+      anexos: { orderBy: { createdAt: 'asc' as const } },
+      aprovadorUsuario: { select: { id: true, nome: true, email: true } },
       comentarios: {
         include: { autorUsuario: { select: { id: true, nome: true, email: true } } },
         orderBy: { createdAt: 'asc' as const },

@@ -28,6 +28,7 @@ import { ModelosDocumentoModule } from './modelos-documento/modelos-documento.mo
 import { DeslocamentosModule } from './deslocamentos/deslocamentos.module';
 import { BancosModule } from './bancos/bancos.module';
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
+import { FornecedoresModule } from './fornecedores/fornecedores.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { FuncionariosModule } from './funcionarios/funcionarios.module';
     DeslocamentosModule,
     BancosModule,
     FuncionariosModule,
+    FornecedoresModule,
     SuporteModule,
     FaturamentoModule,
   ],

@@ -32,6 +32,7 @@ import RepositorioPage from '../pages/RepositorioPage';
 import BancosPage from '../pages/sistema/BancosPage';
 import ContasBancariasPage from '../pages/sistema/ContasBancariasPage';
 import FuncionariosPage from '../pages/sistema/FuncionariosPage';
+import FornecedoresPage from '../pages/sistema/FornecedoresPage';
 
 export default function App() {
   return (
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="sistema/bancos" element={<BancosPage />} />
         <Route path="sistema/contas" element={<ContasBancariasPage />} />
         <Route path="sistema/funcionarios" element={<FuncionariosPage />} />
+        <Route path="sistema/fornecedores" element={<FornecedoresPage />} />
         <Route path="bi" element={<BiPage />} />
         <Route path="aprendizado" element={<LearningPage />} />
       </Route>

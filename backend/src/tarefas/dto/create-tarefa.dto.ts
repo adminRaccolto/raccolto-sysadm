@@ -86,6 +86,14 @@ export class CreateTarefaDto {
   status?: StatusTarefa;
 
   @IsOptional()
+  @IsString()
+  aprovadorTipo?: string;
+
+  @IsOptional()
+  @IsString()
+  aprovadorUsuarioId?: string;
+
+  @IsOptional()
   @IsBoolean()
   visivelCliente?: boolean;
 }

@@ -26,7 +26,7 @@ export type StatusProjeto =
 export type PrioridadeProjeto = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA';
 export type TipoAtribuicaoTarefa = 'ANALISTA' | 'CLIENTE';
 export type PrioridadeTarefa = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA';
-export type StatusTarefa = 'NAO_INICIADA' | 'EM_ANDAMENTO' | 'CONCLUIDA' | 'AGUARDANDO' | 'CANCELADA';
+export type StatusTarefa = 'NAO_INICIADA' | 'INICIADA' | 'AGUARDANDO_APROVACAO' | 'CONCLUIDA' | 'CANCELADA';
 export type TipoEntregavel =
   | 'RELATORIO'
   | 'PLANILHA'
@@ -258,10 +258,33 @@ export interface UsuarioResumo {
 }
 
 export interface ProjetoPainel {
-  tarefasAIniciar: number;
+  tarefasAbertas: number;
   tarefasAtrasadas: number;
+  tarefasConcluidas: number;
+  tarefasPendentesAprovacao: number;
+  tarefasCanceladas: number;
   percentualConclusao: number;
   totalTarefas: number;
+}
+
+export interface ProjetoMembro {
+  id: string;
+  projetoId: string;
+  usuarioId: string;
+  papel: string;
+  usuario?: UsuarioResumo;
+  createdAt: string;
+}
+
+export interface TarefaAnexo {
+  id: string;
+  tarefaId: string;
+  nome: string;
+  url: string;
+  tipo?: string | null;
+  tamanho?: number | null;
+  autorNome: string;
+  createdAt: string;
 }
 
 export type StatusEtapa = 'PLANEJADA' | 'ATIVA' | 'CONCLUIDA' | 'CANCELADA';
@@ -301,9 +324,11 @@ export interface Projeto {
   contratoId?: string | null;
   produtoServicoId?: string | null;
   responsavelId?: string | null;
+  gerenteId?: string | null;
   nome: string;
   interno?: boolean;
   descricao?: string | null;
+  cor?: string;
   equipeEnvolvida?: string | null;
   tipoServicoProjeto?: string | null;
   faseAtual?: string | null;
@@ -320,6 +345,8 @@ export interface Projeto {
   contaGerencial?: ContaGerencial | null;
   contaGerencialId?: string | null;
   responsavel?: UsuarioResumo | null;
+  gerente?: UsuarioResumo | null;
+  membros?: ProjetoMembro[];
   painel?: ProjetoPainel;
   etapas?: ProjetoEtapa[];
   _count?: {
@@ -367,14 +394,18 @@ export interface Tarefa {
     visivelCliente?: boolean;
     interno?: boolean;
   };
-  etapa?: { id: string; nome: string; status: string } | null;
+  aprovadorTipo?: string | null;
+  aprovadorUsuarioId?: string | null;
+  etapa?: { id: string; nome: string; status: string; cor?: string | null } | null;
   labels?: Array<{ label: TarefaLabel }>;
+  anexos?: TarefaAnexo[];
   atividades?: TarefaAtividade[];
   responsavelUsuario?: UsuarioResumo | null;
   responsavelCliente?: {
     id: string;
     razaoSocial: string;
   } | null;
+  aprovadorUsuario?: UsuarioResumo | null;
   comentarios?: HistoricoComentario[];
   createdAt: string;
 }
@@ -449,9 +480,13 @@ export interface Funcionario {
   id: string;
   empresaId: string;
   nome: string;
+  documento?: string | null;
+  tipoDocumento?: string | null;
   cpf?: string | null;
   email?: string | null;
   telefone?: string | null;
+  sexo?: string | null;
+  fotoUrl?: string | null;
   cargo?: string | null;
   vinculo: string;
   salario?: number | null;
@@ -470,8 +505,35 @@ export interface Funcionario {
   contaBancariaConta?: string | null;
   contaBancariaBanco?: string | null;
   contaBancariaPix?: string | null;
+  usuarioId?: string | null;
+  fornecedorId?: string | null;
+  fornecedor?: { id: string; razaoSocial: string; nomeFantasia?: string | null } | null;
   ativo: boolean;
   observacoes?: string | null;
+  createdAt: string;
+}
+
+export interface Fornecedor {
+  id: string;
+  empresaId: string;
+  razaoSocial: string;
+  nomeFantasia?: string | null;
+  cnpj?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  cep?: string | null;
+  nomeContato?: string | null;
+  telefoneEmpresa?: string | null;
+  telefoneContato?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  observacoes?: string | null;
+  ativo: boolean;
+  _count?: { funcionarios: number };
   createdAt: string;
 }
 
