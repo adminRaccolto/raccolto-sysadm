@@ -68,6 +68,9 @@ type ContratoForm = {
   modeloContratoNome: string;
   textoContratoBase: string;
   observacoes: string;
+  contatoClienteNome: string;
+  contatoClienteEmail: string;
+  contatoClienteTelefone: string;
   autentiqueDocId: string | null;
   autentiqueSignUrl: string | null;
   pdfAssinadoUrl: string | null;
@@ -116,6 +119,9 @@ const initialForm: ContratoForm = {
   observacoes: '',
   autentiqueDocId: null,
   autentiqueSignUrl: null,
+  contatoClienteNome: '',
+  contatoClienteEmail: '',
+  contatoClienteTelefone: '',
   pdfAssinadoUrl: null,
   cobrancas: [],
 };
@@ -381,6 +387,17 @@ export default function ContratosPage() {
     [clientes, form.clienteId],
   );
 
+  function handleClienteChange(clienteId: string) {
+    const cliente = clientes.find((c) => c.id === clienteId) || null;
+    setForm((prev) => ({
+      ...prev,
+      clienteId,
+      contatoClienteNome: prev.contatoClienteNome || cliente?.contatoPrincipal || '',
+      contatoClienteEmail: prev.contatoClienteEmail || cliente?.email || '',
+      contatoClienteTelefone: prev.contatoClienteTelefone || cliente?.whatsapp || cliente?.telefone || '',
+    }));
+  }
+
   function resetForm() {
     const modeloPadrao = modelos.find((item) => item.padrao) || modelos[0] || null;
     setEditingId(null);
@@ -442,6 +459,9 @@ export default function ContratosPage() {
       modeloContratoId: modeloSelecionado?.id || '',
       modeloContratoNome: contrato.modeloContratoNome || 'Contrato padrão',
       textoContratoBase: contrato.textoContratoBase || '',
+      contatoClienteNome: contrato.contatoClienteNome || '',
+      contatoClienteEmail: contrato.contatoClienteEmail || '',
+      contatoClienteTelefone: contrato.contatoClienteTelefone || '',
       observacoes: contrato.observacoes || '',
       autentiqueDocId: contrato.autentiqueDocId ?? null,
       autentiqueSignUrl: contrato.autentiqueSignUrl ?? null,
@@ -561,6 +581,9 @@ export default function ContratosPage() {
     try {
       const payload = {
         clienteId: form.clienteId,
+        ...(form.contatoClienteNome ? { contatoClienteNome: form.contatoClienteNome } : {}),
+        ...(form.contatoClienteEmail ? { contatoClienteEmail: form.contatoClienteEmail } : {}),
+        ...(form.contatoClienteTelefone ? { contatoClienteTelefone: form.contatoClienteTelefone } : {}),
         ...(form.produtoServicoId ? { produtoServicoId: form.produtoServicoId } : {}),
         ...(form.numeroContrato ? { numeroContrato: form.numeroContrato } : {}),
         ...(form.codigo ? { codigo: form.codigo } : {}),
@@ -760,7 +783,7 @@ export default function ContratosPage() {
         <form className="form-grid" onSubmit={handleSubmit}>
           <div className="field">
             <label>Cliente</label>
-            <select value={form.clienteId} onChange={(e) => setForm((c) => ({ ...c, clienteId: e.target.value }))} required>
+            <select value={form.clienteId} onChange={(e) => handleClienteChange(e.target.value)} required>
               <option value="">Selecione</option>
               {clientes.map((cliente) => (
                 <option key={cliente.id} value={cliente.id}>{cliente.razaoSocial}</option>
@@ -789,6 +812,19 @@ export default function ContratosPage() {
               {clienteAtual?.whatsapp ? <>WhatsApp: {clienteAtual.whatsapp}<br /></> : null}
               Endereço: {formatClienteEndereco(clienteAtual)}
             </div>
+          </div>
+
+          <div className="field field--span-2">
+            <label>Nome do contato do cliente</label>
+            <input value={form.contatoClienteNome} onChange={(e) => setForm((c) => ({ ...c, contatoClienteNome: e.target.value }))} placeholder="Nome do responsável" />
+          </div>
+          <div className="field">
+            <label>E-mail do cliente</label>
+            <input type="email" value={form.contatoClienteEmail} onChange={(e) => setForm((c) => ({ ...c, contatoClienteEmail: e.target.value }))} placeholder="email@cliente.com.br" />
+          </div>
+          <div className="field">
+            <label>Telefone do cliente</label>
+            <input value={form.contatoClienteTelefone} onChange={(e) => setForm((c) => ({ ...c, contatoClienteTelefone: e.target.value }))} placeholder="(11) 99999-9999" />
           </div>
 
           <div className="field">
