@@ -415,6 +415,7 @@ export default function PropostasPage() {
   }
 
   const podeEditar = (p: PropostaApi) => p.status === 'RASCUNHO';
+  const podeExcluir = (p: PropostaApi) => p.status !== 'CONVERTIDA';
   const podeEnviar = (p: PropostaApi) => p.status === 'RASCUNHO' || p.status === 'RECUSADA';
 
   function openModelosModal() {
@@ -553,7 +554,7 @@ export default function PropostasPage() {
               <button
                 className="button button--danger button--small"
                 type="button"
-                disabled={!selectedProposta || !podeEditar(selectedProposta!)}
+                disabled={!selectedProposta || !podeExcluir(selectedProposta!)}
                 onClick={() => selectedProposta && void handleDelete(selectedProposta)}
               >
                 Excluir
