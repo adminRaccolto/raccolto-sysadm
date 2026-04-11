@@ -600,37 +600,23 @@ export default function ProjetoWorkspacePage() {
     <div className="page-stack">
       <PageHeader
         title={projeto.nome}
-        subtitle={`${projeto.interno ? 'Projeto interno' : projeto.cliente?.razaoSocial || 'Projeto'} · ${labelize(projeto.status)}`}
-        actions={<Link className="button button--ghost" to="/projetos">← Projetos</Link>}
+        subtitle={`${projeto.interno ? 'Projeto interno' : projeto.cliente?.razaoSocial || 'Projeto'} · ${labelize(projeto.status)} · ${formatDate(projeto.dataInicio)} → ${formatDate(projeto.dataFimPrevista)}`}
+        actions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span className="mini-stat">Abertas <strong>{projeto.painel?.tarefasAbertas ?? 0}</strong></span>
+              <span className="mini-stat" style={projeto.painel?.tarefasAtrasadas ? { color: '#ef4444' } : {}}>Atrasadas <strong>{projeto.painel?.tarefasAtrasadas ?? 0}</strong></span>
+              <span className="mini-stat">Aprovação <strong>{projeto.painel?.tarefasPendentesAprovacao ?? 0}</strong></span>
+              <span className="mini-stat">Concluídas <strong>{projeto.painel?.tarefasConcluidas ?? 0}</strong></span>
+              <span className="mini-stat">{projeto.painel?.percentualConclusao ?? projeto.percentualAndamento ?? 0}%</span>
+            </div>
+            <Link className="button button--ghost" to="/projetos">← Projetos</Link>
+          </div>
+        }
       />
 
       {error ? <Feedback type="error" message={error} /> : null}
       {success ? <Feedback type="success" message={success} /> : null}
-
-      {/* Hero + Stats */}
-      <section className="panel" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div>
-            <div className="eyebrow">Workspace do Projeto</div>
-            <h3 style={{ margin: '2px 0 4px' }}>{projeto.nome}</h3>
-            <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>{projeto.descricao || `${projeto.interno ? 'Projeto interno' : projeto.cliente?.razaoSocial || ''} · ${labelize(projeto.status)} · ${formatDate(projeto.dataInicio)} → ${formatDate(projeto.dataFimPrevista)}`}</p>
-          </div>
-        </div>
-        <div className="project-summary-grid">
-          <div className="stat-card"><span className="stat-card__label">Abertas</span><strong className="stat-card__value">{projeto.painel?.tarefasAbertas ?? 0}</strong></div>
-          <div className="stat-card" style={projeto.painel?.tarefasAtrasadas ? { borderColor: '#ef4444' } : {}}>
-            <span className="stat-card__label">Atrasadas</span>
-            <strong className="stat-card__value" style={projeto.painel?.tarefasAtrasadas ? { color: '#ef4444' } : {}}>{projeto.painel?.tarefasAtrasadas ?? 0}</strong>
-          </div>
-          <div className="stat-card"><span className="stat-card__label">Pend. Aprovação</span><strong className="stat-card__value">{projeto.painel?.tarefasPendentesAprovacao ?? 0}</strong></div>
-          <div className="stat-card"><span className="stat-card__label">Concluídas</span><strong className="stat-card__value">{projeto.painel?.tarefasConcluidas ?? 0}</strong></div>
-          <div className="stat-card"><span className="stat-card__label">Canceladas</span><strong className="stat-card__value">{projeto.painel?.tarefasCanceladas ?? 0}</strong></div>
-          <div className="stat-card">
-            <span className="stat-card__label">Progresso</span>
-            <strong className="stat-card__value">{projeto.painel?.percentualConclusao ?? projeto.percentualAndamento ?? 0}%</strong>
-          </div>
-        </div>
-      </section>
 
       {/* Tabs */}
       <div className="segmented segmented--tabs">
