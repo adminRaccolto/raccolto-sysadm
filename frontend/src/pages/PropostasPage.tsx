@@ -572,6 +572,40 @@ export default function PropostasPage() {
           </div>
         ) : null}
 
+        {selectedProposta?.autentiqueSignUrl && selectedProposta.statusAssinatura !== 'ASSINADO' ? (
+          <div className="panel" style={{ background: 'var(--warning-bg, #fffbeb)', border: '1px solid #f59e0b', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <strong style={{ fontSize: 13 }}>Link de assinatura</strong>
+                <p style={{ fontSize: 12, color: 'var(--muted)', margin: '2px 0 8px' }}>
+                  Envie este link ao cliente se o email não chegou. O Autentique também envia automaticamente.
+                </p>
+                <input
+                  readOnly
+                  value={selectedProposta.autentiqueSignUrl}
+                  style={{ width: '100%', fontSize: 12, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'text' }}
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'flex-end', paddingBottom: 2 }}>
+                <button
+                  className="button button--small"
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(selectedProposta.autentiqueSignUrl!);
+                    setSuccess('Link copiado para a área de transferência.');
+                  }}
+                >
+                  Copiar link
+                </button>
+                <a className="button button--ghost button--small" href={selectedProposta.autentiqueSignUrl} target="_blank" rel="noreferrer">
+                  Abrir
+                </a>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {loading ? <LoadingBlock label="Carregando propostas..." /> : null}
         {!loading && filteredPropostas.length === 0 ? (
           <EmptyState message="Nenhuma proposta encontrada para este filtro." />

@@ -52,6 +52,7 @@ export class AutentiqueService {
     pdfBuffer: Buffer;
     signatarioNome: string;
     signatarioEmail: string;
+    mensagemEmail?: string;
   }): Promise<{ docId: string; signUrl: string }> {
     const mutation = `
       mutation CreateDocumentMutation(
@@ -71,10 +72,13 @@ export class AutentiqueService {
       }
     `;
 
+    const mensagem = params.mensagemEmail
+      ?? `Olá, ${params.signatarioNome}. Você recebeu o documento "${params.nome}" para assinatura digital. Clique no link abaixo para assinar.`;
+
     const operations = JSON.stringify({
       query: mutation,
       variables: {
-        document: { name: params.nome },
+        document: { name: params.nome, message: mensagem },
         signers: [{ name: params.signatarioNome, email: params.signatarioEmail, action: 'SIGN' }],
         file: null,
       },
@@ -111,8 +115,19 @@ export class AutentiqueService {
     const doc = json.data?.createDocument;
     if (!doc) throw new BadRequestException(`Autentique não retornou o documento. Resposta: ${rawText.slice(0, 300)}`);
 
-    const signUrl = doc.signatures[0]?.link?.short_link || '';
-    this.logger.log(`Documento enviado ao Autentique: ${doc.id}`);
+    // O Autentique pode auto-adicionar o titular da conta como signatário (name: null).
+    // Precisamos do link do signatário explícito (o cliente), que tem name preenchido.
+    const signatarioExplicito = doc.signatures.find((s) => s.name !== null && s.email === params.signatarioEmail)
+      ?? doc.signatures.find((s) => s.name !== null)
+      ?? doc.signatures[0];
+
+    const signUrl = signatarioExplicito?.link?.short_link || '';
+    this.logger.log(`Documento enviado ao Autentique: ${doc.id} | signatário: ${params.signatarioEmail} | signUrl: ${signUrl || '(vazio)'}`);
+
+    if (!signUrl) {
+      this.logger.warn(`Autentique não retornou link de assinatura para ${params.signatarioEmail}. Assinaturas: ${JSON.stringify(doc.signatures.map((s) => ({ name: s.name, email: s.email, hasLink: !!s.link })))}`);
+    }
+
     return { docId: doc.id, signUrl };
   }
 
