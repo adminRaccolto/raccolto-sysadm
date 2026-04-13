@@ -7,8 +7,8 @@ import LoadingBlock from '../../components/LoadingBlock';
 import Modal from '../../components/Modal';
 import PageHeader from '../../components/PageHeader';
 import FinanceiroNav from '../../components/financeiro/FinanceiroNav';
-import type { ContaGerencial, ContaPagar } from '../../types/api';
-import { formatCurrency, formatDate, labelize } from '../../utils/format';
+import type { ContaGerencial, ContaPagar, Fornecedor } from '../../types/api';
+import { formatCurrency, formatDate, labelize, maskCurrencyInputBRL, parseCurrencyInputBRL } from '../../utils/format';
 import { gerarParcelas, type ParcelaPreview, type RegraDiaNaoUtil } from '../../utils/financeiro';
 
 const initialForm = {
@@ -23,6 +23,8 @@ const initialForm = {
   intervaloMeses: '1',
   regraDiaNaoUtil: 'PROXIMO_DIA_UTIL' as RegraDiaNaoUtil,
   previsao: false,
+  recorrente: false,
+  ateData: '',
   observacoes: '',
 };
 
@@ -31,6 +33,7 @@ type FormState = typeof initialForm;
 export default function ContasPagarPage() {
   const [items, setItems] = useState<ContaPagar[]>([]);
   const [contas, setContas] = useState<ContaGerencial[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [form, setForm] = useState<FormState>(initialForm);
   const [parcelas, setParcelas] = useState<ParcelaPreview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,12 +55,14 @@ export default function ContasPagarPage() {
   async function load() {
     setLoading(true);
     try {
-      const [pagarResp, contasResp] = await Promise.all([
+      const [pagarResp, contasResp, fornResp] = await Promise.all([
         http.get<{ itens: ContaPagar[] }>('/financeiro/contas-pagar'),
         http.get<ContaGerencial[]>('/financeiro/plano-contas'),
+        http.get<Fornecedor[]>('/fornecedores'),
       ]);
       setItems(pagarResp.data.itens);
       setContas(contasResp.data.filter((item) => item.tipo !== 'RECEITA' && item.aceitaLancamento));
+      setFornecedores(fornResp.data.filter((f) => f.ativo));
     } catch (err) {
       handleError(err, 'Falha ao carregar contas a pagar.');
     } finally {
@@ -84,10 +89,10 @@ export default function ContasPagarPage() {
   }
 
   function gerarGrade() {
-    const valorTotal = Number(form.valorTotal);
+    const valorTotal = parseCurrencyInputBRL(form.valorTotal) ?? 0;
     const quantidadeParcelas = Number(form.quantidadeParcelas);
     const intervaloMeses = Number(form.intervaloMeses);
-    if (!form.primeiroVencimento || !Number.isFinite(valorTotal) || valorTotal <= 0 || !Number.isFinite(quantidadeParcelas) || quantidadeParcelas < 1) {
+    if (!form.primeiroVencimento || valorTotal <= 0 || !Number.isFinite(quantidadeParcelas) || quantidadeParcelas < 1) {
       setError('Informe valor total, quantidade de parcelas, intervalo e primeiro vencimento antes de gerar a grade.');
       return;
     }
@@ -120,9 +125,10 @@ export default function ContasPagarPage() {
         dataCompra: form.dataCompra || undefined,
         competencia: form.competencia || undefined,
         vencimento: parcelas[0]?.vencimento || form.primeiroVencimento,
-        valor: Number(form.valorTotal),
+        valor: parseCurrencyInputBRL(form.valorTotal) ?? 0,
         totalParcelas: parcelas.length,
-        parcelado: parcelas.length > 1,
+        parcelado: !form.recorrente && parcelas.length > 1,
+        recorrente: form.recorrente,
         parcelas: parcelas.map((item) => ({
           parcelaNumero: item.parcelaNumero,
           valor: Number(item.valor),
@@ -333,7 +339,12 @@ export default function ContasPagarPage() {
           </div>
           <div className="field">
             <label>Fornecedor</label>
-            <input value={form.fornecedor} onChange={(e) => setForm((c) => ({ ...c, fornecedor: e.target.value }))} />
+            <select value={form.fornecedor} onChange={(e) => setForm((c) => ({ ...c, fornecedor: e.target.value }))}>
+              <option value="">— Sem fornecedor —</option>
+              {fornecedores.map((f) => (
+                <option key={f.id} value={f.razaoSocial}>{f.nomeFantasia || f.razaoSocial}</option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label>Descrição</label>
@@ -349,7 +360,7 @@ export default function ContasPagarPage() {
           </div>
           <div className="field">
             <label>Valor total</label>
-            <input type="number" step="0.01" value={form.valorTotal} onChange={(e) => setForm((c) => ({ ...c, valorTotal: e.target.value }))} required />
+            <input value={form.valorTotal} onChange={(e) => setForm((c) => ({ ...c, valorTotal: maskCurrencyInputBRL(e.target.value) }))} placeholder="R$ 0,00" required />
           </div>
           <div className="field">
             <label>Quantidade de parcelas</label>
@@ -378,12 +389,36 @@ export default function ContasPagarPage() {
               <option value="MANTER">Manter data e ajustar manualmente</option>
             </select>
           </div>
-          <div className="field field--checkbox field--span-2">
+          <div className="field field--checkbox">
             <label>
               <input type="checkbox" checked={form.previsao} onChange={(e) => setForm((c) => ({ ...c, previsao: e.target.checked }))} />
               Lançar como previsão
             </label>
           </div>
+          <div className="field field--checkbox">
+            <label>
+              <input type="checkbox" checked={form.recorrente} onChange={(e) => setForm((c) => ({ ...c, recorrente: e.target.checked, ateData: '' }))} />
+              Lançamento recorrente
+            </label>
+          </div>
+          {form.recorrente && (
+            <div className="field field--span-2">
+              <label>Repetir até</label>
+              <input type="date" value={form.ateData} onChange={(e) => {
+                const ateData = e.target.value;
+                setForm((c) => {
+                  if (c.primeiroVencimento && ateData) {
+                    const start = new Date(c.primeiroVencimento);
+                    const end = new Date(ateData);
+                    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+                    const count = String(Math.max(1, Math.floor(months / Number(c.intervaloMeses)) + 1));
+                    return { ...c, ateData, quantidadeParcelas: count };
+                  }
+                  return { ...c, ateData };
+                });
+              }} />
+            </div>
+          )}
           <div className="field field--span-2">
             <label>Observações</label>
             <textarea rows={3} value={form.observacoes} onChange={(e) => setForm((c) => ({ ...c, observacoes: e.target.value }))} />

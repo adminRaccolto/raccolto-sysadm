@@ -8,7 +8,7 @@ import Modal from '../../components/Modal';
 import PageHeader from '../../components/PageHeader';
 import FinanceiroNav from '../../components/financeiro/FinanceiroNav';
 import type { Cliente, ContaGerencial, ProdutoServico, Recebivel } from '../../types/api';
-import { formatCurrency, formatDate, labelize } from '../../utils/format';
+import { formatCurrency, formatDate, labelize, maskCurrencyInputBRL, parseCurrencyInputBRL } from '../../utils/format';
 import { gerarParcelas, type ParcelaPreview, type RegraDiaNaoUtil } from '../../utils/financeiro';
 
 const initialForm = {
@@ -93,10 +93,10 @@ export default function ContasReceberPage() {
   }
 
   function gerarGrade() {
-    const valorTotal = Number(form.valorTotal);
+    const valorTotal = parseCurrencyInputBRL(form.valorTotal) ?? 0;
     const quantidadeParcelas = Number(form.quantidadeParcelas);
     const intervaloMeses = Number(form.intervaloMeses);
-    if (!form.primeiroVencimento || !Number.isFinite(valorTotal) || valorTotal <= 0 || !Number.isFinite(quantidadeParcelas) || quantidadeParcelas < 1) {
+    if (!form.primeiroVencimento || valorTotal <= 0 || !Number.isFinite(quantidadeParcelas) || quantidadeParcelas < 1) {
       setError('Informe valor total, quantidade de parcelas, intervalo e primeiro vencimento antes de gerar a grade.');
       return;
     }
@@ -128,7 +128,7 @@ export default function ContasReceberPage() {
         produtoServicoId: form.produtoServicoId || undefined,
         contaGerencialId: form.contaGerencialId,
         descricao: form.descricao,
-        valor: Number(form.valorTotal),
+        valor: parseCurrencyInputBRL(form.valorTotal) ?? 0,
         vencimento: parcelas[0]?.vencimento || form.primeiroVencimento,
         totalParcelas: parcelas.length,
         parcelas: parcelas.map((item) => ({
@@ -377,7 +377,7 @@ export default function ContasReceberPage() {
           </div>
           <div className="field">
             <label>Valor total</label>
-            <input type="number" step="0.01" value={form.valorTotal} onChange={(e) => setForm((c) => ({ ...c, valorTotal: e.target.value }))} required />
+            <input value={form.valorTotal} onChange={(e) => setForm((c) => ({ ...c, valorTotal: maskCurrencyInputBRL(e.target.value) }))} placeholder="R$ 0,00" required />
           </div>
           <div className="field">
             <label>Quantidade de parcelas</label>

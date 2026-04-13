@@ -9,6 +9,7 @@ import PageHeader from '../../components/PageHeader';
 import SystemNav from '../../components/SystemNav';
 import BackButton from '../../components/BackButton';
 import type { Fornecedor } from '../../types/api';
+import { maskCpfCnpj, maskPhone } from '../../utils/format';
 
 const initialForm = {
   razaoSocial: '',
@@ -258,7 +259,7 @@ export default function FornecedoresPage() {
 
           <div className="field field--span-2">
             <label>CNPJ</label>
-            <input value={form.cnpj} onChange={(e) => setForm((c) => ({ ...c, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" />
+            <input value={form.cnpj} onChange={(e) => setForm((c) => ({ ...c, cnpj: maskCpfCnpj(e.target.value) }))} placeholder="00.000.000/0000-00" />
           </div>
 
           <div className="field">
@@ -268,7 +269,7 @@ export default function FornecedoresPage() {
 
           <div className="field">
             <label>Telefone da empresa</label>
-            <input value={form.telefoneEmpresa} onChange={(e) => setForm((c) => ({ ...c, telefoneEmpresa: e.target.value }))} placeholder="(00) 0000-0000" />
+            <input value={form.telefoneEmpresa} onChange={(e) => setForm((c) => ({ ...c, telefoneEmpresa: maskPhone(e.target.value) }))} placeholder="(00) 0000-0000" />
           </div>
 
           {/* Endereço */}
@@ -315,12 +316,12 @@ export default function FornecedoresPage() {
 
           <div className="field">
             <label>Telefone do contato</label>
-            <input value={form.telefoneContato} onChange={(e) => setForm((c) => ({ ...c, telefoneContato: e.target.value }))} placeholder="(00) 00000-0000" />
+            <input value={form.telefoneContato} onChange={(e) => setForm((c) => ({ ...c, telefoneContato: maskPhone(e.target.value) }))} placeholder="(00) 00000-0000" />
           </div>
 
           <div className="field">
             <label>WhatsApp do contato</label>
-            <input value={form.whatsapp} onChange={(e) => setForm((c) => ({ ...c, whatsapp: e.target.value }))} placeholder="(00) 00000-0000" />
+            <input value={form.whatsapp} onChange={(e) => setForm((c) => ({ ...c, whatsapp: maskPhone(e.target.value) }))} placeholder="(00) 00000-0000" />
           </div>
 
           <div className="field field--span-3">
