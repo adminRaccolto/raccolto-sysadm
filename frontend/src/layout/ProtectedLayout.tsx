@@ -5,6 +5,7 @@ import {
   BarChart3,
   Bell,
   Briefcase,
+  Building2,
   Car,
   CheckSquare,
   ChevronDown,
@@ -69,7 +70,17 @@ const navEntries: NavEntry[] = [
     ],
   },
   { type: 'link', to: '/bi',         label: 'BI',      Icon: BarChart3 },
-  { type: 'link', to: '/sistema',    label: 'Sistema', Icon: Settings },
+  {
+    type: 'group', label: 'Sistema', Icon: Settings,
+    items: [
+      { to: '/sistema',              label: 'Empresa',      Icon: Settings },
+      { to: '/sistema/fornecedores', label: 'Fornecedores', Icon: Building2 },
+      { to: '/sistema/funcionarios', label: 'Funcionários', Icon: Users },
+      { to: '/sistema/bancos',       label: 'Bancos',       Icon: Wallet },
+      { to: '/sistema/contas',       label: 'Contas Banc.', Icon: Receipt },
+      { to: '/usuarios',             label: 'Usuários',     Icon: Users },
+    ],
+  },
   { type: 'link', to: '/aprendizado',label: 'Aprenda', Icon: GraduationCap },
 ];
 
