@@ -37,14 +37,20 @@ type NavEntry = { type: 'link' } & MenuItem | { type: 'group' } & MenuGroup;
 const navEntries: NavEntry[] = [
   { type: 'link',  to: '/dashboard', label: 'Início', Icon: LayoutDashboard },
   {
+    type: 'group', label: 'Cadastros', Icon: Users,
+    items: [
+      { to: '/clientes',             label: 'Clientes',     Icon: Users },
+      { to: '/sistema/fornecedores', label: 'Fornecedores', Icon: Building2 },
+      { to: '/produtos-servicos',    label: 'Produtos',     Icon: Package },
+    ],
+  },
+  {
     type: 'group', label: 'Comercial', Icon: FileSignature,
     items: [
-      { to: '/clientes',          label: 'Clientes',   Icon: Users },
-      { to: '/produtos-servicos', label: 'Produtos',   Icon: Package },
-      { to: '/propostas',         label: 'Propostas',  Icon: FileText },
-      { to: '/contratos',         label: 'Contratos',  Icon: FileSignature },
-      { to: '/crm',               label: 'CRM',        Icon: Target },
-      { to: '/captacao',          label: 'Captação',   Icon: Megaphone },
+      { to: '/propostas',  label: 'Propostas', Icon: FileText },
+      { to: '/contratos',  label: 'Contratos', Icon: FileSignature },
+      { to: '/crm',        label: 'CRM',       Icon: Target },
+      { to: '/captacao',   label: 'Captação',  Icon: Megaphone },
     ],
   },
   {
@@ -74,7 +80,6 @@ const navEntries: NavEntry[] = [
     type: 'group', label: 'Sistema', Icon: Settings,
     items: [
       { to: '/sistema',              label: 'Empresa',      Icon: Settings },
-      { to: '/sistema/fornecedores', label: 'Fornecedores', Icon: Building2 },
       { to: '/sistema/funcionarios', label: 'Funcionários', Icon: Users },
       { to: '/sistema/bancos',       label: 'Bancos',       Icon: Wallet },
       { to: '/sistema/contas',       label: 'Contas Banc.', Icon: Receipt },
