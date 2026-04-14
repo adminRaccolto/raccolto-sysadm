@@ -582,8 +582,7 @@ export default function FinanceiroPage() {
                         <th>Data / Descrição</th>
                         <th style={{ color: '#0f172a' }}>Entradas</th>
                         <th style={{ color: '#c2185b' }}>Saídas</th>
-                        <th>Saldo operacional</th>
-                        {temSimulacoes ? <th style={{ color: '#7c3aed' }}>◆ Saldo c/ sim.</th> : null}
+                        <th>Saldo Acumulado</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -603,19 +602,14 @@ export default function FinanceiroPage() {
                               </span>
                             </td>
                             <td style={{ color: '#0f172a', fontWeight: 700 }}>
-                              {group.entradasOp > 0 ? formatCurrency(group.entradasOp) : '—'}
+                              {group.totalEntradas > 0 ? formatCurrency(group.totalEntradas) : '—'}
                             </td>
                             <td style={{ color: '#c2185b', fontWeight: 700 }}>
-                              {group.saidasOp > 0 ? formatCurrency(group.saidasOp) : '—'}
+                              {group.totalSaidas > 0 ? formatCurrency(group.totalSaidas) : '—'}
                             </td>
-                            <td style={{ color: group.saldoOp < 0 ? '#c2185b' : undefined, fontWeight: 700 }}>
-                              {formatCurrency(group.saldoOp)}
+                            <td style={{ color: group.saldoTotal < 0 ? '#c2185b' : group.hasSimulacao ? '#7c3aed' : undefined, fontWeight: 700 }}>
+                              {formatCurrency(group.saldoTotal)}
                             </td>
-                            {temSimulacoes ? (
-                              <td style={{ color: '#7c3aed', fontWeight: 700 }}>
-                                {group.saldoTotal !== group.saldoOp ? formatCurrency(group.saldoTotal) : '—'}
-                              </td>
-                            ) : null}
                           </tr>
                           {expandedDates.has(group.data) ? group.events.map((event) => {
                             const isSimulacao = event.simulacao;
@@ -639,7 +633,6 @@ export default function FinanceiroPage() {
                                   {event.tipo === 'SAIDA' ? formatCurrency(event.valor) : ''}
                                 </td>
                                 <td>—</td>
-                                {temSimulacoes ? <td>—</td> : null}
                               </tr>
                             );
                           }) : null}
