@@ -7,7 +7,7 @@ import Modal from '../components/Modal';
 import PageHeader from '../components/PageHeader';
 import FinanceiroNav from '../components/financeiro/FinanceiroNav';
 import type { ContaGerencial, ContaPagar, Recebivel } from '../types/api';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, maskCurrencyInputBRL, parseCurrencyInputBRL } from '../utils/format';
 import { monthKey, monthLabel, toDateKey, type SimulacaoFluxoItem } from '../utils/financeiro';
 
 type FlowEvent = {
@@ -37,6 +37,7 @@ export default function FinanceiroPage() {
   const [pagar, setPagar] = useState<ContaPagar[]>([]);
   const [contas, setContas] = useState<ContaGerencial[]>([]);
   const [simulacoes, setSimulacoes] = useState<SimulacaoFluxoItem[]>([]);
+  const [simulacoesAtivas, setSimulacoesAtivas] = useState(true);
   const [simulacaoForm, setSimulacaoForm] = useState(initialSimulacaoForm);
   const [loading, setLoading] = useState(true);
   const [savingSimulation, setSavingSimulation] = useState(false);
@@ -72,7 +73,8 @@ export default function FinanceiroPage() {
     void load();
   }, []);
 
-  const flowEvents = useMemo<FlowEvent[]>(() => {
+  // All operational events (no simulations)
+  const flowEventsOp = useMemo<FlowEvent[]>(() => {
     const fromReceber = receber.map((item) => ({
       id: `rec-${item.id}`,
       contaGerencialId: item.contaGerencial?.id || item.contaGerencialId || 'sem-conta',
@@ -95,6 +97,12 @@ export default function FinanceiroPage() {
       previsao: item.previsao,
       simulacao: false,
     }));
+    return [...fromReceber, ...fromPagar].sort((a, b) => a.data.localeCompare(b.data));
+  }, [pagar, receber]);
+
+  // Full events — adds simulations when active
+  const flowEvents = useMemo<FlowEvent[]>(() => {
+    if (!simulacoesAtivas || simulacoes.length === 0) return flowEventsOp;
     const fromSimulacao = simulacoes.map((item) => ({
       id: item.id,
       contaGerencialId: item.contaGerencialId,
@@ -109,8 +117,8 @@ export default function FinanceiroPage() {
       previsao: false,
       simulacao: true,
     }));
-    return [...fromReceber, ...fromPagar, ...fromSimulacao].sort((a, b) => a.data.localeCompare(b.data));
-  }, [contas, pagar, receber, simulacoes]);
+    return [...flowEventsOp, ...fromSimulacao].sort((a, b) => a.data.localeCompare(b.data));
+  }, [contas, flowEventsOp, simulacoes, simulacoesAtivas]);
 
   const indicadores = useMemo(() => {
     const totalReceberAberto = receber
@@ -134,6 +142,7 @@ export default function FinanceiroPage() {
     return keys.sort();
   }, [flowEvents]);
 
+  // Monthly grouping (includes simulations when active)
   const fluxoMensal = useMemo(() => {
     const grouped = new Map<string, { contaLabel: string; contaGerencialId: string; meses: Record<string, { real: number; previsao: number; simulacao: number }> }>();
     for (const event of flowEvents) {
@@ -158,7 +167,22 @@ export default function FinanceiroPage() {
     return up.includes('IRPJ') || up.includes('CSLL');
   };
 
-  const resultadoOperacionalPorMes = useMemo(() => {
+  // Totalizadores mensais — sem simulações (operacional)
+  const resultadoOpPorMes = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const mes of meses) {
+      result[mes] = fluxoMensal
+        .filter((row) => !isImpostoLabel(row.contaLabel))
+        .reduce((sum, row) => {
+          const cell = row.meses[mes] || { real: 0, previsao: 0, simulacao: 0 };
+          return sum + cell.real + cell.previsao;
+        }, 0);
+    }
+    return result;
+  }, [fluxoMensal, meses]);
+
+  // Totalizadores mensais — com simulações
+  const resultadoComSimPorMes = useMemo(() => {
     const result: Record<string, number> = {};
     for (const mes of meses) {
       result[mes] = fluxoMensal
@@ -197,37 +221,76 @@ export default function FinanceiroPage() {
     return result;
   }, [fluxoMensal, meses]);
 
-  const lucroLiquidoPorMes = useMemo(() => {
+  // Lucro líquido operacional (sem simulações)
+  const lucroLiquidoOpPorMes = useMemo(() => {
     const result: Record<string, number> = {};
     for (const mes of meses) {
-      result[mes] = (resultadoOperacionalPorMes[mes] ?? 0) - (irpjPorMes[mes] ?? 0) - (csllPorMes[mes] ?? 0);
+      result[mes] = (resultadoOpPorMes[mes] ?? 0) - (irpjPorMes[mes] ?? 0) - (csllPorMes[mes] ?? 0);
     }
     return result;
-  }, [resultadoOperacionalPorMes, irpjPorMes, csllPorMes, meses]);
+  }, [resultadoOpPorMes, irpjPorMes, csllPorMes, meses]);
 
-  const saldoAcumulado = useMemo(() => {
+  // Lucro líquido com simulações
+  const lucroLiquidoComSimPorMes = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const mes of meses) {
+      result[mes] = (resultadoComSimPorMes[mes] ?? 0) - (irpjPorMes[mes] ?? 0) - (csllPorMes[mes] ?? 0);
+    }
+    return result;
+  }, [resultadoComSimPorMes, irpjPorMes, csllPorMes, meses]);
+
+  // Saldo acumulado operacional
+  const saldoAcumuladoOp = useMemo(() => {
     let acc = 0;
     return meses.map((mes) => {
-      acc += lucroLiquidoPorMes[mes] ?? 0;
+      acc += lucroLiquidoOpPorMes[mes] ?? 0;
       return acc;
     });
-  }, [lucroLiquidoPorMes, meses]);
+  }, [lucroLiquidoOpPorMes, meses]);
 
+  // Saldo acumulado com simulações
+  const saldoAcumuladoComSim = useMemo(() => {
+    let acc = 0;
+    return meses.map((mes) => {
+      acc += lucroLiquidoComSimPorMes[mes] ?? 0;
+      return acc;
+    });
+  }, [lucroLiquidoComSimPorMes, meses]);
+
+  const temSimulacoes = simulacoesAtivas && simulacoes.length > 0;
+
+  // Fluxo diário — dois saldos: operacional e total (c/ sim)
   const fluxoDiarioAgrupado = useMemo(() => {
-    const map = new Map<string, { data: string; events: FlowEvent[]; totalEntradas: number; totalSaidas: number }>();
+    type DayGroup = {
+      data: string;
+      events: FlowEvent[];
+      totalEntradas: number;
+      totalSaidas: number;
+      entradasOp: number;
+      saidasOp: number;
+      hasSimulacao: boolean;
+    };
+    const map = new Map<string, DayGroup>();
     for (const event of flowEvents) {
-      const group = map.get(event.data) || { data: event.data, events: [], totalEntradas: 0, totalSaidas: 0 };
+      const group: DayGroup = map.get(event.data) || { data: event.data, events: [], totalEntradas: 0, totalSaidas: 0, entradasOp: 0, saidasOp: 0, hasSimulacao: false };
       group.events.push(event);
       if (event.tipo === 'ENTRADA') group.totalEntradas += event.valor;
       else group.totalSaidas += event.valor;
+      if (!event.simulacao) {
+        if (event.tipo === 'ENTRADA') group.entradasOp += event.valor;
+        else group.saidasOp += event.valor;
+      }
+      if (event.simulacao) group.hasSimulacao = true;
       map.set(event.data, group);
     }
-    let saldoAcc = 0;
+    let saldoOpAcc = 0;
+    let saldoTotalAcc = 0;
     return Array.from(map.values())
       .sort((a, b) => a.data.localeCompare(b.data))
       .map((group) => {
-        saldoAcc += group.totalEntradas - group.totalSaidas;
-        return { ...group, saldo: saldoAcc };
+        saldoOpAcc += group.entradasOp - group.saidasOp;
+        saldoTotalAcc += group.totalEntradas - group.totalSaidas;
+        return { ...group, saldoOp: saldoOpAcc, saldoTotal: saldoTotalAcc };
       });
   }, [flowEvents]);
 
@@ -238,12 +301,6 @@ export default function FinanceiroPage() {
       else next.add(date);
       return next;
     });
-  }
-
-  function getValueClass(event: FlowEvent) {
-    if (event.simulacao) return 'value--simulation';
-    if (event.previsao) return 'value--forecast';
-    return '';
   }
 
   function openSimulationModal() {
@@ -260,6 +317,7 @@ export default function FinanceiroPage() {
     event.preventDefault();
     setSavingSimulation(true);
     try {
+      const valor = parseCurrencyInputBRL(simulacaoForm.valor) ?? 0;
       setSimulacoes((current) => [
         ...current,
         {
@@ -267,7 +325,7 @@ export default function FinanceiroPage() {
           descricao: simulacaoForm.descricao,
           contaGerencialId: simulacaoForm.contaGerencialId,
           tipo: simulacaoForm.tipo,
-          valor: Number(simulacaoForm.valor),
+          valor,
           data: simulacaoForm.data,
         },
       ]);
@@ -277,12 +335,31 @@ export default function FinanceiroPage() {
     }
   }
 
+  function removeSimulacao(id: string) {
+    setSimulacoes((current) => current.filter((s) => s.id !== id));
+  }
+
   return (
     <div className="page-stack page-stack--compact">
       <PageHeader
         title="Financeiro"
         subtitle="Fluxo de caixa mensal e diário, simulação de cenários e indicadores gerenciais."
-        actions={<button className="button button--small" type="button" onClick={openSimulationModal}>Nova simulação</button>}
+        actions={
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              className={`button button--small${simulacoesAtivas ? '' : ' button--ghost'}`}
+              type="button"
+              style={simulacoesAtivas ? { background: '#7c3aed', borderColor: '#7c3aed' } : { color: '#7c3aed', borderColor: '#7c3aed' }}
+              onClick={() => setSimulacoesAtivas((v) => !v)}
+              title={simulacoesAtivas ? 'Simulações ativas — clique para desativar' : 'Simulações desativadas — clique para ativar'}
+            >
+              ◆ Simulações {simulacoesAtivas ? 'Ativas' : 'Desativadas'}
+            </button>
+            <button className="button button--small button--ghost" type="button" onClick={openSimulationModal}>
+              + Nova simulação
+            </button>
+          </div>
+        }
       />
       <FinanceiroNav />
       {error ? <Feedback type="error" message={error} /> : null}
@@ -302,16 +379,27 @@ export default function FinanceiroPage() {
                 <div className="stat-card"><span className="stat-card__label">A receber em aberto</span><strong>{formatCurrency(indicadores.totalReceberAberto)}</strong><span className="stat-card__helper">Receitas abertas e previsões não recebidas.</span></div>
                 <div className="stat-card"><span className="stat-card__label">A pagar em aberto</span><strong>{formatCurrency(indicadores.totalPagarAberto)}</strong><span className="stat-card__helper">Compromissos futuros e vencidos não pagos.</span></div>
                 <div className="stat-card"><span className="stat-card__label">Saldo projetado</span><strong>{formatCurrency(indicadores.saldoProjetado)}</strong><span className="stat-card__helper">A receber menos a pagar no cenário atual.</span></div>
-                <div className="stat-card"><span className="stat-card__label">Impacto das simulações</span><strong>{formatCurrency(indicadores.totalSimulado)}</strong><span className="stat-card__helper">Cenário temporário sem efetivar lançamentos.</span></div>
+                <div className="stat-card"><span className="stat-card__label">Impacto das simulações</span><strong style={{ color: '#7c3aed' }}>{formatCurrency(indicadores.totalSimulado)}</strong><span className="stat-card__helper">{simulacoesAtivas ? 'Cenário ativo no fluxo.' : 'Simulações desativadas.'}</span></div>
               </section>
 
+              {/* Grid de simulações */}
               <section className="panel panel--compact">
                 <div className="panel__header panel__header--row">
                   <div>
-                    <h3>Simulações temporárias</h3>
-                    <p>Entradas e saídas simuladas não são gravadas no financeiro real.</p>
+                    <h3>Simulações</h3>
+                    <p>{simulacoes.length} cenário(s) cadastrado(s) · {simulacoesAtivas ? <span style={{ color: '#7c3aed', fontWeight: 700 }}>Ativas no fluxo</span> : <span style={{ color: '#64748b' }}>Desativadas</span>}</p>
                   </div>
-                  <button className="button button--ghost button--small" type="button" onClick={openSimulationModal}>Adicionar simulação</button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className="button button--ghost button--small"
+                      type="button"
+                      style={simulacoesAtivas ? { color: '#7c3aed', borderColor: '#7c3aed' } : {}}
+                      onClick={() => setSimulacoesAtivas((v) => !v)}
+                    >
+                      {simulacoesAtivas ? '◆ Desativar simulações' : '◆ Ativar simulações'}
+                    </button>
+                    <button className="button button--ghost button--small" type="button" onClick={openSimulationModal}>Adicionar</button>
+                  </div>
                 </div>
                 <div className="table-wrap table-wrap--full">
                   <table>
@@ -322,24 +410,26 @@ export default function FinanceiroPage() {
                         <th>Data</th>
                         <th>Tipo</th>
                         <th>Valor</th>
-                        <th>Ações</th>
+                        <th style={{ width: 80 }}>Excluir</th>
                       </tr>
                     </thead>
                     <tbody>
                       {simulacoes.map((item) => (
-                        <tr key={item.id} className="table-row--simulation">
-                          <td>{item.descricao}</td>
+                        <tr key={item.id} style={{ opacity: simulacoesAtivas ? 1 : 0.45 }}>
+                          <td style={{ color: '#7c3aed', fontWeight: 600 }}>◆ {item.descricao}</td>
                           <td>{contas.find((c) => c.id === item.contaGerencialId)?.descricao || '—'}</td>
                           <td>{item.data}</td>
-                          <td>{item.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'}</td>
-                          <td>{formatCurrency(item.valor)}</td>
+                          <td style={{ color: item.tipo === 'ENTRADA' ? '#0f172a' : '#c2185b', fontWeight: 600 }}>
+                            {item.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'}
+                          </td>
+                          <td style={{ color: '#7c3aed', fontWeight: 700 }}>{formatCurrency(item.valor)}</td>
                           <td>
-                            <button className="button button--danger button--small" type="button" onClick={() => setSimulacoes((current) => current.filter((s) => s.id !== item.id))}>Remover</button>
+                            <button className="button button--danger button--small" type="button" onClick={() => removeSimulacao(item.id)}>Excluir</button>
                           </td>
                         </tr>
                       ))}
                       {simulacoes.length === 0 ? (
-                        <tr><td colSpan={6} className="muted">Nenhuma simulação cadastrada no momento.</td></tr>
+                        <tr><td colSpan={6} className="muted">Nenhuma simulação cadastrada. Use "+ Nova simulação" para criar cenários.</td></tr>
                       ) : null}
                     </tbody>
                   </table>
@@ -352,7 +442,10 @@ export default function FinanceiroPage() {
             <section className="panel panel--compact">
               <div className="panel__header">
                 <h3>Fluxo de caixa mensal</h3>
-                <p>Estruturado pelo plano de contas. Valores positivos = entradas, negativos = saídas. <span className="value--forecast">Verde = previsão</span> · <span className="value--simulation">Azul = simulação</span>.</p>
+                <p>
+                  Estruturado pelo plano de contas. Valores positivos = <strong>entradas</strong>, negativos = <span style={{ color: '#c2185b' }}>saídas</span>.
+                  {temSimulacoes ? <span style={{ color: '#7c3aed' }}> · ◆ Simulações ativas</span> : null}
+                </p>
               </div>
               <div className="table-wrap table-wrap--full">
                 <table>
@@ -372,9 +465,9 @@ export default function FinanceiroPage() {
                           return (
                             <td key={mes}>
                               <div className="cash-month-cell">
-                                <strong className={total < 0 ? 'value--negative' : total > 0 ? 'value--positive' : ''}>{formatCurrency(total)}</strong>
+                                <strong style={{ color: total < 0 ? '#c2185b' : total > 0 ? '#0f172a' : '#94a3b8' }}>{formatCurrency(total)}</strong>
                                 {cell.previsao ? <div className="cash-month-cell__hint value--forecast">Prev.: {formatCurrency(cell.previsao)}</div> : null}
-                                {cell.simulacao ? <div className="cash-month-cell__hint value--simulation">Sim.: {formatCurrency(cell.simulacao)}</div> : null}
+                                {cell.simulacao ? <div className="cash-month-cell__hint" style={{ color: '#7c3aed' }}>◆ Sim.: {formatCurrency(cell.simulacao)}</div> : null}
                               </div>
                             </td>
                           );
@@ -389,38 +482,47 @@ export default function FinanceiroPage() {
                         <tr className="flow-total-row">
                           <td>Resultado Operacional Líquido</td>
                           {meses.map((mes) => {
-                            const val = resultadoOperacionalPorMes[mes] ?? 0;
-                            return <td key={mes} className={val < 0 ? 'value--negative' : val > 0 ? 'value--positive' : ''}>{formatCurrency(val)}</td>;
+                            const val = resultadoComSimPorMes[mes] ?? 0;
+                            return <td key={mes} style={{ color: val < 0 ? '#c2185b' : val > 0 ? '#0f172a' : undefined }}>{formatCurrency(val)}</td>;
                           })}
                         </tr>
                         <tr className="flow-total-row">
                           <td>(-) IRPJ</td>
                           {meses.map((mes) => {
                             const val = irpjPorMes[mes] ?? 0;
-                            return <td key={mes} className={val > 0 ? 'value--negative' : ''}>{val > 0 ? `(${formatCurrency(val)})` : '—'}</td>;
+                            return <td key={mes} style={{ color: val > 0 ? '#c2185b' : undefined }}>{val > 0 ? `(${formatCurrency(val)})` : '—'}</td>;
                           })}
                         </tr>
                         <tr className="flow-total-row">
                           <td>(-) CSLL</td>
                           {meses.map((mes) => {
                             const val = csllPorMes[mes] ?? 0;
-                            return <td key={mes} className={val > 0 ? 'value--negative' : ''}>{val > 0 ? `(${formatCurrency(val)})` : '—'}</td>;
+                            return <td key={mes} style={{ color: val > 0 ? '#c2185b' : undefined }}>{val > 0 ? `(${formatCurrency(val)})` : '—'}</td>;
                           })}
                         </tr>
                         <tr className="flow-total-row flow-total-row--accent">
                           <td>= Lucro Líquido</td>
                           {meses.map((mes) => {
-                            const val = lucroLiquidoPorMes[mes] ?? 0;
-                            return <td key={mes} className={val < 0 ? 'value--negative' : val > 0 ? 'value--positive' : ''}>{formatCurrency(val)}</td>;
+                            const val = lucroLiquidoComSimPorMes[mes] ?? 0;
+                            return <td key={mes} style={{ color: val < 0 ? '#c2185b' : val > 0 ? '#0f172a' : undefined }}>{formatCurrency(val)}</td>;
                           })}
                         </tr>
                         <tr className="flow-total-row flow-total-row--accent">
-                          <td>Saldo acumulado</td>
+                          <td>Saldo acumulado operacional</td>
                           {meses.map((mes, i) => {
-                            const val = saldoAcumulado[i] ?? 0;
-                            return <td key={mes} className={val < 0 ? 'value--negative' : ''}>{formatCurrency(val)}</td>;
+                            const val = saldoAcumuladoOp[i] ?? 0;
+                            return <td key={mes} style={{ color: val < 0 ? '#c2185b' : undefined }}>{formatCurrency(val)}</td>;
                           })}
                         </tr>
+                        {temSimulacoes ? (
+                          <tr className="flow-total-row flow-total-row--accent" style={{ background: 'rgba(124,58,237,0.08)' }}>
+                            <td style={{ color: '#7c3aed' }}>◆ Saldo acumulado c/ simulações</td>
+                            {meses.map((mes, i) => {
+                              const val = saldoAcumuladoComSim[i] ?? 0;
+                              return <td key={mes} style={{ color: '#7c3aed', fontWeight: 700 }}>{formatCurrency(val)}</td>;
+                            })}
+                          </tr>
+                        ) : null}
                       </>
                     ) : null}
                   </tbody>
@@ -433,7 +535,12 @@ export default function FinanceiroPage() {
             <section className="panel panel--compact">
               <div className="panel__header">
                 <h3>Fluxo de caixa diário</h3>
-                <p>Clique no <strong>+</strong> de uma data para ver os lançamentos. <span className="value--forecast">Verde = previsão</span> · <span className="value--simulation">Azul = simulação</span>.</p>
+                <p>
+                  Clique no <strong>+</strong> para ver os lançamentos. &nbsp;
+                  <span style={{ color: '#0f172a', fontWeight: 600 }}>Entradas = preto</span> ·{' '}
+                  <span style={{ color: '#c2185b', fontWeight: 600 }}>Saídas = magenta</span> ·{' '}
+                  <span style={{ color: '#7c3aed', fontWeight: 600 }}>◆ Simulações = roxo</span>
+                </p>
               </div>
               {fluxoDiarioAgrupado.length === 0 ? (
                 <p className="muted">Nenhum lançamento projetado ainda.</p>
@@ -443,9 +550,10 @@ export default function FinanceiroPage() {
                     <thead>
                       <tr>
                         <th>Data / Descrição</th>
-                        <th>Entradas</th>
-                        <th>Saídas</th>
-                        <th>Saldo acumulado</th>
+                        <th style={{ color: '#0f172a' }}>Entradas</th>
+                        <th style={{ color: '#c2185b' }}>Saídas</th>
+                        <th>Saldo operacional</th>
+                        {temSimulacoes ? <th style={{ color: '#7c3aed' }}>◆ Saldo c/ sim.</th> : null}
                       </tr>
                     </thead>
                     <tbody>
@@ -456,27 +564,55 @@ export default function FinanceiroPage() {
                               <span className="flow-date-toggle">
                                 <span className="flow-date-icon">{expandedDates.has(group.data) ? '−' : '+'}</span>
                                 {group.data}
+                                {group.hasSimulacao ? (
+                                  <span
+                                    title="Esta data contém lançamentos simulados"
+                                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, borderRadius: '50%', background: '#7c3aed', color: 'white', fontSize: 10, fontWeight: 700, flexShrink: 0 }}
+                                  >◆</span>
+                                ) : null}
                               </span>
                             </td>
-                            <td>{group.totalEntradas > 0 ? formatCurrency(group.totalEntradas) : '—'}</td>
-                            <td>{group.totalSaidas > 0 ? formatCurrency(group.totalSaidas) : '—'}</td>
-                            <td className={group.saldo < 0 ? 'value--negative' : ''}>{formatCurrency(group.saldo)}</td>
+                            <td style={{ color: '#0f172a', fontWeight: 700 }}>
+                              {group.entradasOp > 0 ? formatCurrency(group.entradasOp) : '—'}
+                            </td>
+                            <td style={{ color: '#c2185b', fontWeight: 700 }}>
+                              {group.saidasOp > 0 ? formatCurrency(group.saidasOp) : '—'}
+                            </td>
+                            <td style={{ color: group.saldoOp < 0 ? '#c2185b' : undefined, fontWeight: 700 }}>
+                              {formatCurrency(group.saldoOp)}
+                            </td>
+                            {temSimulacoes ? (
+                              <td style={{ color: '#7c3aed', fontWeight: 700 }}>
+                                {group.saldoTotal !== group.saldoOp ? formatCurrency(group.saldoTotal) : '—'}
+                              </td>
+                            ) : null}
                           </tr>
-                          {expandedDates.has(group.data) ? group.events.map((event) => (
-                            <tr key={event.id} className="flow-detail-row">
-                              <td>
-                                {event.descricao}
-                                <div className="table-subline">{event.contaLabel}{event.previsao ? ' · Previsão' : ''}{event.simulacao ? ' · Simulação' : ''}</div>
-                              </td>
-                              <td className={getValueClass(event)}>
-                                {event.tipo === 'ENTRADA' ? formatCurrency(event.valor) : ''}
-                              </td>
-                              <td className={getValueClass(event)}>
-                                {event.tipo === 'SAIDA' ? formatCurrency(event.valor) : ''}
-                              </td>
-                              <td>—</td>
-                            </tr>
-                          )) : null}
+                          {expandedDates.has(group.data) ? group.events.map((event) => {
+                            const isSimulacao = event.simulacao;
+                            const color = isSimulacao ? '#7c3aed' : event.tipo === 'ENTRADA' ? '#0f172a' : '#c2185b';
+                            return (
+                              <tr key={event.id} className="flow-detail-row">
+                                <td>
+                                  <span style={{ color }}>
+                                    {isSimulacao ? '◆ ' : ''}{event.descricao}
+                                  </span>
+                                  <div className="table-subline">
+                                    {event.contaLabel}
+                                    {event.previsao ? ' · Previsão' : ''}
+                                    {isSimulacao ? ' · Simulação' : ''}
+                                  </div>
+                                </td>
+                                <td style={{ color, fontWeight: 600 }}>
+                                  {event.tipo === 'ENTRADA' ? formatCurrency(event.valor) : ''}
+                                </td>
+                                <td style={{ color, fontWeight: 600 }}>
+                                  {event.tipo === 'SAIDA' ? formatCurrency(event.valor) : ''}
+                                </td>
+                                <td>—</td>
+                                {temSimulacoes ? <td>—</td> : null}
+                              </tr>
+                            );
+                          }) : null}
                         </Fragment>
                       ))}
                     </tbody>
@@ -521,11 +657,16 @@ export default function FinanceiroPage() {
           </div>
           <div className="field">
             <label>Valor</label>
-            <input type="number" step="0.01" value={simulacaoForm.valor} onChange={(e) => setSimulacaoForm((c) => ({ ...c, valor: e.target.value }))} required />
+            <input
+              value={simulacaoForm.valor}
+              onChange={(e) => setSimulacaoForm((c) => ({ ...c, valor: maskCurrencyInputBRL(e.target.value) }))}
+              placeholder="R$ 0,00"
+              required
+            />
           </div>
           <div className="field field--span-2">
-            <button className="button" type="submit" disabled={savingSimulation}>
-              {savingSimulation ? 'Adicionando...' : 'Adicionar simulação'}
+            <button className="button" type="submit" disabled={savingSimulation} style={{ background: '#7c3aed', borderColor: '#7c3aed' }}>
+              {savingSimulation ? 'Adicionando...' : '◆ Adicionar simulação'}
             </button>
           </div>
         </form>
