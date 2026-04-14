@@ -607,7 +607,7 @@ export default function FinanceiroPage() {
                             <td style={{ color: '#c2185b', fontWeight: 700 }}>
                               {group.totalSaidas > 0 ? formatCurrency(group.totalSaidas) : '—'}
                             </td>
-                            <td style={{ color: group.saldoTotal < 0 ? '#c2185b' : group.hasSimulacao ? '#7c3aed' : undefined, fontWeight: 700 }}>
+                            <td style={{ color: group.saldoTotal < 0 ? '#c2185b' : undefined, fontWeight: 700 }}>
                               {formatCurrency(group.saldoTotal)}
                             </td>
                           </tr>
