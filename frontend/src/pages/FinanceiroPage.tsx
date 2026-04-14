@@ -508,21 +508,12 @@ export default function FinanceiroPage() {
                           })}
                         </tr>
                         <tr className="flow-total-row flow-total-row--accent">
-                          <td>Saldo acumulado operacional</td>
+                          <td>Saldo Acumulado{temSimulacoes ? <span style={{ color: '#7c3aed', fontSize: 11, marginLeft: 6 }}>◆ c/ simulações</span> : null}</td>
                           {meses.map((mes, i) => {
-                            const val = saldoAcumuladoOp[i] ?? 0;
-                            return <td key={mes} style={{ color: val < 0 ? '#c2185b' : undefined }}>{formatCurrency(val)}</td>;
+                            const val = (temSimulacoes ? saldoAcumuladoComSim[i] : saldoAcumuladoOp[i]) ?? 0;
+                            return <td key={mes} style={{ color: temSimulacoes ? '#7c3aed' : val < 0 ? '#c2185b' : undefined, fontWeight: 700 }}>{formatCurrency(val)}</td>;
                           })}
                         </tr>
-                        {temSimulacoes ? (
-                          <tr className="flow-total-row flow-total-row--accent" style={{ background: 'rgba(124,58,237,0.08)' }}>
-                            <td style={{ color: '#7c3aed' }}>◆ Saldo acumulado c/ simulações</td>
-                            {meses.map((mes, i) => {
-                              const val = saldoAcumuladoComSim[i] ?? 0;
-                              return <td key={mes} style={{ color: '#7c3aed', fontWeight: 700 }}>{formatCurrency(val)}</td>;
-                            })}
-                          </tr>
-                        ) : null}
                       </>
                     ) : null}
                   </tbody>
