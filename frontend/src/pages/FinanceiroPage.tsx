@@ -36,8 +36,16 @@ export default function FinanceiroPage() {
   const [receber, setReceber] = useState<Recebivel[]>([]);
   const [pagar, setPagar] = useState<ContaPagar[]>([]);
   const [contas, setContas] = useState<ContaGerencial[]>([]);
-  const [simulacoes, setSimulacoes] = useState<SimulacaoFluxoItem[]>([]);
-  const [simulacoesAtivas, setSimulacoesAtivas] = useState(true);
+  const [simulacoes, setSimulacoes] = useState<SimulacaoFluxoItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('raccolto_simulacoes');
+      return saved ? (JSON.parse(saved) as SimulacaoFluxoItem[]) : [];
+    } catch { return []; }
+  });
+  const [simulacoesAtivas, setSimulacoesAtivas] = useState(() => {
+    try { return localStorage.getItem('raccolto_simulacoes_ativas') !== 'false'; } catch { return true; }
+  });
+  const [selectedSimIds, setSelectedSimIds] = useState<Set<string>>(new Set());
   const [simulacaoForm, setSimulacaoForm] = useState(initialSimulacaoForm);
   const [loading, setLoading] = useState(true);
   const [savingSimulation, setSavingSimulation] = useState(false);
@@ -45,6 +53,15 @@ export default function FinanceiroPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('painel');
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+
+  // Persist simulacoes and active state
+  useEffect(() => {
+    try { localStorage.setItem('raccolto_simulacoes', JSON.stringify(simulacoes)); } catch {}
+  }, [simulacoes]);
+
+  useEffect(() => {
+    try { localStorage.setItem('raccolto_simulacoes_ativas', String(simulacoesAtivas)); } catch {}
+  }, [simulacoesAtivas]);
 
   useEffect(() => {
     async function load() {
@@ -335,8 +352,23 @@ export default function FinanceiroPage() {
     }
   }
 
-  function removeSimulacao(id: string) {
-    setSimulacoes((current) => current.filter((s) => s.id !== id));
+  function toggleSimSelect(id: string) {
+    setSelectedSimIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSimSelectAll() {
+    setSelectedSimIds((prev) =>
+      prev.size === simulacoes.length ? new Set() : new Set(simulacoes.map((s) => s.id))
+    );
+  }
+
+  function deleteSelectedSimulacoes() {
+    setSimulacoes((current) => current.filter((s) => !selectedSimIds.has(s.id)));
+    setSelectedSimIds(new Set());
   }
 
   return (
@@ -387,35 +419,45 @@ export default function FinanceiroPage() {
                 <div className="panel__header panel__header--row">
                   <div>
                     <h3>Simulações</h3>
-                    <p>{simulacoes.length} cenário(s) cadastrado(s) · {simulacoesAtivas ? <span style={{ color: '#7c3aed', fontWeight: 700 }}>Ativas no fluxo</span> : <span style={{ color: '#64748b' }}>Desativadas</span>}</p>
+                    <p>{simulacoes.length} cenário(s) · {simulacoesAtivas ? <span style={{ color: '#7c3aed', fontWeight: 700 }}>Ativas no fluxo</span> : <span style={{ color: '#64748b' }}>Desativadas</span>}</p>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
+                    {selectedSimIds.size > 0 && (
+                      <button className="button button--danger button--small" type="button" onClick={deleteSelectedSimulacoes}>
+                        Excluir selecionadas ({selectedSimIds.size})
+                      </button>
+                    )}
                     <button
                       className="button button--ghost button--small"
                       type="button"
                       style={simulacoesAtivas ? { color: '#7c3aed', borderColor: '#7c3aed' } : {}}
                       onClick={() => setSimulacoesAtivas((v) => !v)}
                     >
-                      {simulacoesAtivas ? '◆ Desativar simulações' : '◆ Ativar simulações'}
+                      {simulacoesAtivas ? '◆ Desativar' : '◆ Ativar'}
                     </button>
-                    <button className="button button--ghost button--small" type="button" onClick={openSimulationModal}>Adicionar</button>
+                    <button className="button button--ghost button--small" type="button" onClick={openSimulationModal}>+ Adicionar</button>
                   </div>
                 </div>
                 <div className="table-wrap table-wrap--full">
                   <table>
                     <thead>
                       <tr>
+                        <th style={{ width: 36 }}>
+                          <input type="checkbox" checked={simulacoes.length > 0 && selectedSimIds.size === simulacoes.length} onChange={toggleSimSelectAll} title="Selecionar todas" />
+                        </th>
                         <th>Descrição</th>
                         <th>Conta gerencial</th>
                         <th>Data</th>
                         <th>Tipo</th>
                         <th>Valor</th>
-                        <th style={{ width: 80 }}>Excluir</th>
                       </tr>
                     </thead>
                     <tbody>
                       {simulacoes.map((item) => (
-                        <tr key={item.id} style={{ opacity: simulacoesAtivas ? 1 : 0.45 }}>
+                        <tr key={item.id} style={{ opacity: simulacoesAtivas ? 1 : 0.45 }} className={selectedSimIds.has(item.id) ? 'table-row--selected' : ''}>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <input type="checkbox" checked={selectedSimIds.has(item.id)} onChange={() => toggleSimSelect(item.id)} />
+                          </td>
                           <td style={{ color: '#7c3aed', fontWeight: 600 }}>◆ {item.descricao}</td>
                           <td>{contas.find((c) => c.id === item.contaGerencialId)?.descricao || '—'}</td>
                           <td>{item.data}</td>
@@ -423,13 +465,10 @@ export default function FinanceiroPage() {
                             {item.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'}
                           </td>
                           <td style={{ color: '#7c3aed', fontWeight: 700 }}>{formatCurrency(item.valor)}</td>
-                          <td>
-                            <button className="button button--danger button--small" type="button" onClick={() => removeSimulacao(item.id)}>Excluir</button>
-                          </td>
                         </tr>
                       ))}
                       {simulacoes.length === 0 ? (
-                        <tr><td colSpan={6} className="muted">Nenhuma simulação cadastrada. Use "+ Nova simulação" para criar cenários.</td></tr>
+                        <tr><td colSpan={6} className="muted">Nenhuma simulação cadastrada. Use "+ Adicionar" para criar cenários.</td></tr>
                       ) : null}
                     </tbody>
                   </table>
