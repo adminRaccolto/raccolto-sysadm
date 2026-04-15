@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import { IsEmail, IsEnum, IsNumber, IsOptional, IsString, Length, Min } from 'class-validator';
 import { StatusCliente, TipoPessoa } from '@prisma/client';
 
 export class CreateClienteDto {
@@ -69,4 +69,18 @@ export class CreateClienteDto {
   @IsOptional()
   @IsEnum(StatusCliente)
   status?: StatusCliente;
+
+  @IsOptional()
+  @IsString()
+  nomeFazenda?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  distanciaKm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  precoKmReembolso?: number;
 }

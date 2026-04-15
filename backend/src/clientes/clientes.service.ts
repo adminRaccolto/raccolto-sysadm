@@ -77,6 +77,9 @@ export class ClientesService {
         cidade: data.cidade !== undefined ? data.cidade?.trim() || null : undefined,
         estado: data.estado !== undefined ? data.estado?.trim().toUpperCase() || null : undefined,
         status: data.status ?? undefined,
+        nomeFazenda: data.nomeFazenda !== undefined ? data.nomeFazenda?.trim() || null : undefined,
+        distanciaKm: data.distanciaKm !== undefined ? data.distanciaKm ?? null : undefined,
+        precoKmReembolso: data.precoKmReembolso !== undefined ? data.precoKmReembolso ?? null : undefined,
       },
       include: this.defaultInclude(),
     });
@@ -183,6 +186,9 @@ export class ClientesService {
       cidade: data.cidade?.trim() || null,
       estado: data.estado?.trim().toUpperCase() || null,
       status: data.status,
+      nomeFazenda: data.nomeFazenda?.trim() || null,
+      distanciaKm: data.distanciaKm ?? null,
+      precoKmReembolso: data.precoKmReembolso ?? null,
     };
   }
 
