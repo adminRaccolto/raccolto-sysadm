@@ -586,14 +586,6 @@ export default function PropostasPage() {
               <button
                 className="button button--ghost button--small"
                 type="button"
-                disabled={!selectedProposta}
-                onClick={() => selectedProposta && window.open(`/propostas/${selectedProposta.id}/preview`, '_blank')}
-              >
-                Visualizar
-              </button>
-              <button
-                className="button button--ghost button--small"
-                type="button"
                 disabled={!selectedProposta || !podeEditar(selectedProposta!)}
                 onClick={() => selectedProposta && startEdit(selectedProposta)}
               >
@@ -652,12 +644,21 @@ export default function PropostasPage() {
         </div>
 
         {selectedProposta ? (
-          <div className="selection-note">
-            Selecionado: <strong>{selectedProposta.titulo}</strong>
-            {' · '}
-            <span className={`status-pill status-pill--${selectedProposta.status.toLowerCase()}`}>
-              {labelStatus(selectedProposta.status)}
+          <div className="selection-note" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <span>
+              Selecionado: <strong>{selectedProposta.titulo}</strong>
+              {' · '}
+              <span className={`status-pill status-pill--${selectedProposta.status.toLowerCase()}`}>
+                {labelStatus(selectedProposta.status)}
+              </span>
             </span>
+            <button
+              className="button button--ghost button--small"
+              type="button"
+              onClick={() => window.open(`/propostas/${selectedProposta.id}/preview`, '_blank')}
+            >
+              Visualizar proposta
+            </button>
           </div>
         ) : null}
 
