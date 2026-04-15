@@ -23,6 +23,84 @@ import {
 
 const periodicidades = ['MENSAL', 'BIMESTRAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL'] as const;
 
+const MODELO_PADRAO_AGB = `## Objetivo da proposta
+
+Apresentar uma solução de consultoria voltada à organização da gestão financeira, administrativa e operacional, com foco em controle, previsibilidade, apoio gerencial à tomada de decisão e melhoria da rotina do cliente.
+
+## 1. Escopo da atuação
+
+### Frente 1 — Operação da gestão financeira
+
+• Contas a pagar, contas a receber, lançamentos fiscais, baixas e conciliação bancária.
+• Estruturação do fluxo de caixa previsto e acompanhamento das rotinas financeiras.
+• Centro de custos, rateios, gestão de contratos e relatórios gerenciais.
+• Treinamento das rotinas e orientação da equipe envolvida.
+
+### Frente 2 — Gestão financeira em nível diretivo
+
+• Análise de passivos e definição de estratégias de pagamento.
+• Estratégias de caixa, controle de recursos financeiros e priorização de desembolsos.
+• Apoio à governança e à aprovação de pagamentos.
+
+### Frente 3 — Gestão operacional
+
+• Controle de abastecimentos, estoque de insumos e produtos.
+• Acompanhamento da operação de campo, apropriações e utilização de hora-máquina.
+• Manutenção de máquinas e equipamentos.
+• Estruturação de orçamento CAPEX e OPEX, com visão orçado x realizado.
+
+### Frente 4 — Implantação e padronização de controles
+
+• Apoio à implantação do sistema gerencial e às parametrizações necessárias.
+• Formatação de controles internos e definição do fluxo de informação.
+• Revisão de processos de trabalho para garantir aderência à operação.
+
+## 2. Entregáveis esperados
+
+• Rotinas financeiras estruturadas e acompanhadas com maior disciplina operacional.
+• Base de informações gerenciais mais confiável para análise de caixa, passivos, custos e resultados.
+• Padronização de controles e processos com definição clara de responsabilidades.
+• Apoio executivo à tomada de decisão financeira e administrativa.
+• Equipe orientada para utilização das rotinas e ferramentas implantadas.
+
+## 3. Forma de trabalho e acompanhamento
+
+• O cronograma analítico será detalhado após a aprovação da proposta.
+• A agenda de visitas e reuniões será alinhada com o responsável, considerando a sazonalidade da operação do cliente.
+• Os atendimentos poderão ocorrer de forma presencial e online, conforme a necessidade de cada etapa.
+• O avanço do projeto dependerá do acesso às informações e da disponibilidade dos responsáveis internos.
+
+## 4. Prazo estimado
+
+Prazo máximo estimado: até {{data_fim}}. O período pode ser reduzido conforme a disponibilidade do cliente, da equipe envolvida e da aderência ao cronograma executivo.
+
+## 5. Investimento
+
+O investimento do projeto é calculado com base no esforço previsto para desenvolvimento das atividades, tanto in office quanto in company.
+
+**Valor total: {{valor_total}}**
+**Forma de pagamento: {{forma_pagamento}}**
+**Parcelas: {{qtd_parcelas}}x ({{periodicidade}})**
+
+## 6. Despesas de deslocamento e condições de desenvolvimento
+
+• Para atendimentos fora do município sede, poderão ser cobrados deslocamento, alimentação e hospedagem, quando aplicável.
+• Quilômetro rodado (ida e volta): conforme tabela vigente.
+• Alimentação: conforme acordado, por dia integral ou valor proporcional.
+• Hospedagem: reservada pelo cliente, quando necessária.
+• O sucesso do projeto depende do compartilhamento tempestivo das informações econômico-financeiras e operacionais previstas no escopo.
+
+## 7. Confidencialidade e pós-implantação
+
+Comprometemo-nos com a confidencialidade das informações compartilhadas pelo cliente. Após a implantação, poderá ser realizado acompanhamento e suporte técnico para monitorar resultados, colher feedbacks e apoiar a consolidação das rotinas implantadas.
+
+## 8. Validade e aceite
+
+• Esta proposta pode ser ajustada conforme escopo, agenda, local de atendimento e necessidades específicas do cliente.
+• Validade desta proposta: {{validade}}.
+• Após o aceite, recomenda-se formalizar o início do projeto por meio de assinatura eletrônica ou confirmação formal por e-mail.`;
+
+
 type PropostaCobranca = {
   ordem: number;
   vencimento: string;
@@ -506,6 +584,14 @@ export default function PropostasPage() {
               <button
                 className="button button--ghost button--small"
                 type="button"
+                disabled={!selectedProposta}
+                onClick={() => selectedProposta && window.open(`/propostas/${selectedProposta.id}/preview`, '_blank')}
+              >
+                Visualizar
+              </button>
+              <button
+                className="button button--ghost button--small"
+                type="button"
                 disabled={!selectedProposta || !podeEditar(selectedProposta!)}
                 onClick={() => selectedProposta && startEdit(selectedProposta)}
               >
@@ -975,6 +1061,16 @@ export default function PropostasPage() {
           <div className="table-actions-toolbar">
             <button className="button button--ghost button--small" type="button" onClick={() => { setEditingModeloId(null); setModeloForm({ nome: '', descricao: '', conteudo: '', ativo: true, padrao: false }); }}>
               Novo modelo
+            </button>
+            <button
+              className="button button--ghost button--small"
+              type="button"
+              onClick={() => {
+                setEditingModeloId(null);
+                setModeloForm({ nome: 'Proposta Consultoria — Estruturação e Diretoria Terceira', descricao: 'Modelo para propostas de consultoria financeira, administrativa e operacional.', conteudo: MODELO_PADRAO_AGB, ativo: true, padrao: modelos.length === 0 });
+              }}
+            >
+              Importar modelo padrão
             </button>
           </div>
 

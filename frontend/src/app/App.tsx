@@ -6,6 +6,7 @@ import DashboardPage from '../pages/DashboardPage';
 import ClientesPage from '../pages/ClientesPage';
 import ContratosPage from '../pages/ContratosPage';
 import PropostasPage from '../pages/PropostasPage';
+import PropostaPreviewPage from '../pages/PropostaPreviewPage';
 import FaturamentoPage from '../pages/FaturamentoPage';
 import ProjetosPage from '../pages/ProjetosPage';
 import SistemaPage from '../pages/SistemaPage';
@@ -39,6 +40,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/captacao/:slug" element={<CaptacaoPublicPage />} />
+      <Route path="propostas/:id/preview" element={<ProtectedRoute><PropostaPreviewPage /></ProtectedRoute>} />
       <Route path="/" element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
