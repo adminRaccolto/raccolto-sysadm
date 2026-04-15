@@ -196,7 +196,7 @@ const ACCENT = '#e07b1a';
 
 const styles = {
   page: {
-    fontFamily: 'Georgia, "Times New Roman", serif',
+    fontFamily: "'Calibri', 'Carlito', Arial, sans-serif",
     fontSize: 13,
     lineHeight: 1.65,
     color: '#222',
@@ -561,37 +561,40 @@ export default function PropostaPreviewPage() {
           </tbody>
         </table>
 
-        {/* Conteúdo do modelo */}
-        {textoFinal ? <RenderText texto={textoFinal} /> : null}
-
-        {/* Grade de cobranças */}
-        {proposta.cobrancas && proposta.cobrancas.length > 0 ? (
-          <div style={styles.cobrancasSection}>
-            <div style={styles.cobrancasTitle}>Fluxo de pagamento</div>
-            <div style={styles.tableWrap}>
-              <table style={styles.table}>
-                <thead style={styles.thead}>
-                  <tr>
-                    <th style={styles.th}>#</th>
-                    <th style={styles.th}>Vencimento</th>
-                    <th style={styles.th}>Descrição</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Valor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {proposta.cobrancas.map((c, i) => (
-                    <tr key={c.ordem} style={i % 2 === 1 ? styles.tdEven : undefined}>
-                      <td style={styles.td}>{c.ordem}</td>
-                      <td style={styles.td}>{formatDate(String(c.vencimento))}</td>
-                      <td style={styles.td}>{c.descricao || '—'}</td>
-                      <td style={styles.tdRight}>{formatCurrency(c.valor)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : null}
+        {/* Conteúdo do modelo — com suporte a {{tabela_cobrancas}} inline */}
+        {textoFinal
+          ? textoFinal.split('{{tabela_cobrancas}}').map((segmento, i, arr) => (
+              <span key={i}>
+                <RenderText texto={segmento} />
+                {i < arr.length - 1 && proposta.cobrancas && proposta.cobrancas.length > 0 ? (
+                  <div style={styles.cobrancasSection}>
+                    <div style={styles.tableWrap}>
+                      <table style={styles.table}>
+                        <thead style={styles.thead}>
+                          <tr>
+                            <th style={styles.th}>#</th>
+                            <th style={styles.th}>Vencimento</th>
+                            <th style={styles.th}>Descrição</th>
+                            <th style={{ ...styles.th, textAlign: 'right' }}>Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {proposta.cobrancas.map((c, ci) => (
+                            <tr key={c.ordem} style={ci % 2 === 1 ? styles.tdEven : undefined}>
+                              <td style={styles.td}>{c.ordem}</td>
+                              <td style={styles.td}>{formatDate(String(c.vencimento))}</td>
+                              <td style={styles.td}>{c.descricao || '—'}</td>
+                              <td style={styles.tdRight}>{formatCurrency(c.valor)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : null}
+              </span>
+            ))
+          : null}
 
         {/* Observações */}
         {proposta.observacoes ? (

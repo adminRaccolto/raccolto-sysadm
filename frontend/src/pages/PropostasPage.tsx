@@ -82,6 +82,8 @@ O investimento do projeto é calculado com base no esforço previsto para desenv
 **Forma de pagamento: {{forma_pagamento}}**
 **Parcelas: {{qtd_parcelas}}x ({{periodicidade}})**
 
+{{tabela_cobrancas}}
+
 ## 6. Despesas de deslocamento e condições de desenvolvimento
 
 • Para atendimentos fora do município sede, poderão ser cobrados deslocamento, alimentação e hospedagem, quando aplicável.
