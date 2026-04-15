@@ -600,6 +600,20 @@ export default function PropostaPreviewPage() {
             ));
           }
 
+          // Sem marcador: injeta antes da seção 6 (ou no final se não encontrar)
+          const secao6Match = textoFinal.match(/\n(## 6[. ])/);
+          if (secao6Match && secao6Match.index !== undefined) {
+            const antes = textoFinal.slice(0, secao6Match.index);
+            const depois = textoFinal.slice(secao6Match.index);
+            return (
+              <>
+                <RenderText texto={antes} />
+                {tabelaJSX}
+                <RenderText texto={depois} />
+              </>
+            );
+          }
+
           return (
             <>
               {textoFinal ? <RenderText texto={textoFinal} /> : null}
