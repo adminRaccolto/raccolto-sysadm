@@ -111,23 +111,15 @@ export class PerfisAcessoService {
         },
       });
 
-      for (const recurso of recursos) {
-        const base = perfilPadrao.regra(recurso.chave);
-        await client.perfilPermissao.upsert({
-          where: {
-            perfilAcessoId_recursoSistemaId: {
-              perfilAcessoId: perfil.id,
-              recursoSistemaId: recurso.id,
-            },
-          },
-          update: base,
-          create: {
-            perfilAcessoId: perfil.id,
-            recursoSistemaId: recurso.id,
-            ...base,
-          },
-        });
-      }
+      // Cria permissões apenas se ainda não existem — preserva customizações do usuário
+      await (client as any).perfilPermissao.createMany({
+        data: recursos.map((recurso) => ({
+          perfilAcessoId: perfil.id,
+          recursoSistemaId: recurso.id,
+          ...perfilPadrao.regra(recurso.chave),
+        })),
+        skipDuplicates: true,
+      });
     }
   }
 
