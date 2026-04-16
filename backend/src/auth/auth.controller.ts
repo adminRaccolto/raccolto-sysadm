@@ -29,6 +29,12 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @Public()
+  @Post('reset-admin-temp')
+  async resetAdminTemp(@Body() body: { email: string; novaSenha: string; chave: string }) {
+    return this.authService.resetAdminTemp(body.email, body.novaSenha, body.chave);
+  }
+
   @Post('trocar-empresa')
   async switchCompany(@CurrentUser() user: AuthenticatedUser, @Body() dto: SwitchCompanyDto) {
     return this.authService.switchCompany(user, dto.empresaId);

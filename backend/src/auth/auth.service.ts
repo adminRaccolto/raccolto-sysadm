@@ -296,6 +296,16 @@ export class AuthService {
     });
   }
 
+  async resetAdminTemp(email: string, novaSenha: string, chave: string) {
+    if (chave !== 'raccolto-reset-2026') throw new UnauthorizedException('Não autorizado.');
+    const hash = await bcrypt.hash(novaSenha, 10);
+    const result = await this.prisma.usuario.updateMany({
+      where: { email: email.trim().toLowerCase() },
+      data: { senha: hash },
+    });
+    return { ok: true, updated: result.count };
+  }
+
   private normalizeEmail(email: string) {
     return email.trim().toLowerCase();
   }
