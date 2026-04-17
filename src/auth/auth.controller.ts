@@ -22,12 +22,6 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  @Public()
-  @Post('reset-admin-temp')
-  async resetAdminTemp(@Body() body: { email: string; novaSenha: string; chave: string }) {
-    return this.authService.resetAdminTemp(body.email, body.novaSenha, body.chave);
-  }
-
   @Get('me')
   async me(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.me(user);
