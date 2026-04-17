@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpsertChecklistDto } from './dto/upsert-checklist.dto';
 
@@ -88,11 +89,11 @@ export class ChecklistDiagnosticoService {
             areaPlantio: f.areaPlantio ?? null,
             areaPlantioPropia: f.areaPlantioPropia ?? null,
             areaPlantioArrendada: f.areaPlantioArrendada ?? null,
-            culturas: f.culturas,
+            culturas: f.culturas as unknown as Prisma.InputJsonValue,
             culturaOutro: f.culturaOutro ?? null,
-            culturasAreas: f.culturasAreas,
+            culturasAreas: f.culturasAreas as unknown as Prisma.InputJsonValue,
             frustracaoSafra: f.frustracaoSafra,
-            frustracoes: f.frustracoes,
+            frustracoes: f.frustracoes as unknown as Prisma.InputJsonValue,
           })),
         });
       }
