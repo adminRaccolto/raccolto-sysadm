@@ -279,28 +279,12 @@ export class FinanceiroService {
   }
 
   async listContasBancarias(empresaId: string) {
-    return this.prisma.contaBancaria.findMany({ where: { empresaId }, include: { bancoRef: true }, orderBy: { nome: 'asc' } });
+    return this.prisma.contaBancaria.findMany({ where: { empresaId }, orderBy: { nome: 'asc' } });
   }
 
   async createContaBancaria(empresaId: string, data: CreateContaBancariaDto) {
     const saldoInicial = data.saldoInicial ?? 0;
-    return this.prisma.contaBancaria.create({
-      data: {
-        empresaId,
-        bancoId: data.bancoId || null,
-        nome: data.nome.trim(),
-        banco: data.banco?.trim() || null,
-        agencia: data.agencia?.trim() || null,
-        numeroConta: data.numeroConta?.trim() || null,
-        chavePix: data.chavePix?.trim() || null,
-        tipo: data.tipo ?? TipoContaBancaria.CORRENTE,
-        saldoInicial,
-        saldoAtual: saldoInicial,
-        incluiFluxoCaixa: data.incluiFluxoCaixa ?? true,
-        ativo: data.ativo ?? true,
-      },
-      include: { bancoRef: true },
-    });
+    return this.prisma.contaBancaria.create({ data: { empresaId, nome: data.nome.trim(), banco: data.banco?.trim() || null, agencia: data.agencia?.trim() || null, numeroConta: data.numeroConta?.trim() || null, tipo: data.tipo ?? TipoContaBancaria.CORRENTE, saldoInicial, saldoAtual: saldoInicial, ativo: data.ativo ?? true } });
   }
 
   async updateContaBancaria(empresaId: string, id: string, data: Partial<CreateContaBancariaDto>) {
@@ -308,23 +292,7 @@ export class FinanceiroService {
     if (!atual) throw new BadRequestException('Conta bancária não encontrada.');
     const saldoInicial = data.saldoInicial ?? atual.saldoInicial;
     const diferenca = saldoInicial - atual.saldoInicial;
-    return this.prisma.contaBancaria.update({
-      where: { id },
-      data: {
-        bancoId: data.bancoId !== undefined ? data.bancoId || null : undefined,
-        nome: data.nome !== undefined ? data.nome.trim() : undefined,
-        banco: data.banco !== undefined ? data.banco?.trim() || null : undefined,
-        agencia: data.agencia !== undefined ? data.agencia?.trim() || null : undefined,
-        numeroConta: data.numeroConta !== undefined ? data.numeroConta?.trim() || null : undefined,
-        chavePix: data.chavePix !== undefined ? data.chavePix?.trim() || null : undefined,
-        tipo: data.tipo ?? undefined,
-        saldoInicial: data.saldoInicial ?? undefined,
-        saldoAtual: data.saldoInicial !== undefined ? atual.saldoAtual + diferenca : undefined,
-        incluiFluxoCaixa: data.incluiFluxoCaixa !== undefined ? data.incluiFluxoCaixa : undefined,
-        ativo: data.ativo ?? undefined,
-      },
-      include: { bancoRef: true },
-    });
+    return this.prisma.contaBancaria.update({ where: { id }, data: { nome: data.nome !== undefined ? data.nome.trim() : undefined, banco: data.banco !== undefined ? data.banco?.trim() || null : undefined, agencia: data.agencia !== undefined ? data.agencia?.trim() || null : undefined, numeroConta: data.numeroConta !== undefined ? data.numeroConta?.trim() || null : undefined, tipo: data.tipo ?? undefined, saldoInicial: data.saldoInicial ?? undefined, saldoAtual: data.saldoInicial !== undefined ? atual.saldoAtual + diferenca : undefined, ativo: data.ativo ?? undefined } });
   }
 
   async removeContaBancaria(empresaId: string, id: string) {
@@ -336,12 +304,10 @@ export class FinanceiroService {
   }
 
   async getFluxoCaixaProjetado(empresaId: string) {
-    const [recebiveis, contasPagar, contasBancarias] = await Promise.all([
+    const [recebiveis, contasPagar] = await Promise.all([
       this.prisma.recebivel.findMany({ where: { empresaId, status: { in: [StatusRecebivel.ABERTO, StatusRecebivel.VENCIDO] } }, select: { vencimento: true, valor: true } }),
       this.prisma.contaPagar.findMany({ where: { empresaId, status: { in: [StatusContaPagar.ABERTO, StatusContaPagar.VENCIDO] } }, select: { vencimento: true, valor: true } }),
-      this.prisma.contaBancaria.findMany({ where: { empresaId, ativo: true, incluiFluxoCaixa: true }, select: { saldoAtual: true } }),
     ]);
-    const saldoAtualTotal = contasBancarias.reduce((s, c) => s + c.saldoAtual, 0);
     const mapa = new Map<string, { data: string; entradas: number; saidas: number; saldo: number }>();
     const push = (date: Date, entradas: number, saidas: number) => {
       const chave = new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString().slice(0, 10);
@@ -353,7 +319,7 @@ export class FinanceiroService {
     };
     recebiveis.forEach((item) => push(item.vencimento, item.valor, 0));
     contasPagar.forEach((item) => push(item.vencimento, 0, item.valor));
-    return { saldoAtualTotal, projecao: Array.from(mapa.values()).sort((a, b) => a.data.localeCompare(b.data)) };
+    return Array.from(mapa.values()).sort((a, b) => a.data.localeCompare(b.data));
   }
 
   private resolveCompetencia(data: CreateContaPagarDto) {

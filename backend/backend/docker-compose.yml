@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: raccolto_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: raccolto_db
+      POSTGRES_USER: raccolto
+      POSTGRES_PASSWORD: raccolto123
+    ports:
+      - "5432:5432"
+    volumes:
+      - raccolto_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  raccolto_postgres_data:

@@ -2,8 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrioridadeNotificacao, StatusAssinatura, StatusProposta } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
-import { AutentiqueService } from '../autentique/autentique.service';
-import { ModelosDocumentoService } from '../modelos-documento/modelos-documento.service';
+import { AutentiqueService } from '../contratos/autentique.service';
 import { CreatePropostaDto } from './dto/create-proposta.dto';
 
 @Injectable()
@@ -14,7 +13,6 @@ export class PropostasService {
     private readonly prisma: PrismaService,
     private readonly notificacoesService: NotificacoesService,
     private readonly autentiqueService: AutentiqueService,
-    private readonly modelosService: ModelosDocumentoService,
   ) {}
 
   private defaultInclude() {
@@ -25,8 +23,6 @@ export class PropostasService {
       cobrancas: { orderBy: { ordem: 'asc' as const } },
     };
   }
-
-  // ── Propostas ────────────────────────────────────────────────────────────
 
   async findAll(empresaId: string) {
     return this.prisma.proposta.findMany({
@@ -265,10 +261,9 @@ export class PropostasService {
     const signatarioNome = proposta.contatoClienteNome || proposta.cliente.contatoPrincipal || proposta.clienteRazaoSocial || 'Cliente';
     const textoContrato = proposta.textoPropostaBase?.trim() || await this.resolverTextoProposta(proposta) || proposta.titulo;
 
-    const pdfBuffer = await this.autentiqueService.gerarPdfContrato(`Proposta — ${proposta.titulo}`, textoContrato);
     const { docId, signUrl } = await this.autentiqueService.enviarDocumento({
       nome: `Proposta — ${proposta.titulo}`,
-      pdfBuffer,
+      textoContrato,
       signatarioNome,
       signatarioEmail,
     });
@@ -463,7 +458,9 @@ export class PropostasService {
     clienteEnderecoFormatado: string | null;
     cobrancas: { ordem: number; vencimento: Date; valor: number; descricao: string | null }[];
   }): Promise<string | null> {
-    const modelo = await this.modelosService.findPadrao(proposta.empresaId, 'PROPOSTA');
+    const modelo = await this.prisma.contratoModelo.findFirst({
+      where: { empresaId: proposta.empresaId, padrao: true },
+    });
     if (!modelo) return null;
 
     const empresa = await this.prisma.empresa.findFirst({ where: { id: proposta.empresaId } });

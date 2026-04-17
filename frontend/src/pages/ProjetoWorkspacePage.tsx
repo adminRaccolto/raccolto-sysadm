@@ -203,7 +203,11 @@ export default function ProjetoWorkspacePage() {
   const [uploadingDocumentoLocal, setUploadingDocumentoLocal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'resumo' | 'fases' | 'backlog' | 'tarefas' | 'entregaveis' | 'documentos'>('resumo');
+  const [activeTab, setActiveTab] = useState<'resumo' | 'fases' | 'backlog' | 'tarefas' | 'entregaveis' | 'documentos' | 'perfil'>('resumo');
+  const [checklist, setChecklist] = useState<any>(null);
+  const [checklistLoading, setChecklistLoading] = useState(false);
+  const [checklistSaving, setChecklistSaving] = useState(false);
+  const [linkCopiado, setLinkCopiado] = useState(false);
   const [viewMode, setViewMode] = useState<'lista' | 'kanban'>('lista');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroAtribuidoA, setFiltroAtribuidoA] = useState('');
@@ -239,6 +243,54 @@ export default function ProjetoWorkspacePage() {
   }
 
   useEffect(() => { void loadData(); }, [id]);
+
+  async function loadChecklist() {
+    if (!id) return;
+    setChecklistLoading(true);
+    try {
+      const res = await http.get<any>(`/checklist-diagnostico/projeto/${id}`);
+      setChecklist(res.data);
+    } catch { setChecklist(null); }
+    finally { setChecklistLoading(false); }
+  }
+
+  useEffect(() => { if (activeTab === 'perfil') void loadChecklist(); }, [activeTab, id]);
+
+  async function criarChecklist() {
+    if (!id) return;
+    setChecklistSaving(true);
+    try {
+      const res = await http.post<any>(`/checklist-diagnostico/projeto/${id}/criar`);
+      setChecklist(res.data);
+    } catch { setError('Falha ao criar diagnóstico.'); }
+    finally { setChecklistSaving(false); }
+  }
+
+  async function marcarEnviado() {
+    if (!id) return;
+    setChecklistSaving(true);
+    try {
+      const res = await http.post<any>(`/checklist-diagnostico/projeto/${id}/enviar`);
+      setChecklist(res.data);
+    } catch { setError('Falha ao marcar como enviado.'); }
+    finally { setChecklistSaving(false); }
+  }
+
+  function copiarLink() {
+    if (!checklist?.token) return;
+    const url = `${window.location.origin}/diagnostico/${checklist.token}`;
+    void navigator.clipboard.writeText(url);
+    setLinkCopiado(true);
+    setTimeout(() => setLinkCopiado(false), 2500);
+  }
+
+  function abrirWhatsapp() {
+    if (!checklist?.token) return;
+    const url = `${window.location.origin}/diagnostico/${checklist.token}`;
+    const nome = projeto?.cliente?.razaoSocial || 'cliente';
+    const msg = encodeURIComponent(`Olá, ${nome}! Segue o link para preencher o Diagnóstico Inicial da Raccolto:\n${url}`);
+    window.open(`https://wa.me/?text=${msg}`, '_blank');
+  }
 
   const atribuidos = useMemo(
     () => [
@@ -594,6 +646,7 @@ export default function ProjetoWorkspacePage() {
     { key: 'tarefas',     label: 'Quadro' },
     { key: 'entregaveis', label: `Entregáveis (${projeto.entregaveis.length})` },
     { key: 'documentos',  label: `Docs (${projeto.documentos.length})` },
+    { key: 'perfil',      label: 'Perfil do Cliente' },
   ] as const;
 
   return (
@@ -656,6 +709,23 @@ export default function ProjetoWorkspacePage() {
               <tr><th>Prioridade</th><td>{labelize(projeto.prioridade)}</td></tr>
               <tr><th>Progresso</th><td>{projeto.painel?.percentualConclusao ?? projeto.percentualAndamento ?? 0}%</td></tr>
               <tr><th>Fases ativas</th><td>{etapas.filter((e) => e.status === 'ATIVA').length} / {etapas.length}</td></tr>
+              <tr>
+                <th>Diagnóstico</th>
+                <td>
+                  <button
+                    type="button"
+                    className="button button--ghost button--small"
+                    style={{ padding: '2px 8px', fontSize: 12 }}
+                    onClick={() => setActiveTab('perfil')}
+                  >
+                    {checklist?.status === 'RESPONDIDO'
+                      ? <span style={{ color: '#16a34a' }}>Respondido ✓</span>
+                      : checklist?.status === 'AGUARDANDO_RESPOSTA'
+                      ? <span style={{ color: '#d97706' }}>Aguardando resposta</span>
+                      : <span style={{ color: '#64748b' }}>Não enviado</span>}
+                  </button>
+                </td>
+              </tr>
             </tbody></table></div>
           </div>
           <div className="panel compact-gap">
@@ -1134,6 +1204,140 @@ export default function ProjetoWorkspacePage() {
             </form>
           </aside>
         </div>
+      ) : null}
+
+      {/* ── PERFIL DO CLIENTE ─────────────────────────────────────────────── */}
+      {activeTab === 'perfil' ? (
+        <section className="workspace-full">
+          <div className="panel panel--compact">
+            <div className="panel__header panel__header--row">
+              <div>
+                <h3>Perfil do Cliente — Diagnóstico Inicial</h3>
+                <p>
+                  {checklist?.status === 'RESPONDIDO' && <span style={{ color: '#16a34a', fontWeight: 600 }}>Respondido em {checklist.respondidoAt ? new Date(checklist.respondidoAt).toLocaleDateString('pt-BR') : '—'}</span>}
+                  {checklist?.status === 'AGUARDANDO_RESPOSTA' && <span style={{ color: '#d97706', fontWeight: 600 }}>Aguardando resposta do cliente</span>}
+                  {(!checklist || checklist.status === 'PENDENTE') && <span style={{ color: '#64748b' }}>Diagnóstico não enviado ainda</span>}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {!checklist && (
+                  <button className="button button--small" type="button" disabled={checklistSaving} onClick={criarChecklist}>
+                    {checklistSaving ? 'Criando...' : 'Criar diagnóstico'}
+                  </button>
+                )}
+                {checklist && checklist.status !== 'RESPONDIDO' && (
+                  <button className="button button--small" type="button" disabled={checklistSaving} onClick={marcarEnviado}>
+                    {checklistSaving ? '...' : 'Marcar como enviado'}
+                  </button>
+                )}
+                {checklist && (
+                  <>
+                    <button className="button button--ghost button--small" type="button" onClick={copiarLink}>
+                      {linkCopiado ? 'Link copiado!' : 'Copiar link'}
+                    </button>
+                    <button className="button button--ghost button--small" type="button" onClick={abrirWhatsapp} style={{ color: '#16a34a' }}>
+                      WhatsApp
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {checklistLoading && <div style={{ padding: 20, color: '#64748b' }}>Carregando...</div>}
+
+            {!checklistLoading && checklist && (
+              <div style={{ padding: '0 20px 24px' }}>
+                {checklist.token && (
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 13, color: '#64748b', flex: 1, wordBreak: 'break-all' }}>
+                      {window.location.origin}/diagnostico/{checklist.token}
+                    </span>
+                  </div>
+                )}
+
+                {checklist.status === 'RESPONDIDO' && checklist.fazendas?.length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <h4 style={{ marginBottom: 12 }}>Fazendas</h4>
+                    {checklist.fazendas.map((f: any, i: number) => (
+                      <div key={f.id} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 12 }}>
+                        <strong style={{ color: 'var(--primary)' }}>{f.nomeFazenda || `Fazenda ${i + 1}`}</strong>
+                        <div className="table-wrap" style={{ marginTop: 10 }}>
+                          <table className="table table--dense" style={{ fontSize: 13 }}>
+                            <tbody>
+                              <tr><th>Área Total</th><td>{f.areaTotal ? `${f.areaTotal} ha` : '—'}</td><th>Área de Plantio</th><td>{f.areaPlantio ? `${f.areaPlantio} ha` : '—'}</td></tr>
+                              <tr><th>Área Própria</th><td>{f.areaPlantioPropia ? `${f.areaPlantioPropia} ha` : '—'}</td><th>Área Arrendada</th><td>{f.areaPlantioArrendada ? `${f.areaPlantioArrendada} ha` : '—'}</td></tr>
+                              <tr><th>Culturas</th><td colSpan={3}>{Array.isArray(f.culturas) && f.culturas.length > 0 ? f.culturas.join(', ') : '—'}{f.culturaOutro ? ` (${f.culturaOutro})` : ''}</td></tr>
+                              <tr><th>Frustração de safra</th><td colSpan={3}>{f.frustracaoSafra ? 'Sim' : 'Não'}</td></tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {checklist.status === 'RESPONDIDO' && (
+                  <>
+                    <h4 style={{ marginBottom: 12 }}>Estrutura Familiar</h4>
+                    <div className="table-wrap" style={{ marginBottom: 20 }}>
+                      <table className="table table--dense" style={{ fontSize: 13 }}>
+                        <tbody>
+                          <tr><th>Negócio familiar</th><td>{checklist.negocioFamiliar == null ? '—' : checklist.negocioFamiliar ? 'Sim' : 'Não'}</td></tr>
+                          {checklist.negocioFamiliar && <>
+                            <tr><th>Membros envolvidos</th><td>{checklist.membrosEnvolvidos ?? '—'}</td></tr>
+                            <tr><th>Decisão por conselho</th><td>{checklist.decisaoPorConselho == null ? '—' : checklist.decisaoPorConselho ? 'Conselho' : 'Somente pelo gestor'}</td></tr>
+                            <tr><th>Em processo de sucessão</th><td>{checklist.emSucessao == null ? '—' : checklist.emSucessao ? 'Sim' : 'Não'}</td></tr>
+                            {checklist.emSucessao && <tr><th>Geração em sucessão</th><td>{checklist.geracaoSucessao || '—'}</td></tr>}
+                            <tr><th>Funções bem definidas</th><td>{checklist.funcoesDefinidas == null ? '—' : checklist.funcoesDefinidas ? 'Sim' : 'Não'}</td></tr>
+                            <tr><th>Governança implantada</th><td>{checklist.governancaImplantada == null ? '—' : checklist.governancaImplantada ? 'Sim' : 'Não'}</td></tr>
+                          </>}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <h4 style={{ marginBottom: 12 }}>Conhecimento do Negócio</h4>
+                    <div className="table-wrap" style={{ marginBottom: 20 }}>
+                      <table className="table table--dense" style={{ fontSize: 13 }}>
+                        <tbody>
+                          <tr><th>Utiliza sistema de gestão</th><td>{checklist.utilizaSistemaGestao == null ? '—' : checklist.utilizaSistemaGestao ? `Sim${checklist.qualSistema ? ` — ${checklist.qualSistema}` : ''}` : 'Não'}</td></tr>
+                          <tr><th>Sabe custo de produção</th><td>{checklist.sabeCustoProduzir == null ? '—' : checklist.sabeCustoProduzir ? 'Sim' : 'Não'}</td></tr>
+                          <tr><th>Fluxo de caixa projetado</th><td>{checklist.temFluxoCaixaProjetado == null ? '—' : checklist.temFluxoCaixaProjetado ? 'Sim' : 'Não'}</td></tr>
+                          <tr><th>Sabe comprometimento futuro</th><td>{checklist.sabeCompromissoFuturo == null ? '—' : checklist.sabeCompromissoFuturo ? 'Sim' : 'Não'}</td></tr>
+                          <tr><th>Base de comercialização</th><td>{checklist.baseComercializacao === 'SOMENTE_MERCADO' ? 'Somente mercado' : checklist.baseComercializacao === 'CONJUNTO_FATORES' ? 'Conjunto de fatores' : '—'}</td></tr>
+                          <tr><th>Trava comercialização futura</th><td>{checklist.travaComercializacao == null ? '—' : checklist.travaComercializacao ? 'Sim' : 'Não'}</td></tr>
+                          <tr><th>Negócio alavancado</th><td>{checklist.negocioAlavancado == null ? '—' : checklist.negocioAlavancado ? 'Sim' : 'Não'}</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {checklist.expectativaParceria && (
+                      <>
+                        <h4 style={{ marginBottom: 8 }}>Expectativas</h4>
+                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 16px', fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap' }}>
+                          {checklist.expectativaParceria}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {checklist.status !== 'RESPONDIDO' && (
+                  <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
+                    <p style={{ fontSize: 14 }}>Aguardando o cliente preencher o diagnóstico.</p>
+                    <p style={{ fontSize: 13 }}>Copie o link acima e envie por e-mail ou WhatsApp.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!checklistLoading && !checklist && (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
+                <p style={{ fontSize: 14 }}>Nenhum diagnóstico criado para este projeto.</p>
+                <p style={{ fontSize: 13 }}>Clique em "Criar diagnóstico" para gerar o link de preenchimento.</p>
+              </div>
+            )}
+          </div>
+        </section>
       ) : null}
 
       {showDocumentoDrawer ? (

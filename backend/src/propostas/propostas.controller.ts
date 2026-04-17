@@ -12,7 +12,6 @@ import { PropostasService } from './propostas.service';
 export class PropostasController {
   constructor(private readonly propostasService: PropostasService) {}
 
-
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.propostasService.findAll(user.empresaId);

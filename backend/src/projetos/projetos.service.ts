@@ -8,18 +8,6 @@ import { AuthenticatedUser } from '../common/interfaces/authenticated-user.inter
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjetoDto } from './dto/create-projeto.dto';
 
-const STATUSES_ABERTAS: StatusTarefa[] = [
-  StatusTarefa.NAO_INICIADA,
-  StatusTarefa.INICIADA,
-  StatusTarefa.AGUARDANDO_APROVACAO,
-] as unknown as StatusTarefa[];
-
-const STATUSES_ATRASADAS: StatusTarefa[] = [
-  StatusTarefa.NAO_INICIADA,
-  StatusTarefa.INICIADA,
-  StatusTarefa.AGUARDANDO_APROVACAO,
-] as unknown as StatusTarefa[];
-
 @Injectable()
 export class ProjetosService {
   constructor(private readonly prisma: PrismaService) {}
@@ -89,20 +77,17 @@ export class ProjetosService {
     }
 
     const responsavelId = await this.resolveResponsavel(empresaId, data.responsavelId);
-    const gerenteId = await this.resolveResponsavel(empresaId, data.gerenteId);
 
-    const projeto = await this.prisma.projeto.create({
+    return this.prisma.projeto.create({
       data: {
         empresaId,
         clienteId,
         contratoId,
         produtoServicoId,
         responsavelId,
-        gerenteId,
         interno,
         nome: data.nome.trim(),
         descricao: data.descricao?.trim() || null,
-        cor: data.cor || '#6366f1',
         equipeEnvolvida: data.equipeEnvolvida?.trim() || null,
         tipoServicoProjeto: data.tipoServicoProjeto?.trim() || null,
         faseAtual: data.faseAtual?.trim() || null,
@@ -118,13 +103,8 @@ export class ProjetosService {
         status: data.status,
         visivelCliente: interno ? false : data.visivelCliente ?? true,
       },
+      include: this.defaultInclude(),
     });
-
-    if (data.membroIds?.length) {
-      await this.syncMembros(projeto.id, empresaId, data.membroIds);
-    }
-
-    return this.findOneById(empresaId, projeto.id);
   }
 
   async update(empresaId: string, id: string, data: Partial<CreateProjetoDto>) {
@@ -198,11 +178,6 @@ export class ProjetosService {
         ? await this.resolveResponsavel(empresaId, data.responsavelId)
         : undefined;
 
-    const gerenteId =
-      data.gerenteId !== undefined
-        ? await this.resolveResponsavel(empresaId, data.gerenteId)
-        : undefined;
-
     await this.prisma.projeto.update({
       where: { id },
       data: {
@@ -210,11 +185,9 @@ export class ProjetosService {
         contratoId,
         produtoServicoId,
         responsavelId,
-        gerenteId,
         interno,
         nome: data.nome?.trim() ?? undefined,
         descricao: data.descricao !== undefined ? data.descricao?.trim() || null : undefined,
-        cor: data.cor || undefined,
         equipeEnvolvida:
           data.equipeEnvolvida !== undefined ? data.equipeEnvolvida?.trim() || null : undefined,
         tipoServicoProjeto:
@@ -237,13 +210,10 @@ export class ProjetosService {
         status: data.status ?? undefined,
         visivelCliente: interno ? false : data.visivelCliente !== undefined ? data.visivelCliente : undefined,
       },
+      include: this.defaultInclude(),
     });
 
-    if (data.membroIds !== undefined) {
-      await this.syncMembros(id, empresaId, data.membroIds ?? []);
-    }
-
-    return this.findOneById(empresaId, id);
+    return this.findOne({ id: '', sub: '', empresaId, clienteId: null, email: '', nome: '', perfil: PerfilUsuario.ADMIN } as AuthenticatedUser, id);
   }
 
   async remove(empresaId: string, id: string) {
@@ -294,50 +264,70 @@ export class ProjetosService {
       throw new ForbiddenException('Cliente sem vínculo operacional definido.');
     }
 
-    const isCliente = user.perfil === PerfilUsuario.CLIENTE;
-    const where = isCliente
-      ? { id, empresaId: user.empresaId, clienteId: user.clienteId!, visivelCliente: true as const }
-      : { id, empresaId: user.empresaId };
-
-    const projetoRaw = await this.prisma.projeto.findFirst({ where });
-    if (!projetoRaw) throw new BadRequestException('Projeto não encontrado.');
-
-    const projeto = await this.loadProjetoDetalhado(projetoRaw.id, isCliente);
-    if (!projeto) throw new BadRequestException('Projeto não encontrado.');
-
-    const hoje = new Date();
-    const tarefas = (projeto as any).tarefas ?? [];
-    const tarefasAbertas = tarefas.filter((t: any) =>
-      [StatusTarefa.NAO_INICIADA, 'INICIADA', 'AGUARDANDO_APROVACAO'].includes(t.status)).length;
-    const tarefasAtrasadas = tarefas.filter(
-      (t: any) => t.prazo && new Date(t.prazo) < hoje &&
-        ![StatusTarefa.CONCLUIDA, StatusTarefa.CANCELADA].includes(t.status),
-    ).length;
-    const tarefasConcluidas = tarefas.filter((t: any) => t.status === StatusTarefa.CONCLUIDA).length;
-    const tarefasPendentesAprovacao = tarefas.filter((t: any) => t.status === 'AGUARDANDO_APROVACAO').length;
-    const tarefasCanceladas = tarefas.filter((t: any) => t.status === StatusTarefa.CANCELADA).length;
-    const totalTarefas = tarefas.length;
-    const percentualConclusao = totalTarefas > 0
-      ? Math.round((tarefasConcluidas / totalTarefas) * 100)
-      : (projeto as any).percentualAndamento ?? 0;
-
-    // Atualiza o percentualAndamento no banco dinamicamente
-    await this.prisma.projeto.update({
-      where: { id: projetoRaw.id },
-      data: { percentualAndamento: percentualConclusao },
+    const projeto = await this.prisma.projeto.findFirst({
+      where:
+        user.perfil === PerfilUsuario.CLIENTE
+          ? {
+              id,
+              empresaId: user.empresaId,
+              clienteId: user.clienteId!,
+              visivelCliente: true,
+            }
+          : {
+              id,
+              empresaId: user.empresaId,
+            },
+      include: {
+        ...this.defaultInclude(),
+        tarefas: {
+          where:
+            user.perfil === PerfilUsuario.CLIENTE
+              ? { visivelCliente: true }
+              : undefined,
+          orderBy: [{ prazo: 'asc' }, { createdAt: 'desc' }],
+        },
+        entregaveis: {
+          where:
+            user.perfil === PerfilUsuario.CLIENTE
+              ? { visivelCliente: true }
+              : undefined,
+          orderBy: [{ dataPrevista: 'asc' }, { createdAt: 'desc' }],
+        },
+        documentos: {
+          where:
+            user.perfil === PerfilUsuario.CLIENTE
+              ? { visivelCliente: true }
+              : undefined,
+          orderBy: [{ updatedAt: 'desc' }],
+        },
+      },
     });
 
-    return Object.assign({}, projeto, {
+    if (!projeto) {
+      throw new BadRequestException('Projeto não encontrado.');
+    }
+
+    const hoje = new Date();
+    const tarefasAIniciar = (projeto.tarefas ?? []).filter((item) => item.status === StatusTarefa.NAO_INICIADA).length;
+    const tarefasAtrasadas = (projeto.tarefas ?? []).filter(
+      (item) =>
+        item.prazo &&
+        new Date(item.prazo) < hoje &&
+        ([StatusTarefa.NAO_INICIADA, StatusTarefa.EM_ANDAMENTO, StatusTarefa.AGUARDANDO] as StatusTarefa[]).includes(item.status as StatusTarefa),
+    ).length;
+    const totalTarefas = (projeto.tarefas ?? []).length;
+    const concluidas = (projeto.tarefas ?? []).filter((item) => item.status === StatusTarefa.CONCLUIDA).length;
+    const percentualConclusao = totalTarefas > 0 ? Math.round((concluidas / totalTarefas) * 100) : projeto.percentualAndamento ?? 0;
+
+    return {
+      ...projeto,
       painel: {
-        tarefasAbertas,
+        tarefasAIniciar,
         tarefasAtrasadas,
-        tarefasConcluidas,
-        tarefasPendentesAprovacao,
-        tarefasCanceladas,
         percentualConclusao,
         totalTarefas,
       },
-    });
+    };
   }
 
   private async resolveClienteInterno(empresaId: string) {
@@ -431,7 +421,9 @@ export class ProjetosService {
         this.prisma.tarefa.count({
           where: {
             empresaId: user.empresaId,
-            NOT: { status: { in: [StatusTarefa.CONCLUIDA, StatusTarefa.CANCELADA] } },
+            status: {
+              in: [StatusTarefa.NAO_INICIADA, StatusTarefa.EM_ANDAMENTO, StatusTarefa.AGUARDANDO],
+            },
             prazo: { lt: hoje },
             projeto: whereBase,
           },
@@ -454,7 +446,9 @@ export class ProjetosService {
           where: {
             empresaId: user.empresaId,
             prazo: { gte: hoje, lte: em7Dias },
-            NOT: { status: { in: [StatusTarefa.CONCLUIDA, StatusTarefa.CANCELADA] } },
+            status: {
+              in: [StatusTarefa.NAO_INICIADA, StatusTarefa.EM_ANDAMENTO, StatusTarefa.AGUARDANDO],
+            },
             projeto: whereBase,
           },
           include: {
@@ -502,106 +496,26 @@ export class ProjetosService {
     };
   }
 
-  private tarefaInclude() {
-    return {
-      responsavelUsuario: { select: { id: true, nome: true, email: true, perfil: true } },
-      aprovadorUsuario: { select: { id: true, nome: true } },
-      etapa: { select: { id: true, nome: true, status: true } },
-      labels: { include: { label: true } },
-      anexos: { orderBy: { createdAt: 'asc' as const } },
-      comentarios: {
-        include: { autorUsuario: { select: { id: true, nome: true } } },
-        orderBy: { createdAt: 'asc' as const },
-      },
-      atividades: { orderBy: { createdAt: 'desc' as const }, take: 30 },
-    };
-  }
-
-  private membroInclude() {
-    return {
-      usuario: { select: { id: true, nome: true, email: true, perfil: true } },
-    };
-  }
-
-  private async loadProjetoDetalhado(id: string, isCliente: boolean) {
-    const usuarioSelect = { select: { id: true, nome: true, email: true, perfil: true } };
-    if (isCliente) {
-      return this.prisma.projeto.findFirst({
-        where: { id },
-        include: {
-          cliente: true, contrato: true, produtoServico: true,
-          responsavel: usuarioSelect,
-          gerente: usuarioSelect,
-          membros: { include: this.membroInclude() },
-          _count: { select: { tarefas: true, entregaveis: true, documentos: true } },
-          tarefas: { where: { visivelCliente: true }, include: this.tarefaInclude(), orderBy: [{ ordem: 'asc' }, { prazo: 'asc' }, { createdAt: 'desc' }] },
-          entregaveis: { where: { visivelCliente: true }, orderBy: [{ dataPrevista: 'asc' }, { createdAt: 'desc' }] },
-          documentos: { where: { visivelCliente: true }, orderBy: [{ updatedAt: 'desc' }] },
-          etapas: { orderBy: { ordem: 'asc' } },
-        },
-      });
-    }
-    return this.prisma.projeto.findFirst({
-      where: { id },
-      include: {
-        cliente: true, contrato: true, produtoServico: true,
-        responsavel: usuarioSelect,
-        gerente: usuarioSelect,
-        membros: { include: this.membroInclude() },
-        _count: { select: { tarefas: true, entregaveis: true, documentos: true } },
-        tarefas: { include: this.tarefaInclude(), orderBy: [{ ordem: 'asc' }, { prazo: 'asc' }, { createdAt: 'desc' }] },
-        entregaveis: { orderBy: [{ dataPrevista: 'asc' }, { createdAt: 'desc' }] },
-        documentos: { orderBy: [{ updatedAt: 'desc' }] },
-        etapas: { orderBy: { ordem: 'asc' } },
-      },
-    });
-  }
-
-  private async findOneById(empresaId: string, id: string) {
-    return this.prisma.projeto.findFirst({
-      where: { id, empresaId },
-      include: {
-        cliente: true, contrato: true, produtoServico: true,
-        responsavel: { select: { id: true, nome: true, email: true, perfil: true } },
-        gerente: { select: { id: true, nome: true, email: true, perfil: true } },
-        membros: { include: this.membroInclude() },
-        _count: { select: { tarefas: true, entregaveis: true, documentos: true } },
-      },
-    });
-  }
-
-  private async syncMembros(projetoId: string, empresaId: string, membroIds: string[]) {
-    // Validate all users belong to this empresa
-    const usuarios = await this.prisma.usuario.findMany({
-      where: { id: { in: membroIds }, empresaId },
-      select: { id: true },
-    });
-    const validIds = usuarios.map((u) => u.id);
-
-    // Delete members not in new list
-    await this.prisma.projetoMembro.deleteMany({
-      where: { projetoId, usuarioId: { notIn: validIds } },
-    });
-
-    // Upsert remaining
-    for (const usuarioId of validIds) {
-      await this.prisma.projetoMembro.upsert({
-        where: { projetoId_usuarioId: { projetoId, usuarioId } },
-        create: { id: require('crypto').randomUUID(), projetoId, usuarioId },
-        update: {},
-      });
-    }
-  }
-
   private defaultInclude() {
     return {
       cliente: true,
       contrato: true,
       produtoServico: true,
-      responsavel: { select: { id: true, nome: true, email: true, perfil: true } },
-      gerente: { select: { id: true, nome: true, email: true, perfil: true } },
-      membros: { include: this.membroInclude() },
-      _count: { select: { tarefas: true, entregaveis: true, documentos: true } },
+      responsavel: {
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          perfil: true,
+        },
+      },
+      _count: {
+        select: {
+          tarefas: true,
+          entregaveis: true,
+          documentos: true,
+        },
+      },
     };
   }
 }

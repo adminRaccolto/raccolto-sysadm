@@ -327,7 +327,7 @@ model Cliente {
   oportunidadesCrm   OportunidadeCrm[]
   faturamentos       Faturamento[]
   deslocamentos          Deslocamento[]
-  checklistDiagnostico   ChecklistDiagnostico?
+  checklistsDiagnostico  ChecklistDiagnostico[]
 
   @@index([empresaId])
 }
@@ -541,6 +541,7 @@ model Projeto {
   deslocamentos             Deslocamento[]
   etapas                    ProjetoEtapa[]
   membros                   ProjetoMembro[]
+  checklistDiagnostico      ChecklistDiagnostico?
 
   @@index([empresaId])
   @@index([clienteId])
@@ -1259,9 +1260,13 @@ model FormularioSubmissao {
 }
 
 model ChecklistDiagnostico {
-  id        String   @id @default(cuid())
-  empresaId String
-  clienteId String   @unique
+  id          String    @id @default(cuid())
+  empresaId   String
+  clienteId   String
+  projetoId   String    @unique
+  token       String    @unique @default(cuid())
+  status      String    @default("PENDENTE")
+  respondidoAt DateTime?
 
   // Bloco 3 - Estrutura Familiar
   negocioFamiliar      Boolean?
@@ -1290,9 +1295,11 @@ model ChecklistDiagnostico {
 
   empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   cliente  Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  projeto  Projeto  @relation(fields: [projetoId], references: [id], onDelete: Cascade)
   fazendas FazendaDiagnostico[]
 
   @@index([empresaId])
+  @@index([clienteId])
 }
 
 model FazendaDiagnostico {
