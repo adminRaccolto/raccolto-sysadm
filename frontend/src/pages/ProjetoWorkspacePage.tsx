@@ -645,14 +645,15 @@ export default function ProjetoWorkspacePage() {
   if (loading) return <LoadingBlock label="Carregando projeto..." />;
   if (!projeto) return <Feedback type="error" message="Projeto não encontrado." />;
 
-  const tabs = [
+  type TabKey = 'resumo' | 'fases' | 'backlog' | 'tarefas' | 'entregaveis' | 'documentos' | 'perfil';
+  const tabs: { key: TabKey; label: string }[] = [
     { key: 'resumo',      label: 'Resumo' },
     { key: 'fases',       label: `Fases${etapas.length > 0 ? ` (${etapas.length})` : ''}` },
     { key: 'backlog',     label: `Backlog (${projeto.tarefas.length})` },
     { key: 'tarefas',     label: 'Quadro' },
     { key: 'entregaveis', label: `Entregáveis (${projeto.entregaveis.length})` },
     { key: 'documentos',  label: `Docs (${projeto.documentos.length})` },
-    ...(projeto.interno ? [] : [{ key: 'perfil' as const, label: 'Perfil do Cliente' }]),
+    ...(projeto.interno ? [] : [{ key: 'perfil' as TabKey, label: 'Perfil do Cliente' }]),
   ];
 
   return (
