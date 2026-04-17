@@ -80,6 +80,19 @@ export class PerfisAcessoService {
         }),
       },
       {
+        nome: 'Consultor',
+        descricao: 'Acesso operacional focado em projetos e entregáveis do consultor.',
+        padraoSistema: true,
+        regra: (chave: string) => ({
+          visualizar: ['dashboard', 'clientes', 'projetos', 'tarefas', 'entregaveis', 'documentos', 'agenda', 'financeiro', 'notificacoes'].includes(chave),
+          criar: ['tarefas', 'entregaveis', 'documentos'].includes(chave),
+          editar: ['tarefas', 'entregaveis', 'documentos'].includes(chave),
+          excluir: false,
+          aprovar: ['entregaveis', 'documentos'].includes(chave),
+          administrar: false,
+        }),
+      },
+      {
         nome: 'Cliente',
         descricao: 'Acesso externo restrito ao que for visível ao cliente.',
         padraoSistema: true,

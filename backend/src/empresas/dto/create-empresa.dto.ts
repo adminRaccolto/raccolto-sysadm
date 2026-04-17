@@ -60,8 +60,4 @@ export class CreateEmpresaDto {
   @IsOptional()
   @IsString()
   logoUrl?: string;
-
-  @IsOptional()
-  @IsString()
-  infBancarias?: string;
 }

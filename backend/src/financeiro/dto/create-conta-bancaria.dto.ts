@@ -8,10 +8,6 @@ export class CreateContaBancariaDto {
 
   @IsOptional()
   @IsString()
-  bancoId?: string;
-
-  @IsOptional()
-  @IsString()
   banco?: string;
 
   @IsOptional()
@@ -23,10 +19,6 @@ export class CreateContaBancariaDto {
   numeroConta?: string;
 
   @IsOptional()
-  @IsString()
-  chavePix?: string;
-
-  @IsOptional()
   @IsEnum(TipoContaBancaria)
   tipo?: TipoContaBancaria;
 
@@ -34,10 +26,6 @@ export class CreateContaBancariaDto {
   @Type(() => Number)
   @IsNumber()
   saldoInicial?: number;
-
-  @IsOptional()
-  @IsBoolean()
-  incluiFluxoCaixa?: boolean;
 
   @IsOptional()
   @IsBoolean()

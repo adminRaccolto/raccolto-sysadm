@@ -156,9 +156,9 @@ button { cursor: pointer; }
   color: #0a3d55;
 }
 .topnav__link--active {
-  background: #0a3d55;
-  color: #fff;
-  font-weight: 600;
+  background: transparent;
+  color: #e8a020;
+  font-weight: 700;
 }
 
 /* ── Nav group dropdown ─────────────────────────────────────── */
@@ -200,7 +200,7 @@ button { cursor: pointer; }
   transition: background 0.12s, color 0.12s;
 }
 .topnav__group-item:hover { background: #eef3f9; color: #0a3d55; }
-.topnav__group-item--active { background: #0a3d55; color: #fff; font-weight: 600; }
+.topnav__group-item--active { background: rgba(232,160,32,0.12); color: #e8a020; font-weight: 700; }
 
 .topnav__actions {
   display: flex;
@@ -377,7 +377,7 @@ button { cursor: pointer; }
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: url('/Ativo 11.png');
+  background-image: url('/Ativo 9.png');
   background-repeat: no-repeat;
   background-position: center center;
   background-size: 420px 420px;
@@ -979,6 +979,9 @@ th {
   color: #92400e;
   background: var(--accent-soft);
 }
+.compact-chip--success { color: #166534; background: #dcfce7; }
+.compact-chip--danger  { color: #991b1b; background: #fee2e2; }
+.compact-chip--muted   { color: #64748b; background: #f1f5f9; }
 
 .checkbox-list    { display: flex; flex-wrap: wrap; gap: 8px 12px; }
 .checkbox-inline  { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }

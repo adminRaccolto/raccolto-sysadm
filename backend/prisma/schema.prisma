@@ -327,8 +327,8 @@ model Cliente {
   recebiveis         Recebivel[]
   oportunidadesCrm   OportunidadeCrm[]
   faturamentos       Faturamento[]
-  deslocamentos      Deslocamento[]
-  checklistsDiagnostico ChecklistDiagnostico[]
+  deslocamentos          Deslocamento[]
+  checklistsDiagnostico  ChecklistDiagnostico[]
 
   @@index([empresaId])
 }
@@ -1285,6 +1285,7 @@ model ChecklistDiagnostico {
   status      String    @default("PENDENTE")
   respondidoAt DateTime?
 
+  // Bloco 3 - Estrutura Familiar
   negocioFamiliar      Boolean?
   membrosEnvolvidos    Int?
   decisaoPorConselho   Boolean?
@@ -1293,6 +1294,7 @@ model ChecklistDiagnostico {
   funcoesDefinidas     Boolean?
   governancaImplantada Boolean?
 
+  // Bloco 4 - Conhecimento do Negócio
   utilizaSistemaGestao   Boolean?
   qualSistema            String?
   sabeCustoProduzir      Boolean?
@@ -1302,6 +1304,7 @@ model ChecklistDiagnostico {
   travaComercializacao   Boolean?
   negocioAlavancado      Boolean?
 
+  // Bloco 5
   expectativaParceria String?
 
   createdAt DateTime @default(now())

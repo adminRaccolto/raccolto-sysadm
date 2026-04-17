@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Logger, Post, Put, UploadedFile, UseInterceptors, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
 import { PerfilUsuario } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -12,8 +12,6 @@ import { StorageService } from '../storage/storage.service';
 
 @Controller('empresas')
 export class EmpresasController {
-  private readonly logger = new Logger(EmpresasController.name);
-
   constructor(
     private readonly empresasService: EmpresasService,
     private readonly storageService: StorageService,
@@ -44,47 +42,13 @@ export class EmpresasController {
   ) {
     if (!file) throw new BadRequestException('Nenhum arquivo de logo foi enviado.');
 
-    try {
-      const url = await this.storageService.uploadFile(
-        file.buffer,
-        file.originalname,
-        file.mimetype,
-        'branding',
-      );
-      return this.empresasService.updateCurrentLogo(user.empresaId, url);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Falha no upload de logo: ${msg}`);
-      throw new InternalServerErrorException(`Falha no upload: ${msg}`);
-    }
-  }
-
-  @Roles(PerfilUsuario.ADMIN)
-  @Post('me/certificado')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }))
-  async uploadCertificado(
-    @CurrentUser() user: AuthenticatedUser,
-    @UploadedFile() file: Express.Multer.File,
-    @Body('senha') senha?: string,
-  ) {
-    if (!file) throw new BadRequestException('Nenhum arquivo de certificado enviado.');
-    try {
-      const url = await this.storageService.uploadFile(
-        file.buffer,
-        file.originalname,
-        file.mimetype,
-        'certificados',
-      );
-      return this.empresasService.updateCurrent(user.empresaId, {
-        certificadoDigitalUrl: url,
-        certificadoDigitalStatus: 'Enviado',
-        ...(senha ? { certificadoDigitalSenha: senha } : {}),
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Falha no upload de certificado: ${msg}`);
-      throw new InternalServerErrorException(`Falha no upload: ${msg}`);
-    }
+    const url = await this.storageService.uploadFile(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+      'branding',
+    );
+    return this.empresasService.updateCurrentLogo(user.empresaId, url);
   }
 
   @Roles(PerfilUsuario.ADMIN)

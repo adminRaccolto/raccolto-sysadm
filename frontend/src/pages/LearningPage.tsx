@@ -253,7 +253,7 @@ const MODULOS: Modulo[] = [
 
 /* ─── componente principal ───────────────────────────────────────── */
 export default function LearningPage() {
-  const [aba, setAba] = useState<'fluxo' | 'modulos' | 'setup'>('fluxo');
+  const [aba, setAba] = useState<'fluxo' | 'modulos' | 'setup' | 'mapeamento'>('fluxo');
   const [moduloAberto, setModuloAberto] = useState<string | null>(null);
 
   function toggleModulo(id: string) {
@@ -278,6 +278,9 @@ export default function LearningPage() {
         </button>
         <button className={`segmented__button${aba === 'setup' ? ' segmented__button--active' : ''}`} onClick={() => setAba('setup')}>
           Primeiros passos
+        </button>
+        <button className={`segmented__button${aba === 'mapeamento' ? ' segmented__button--active' : ''}`} onClick={() => setAba('mapeamento')}>
+          Mapeamento de processos
         </button>
       </div>
 
@@ -504,6 +507,30 @@ export default function LearningPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+      {/* ── Aba: Mapeamento de processos ─────────────────────── */}
+      {aba === 'mapeamento' && (
+        <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Mapeamento de Processos — Raccolto</p>
+              <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Fluxogramas completos de todos os módulos, ciclos e lógica de negócio do sistema.</p>
+            </div>
+            <a
+              href="/mapeamento-processo.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="button button--ghost button--small"
+            >
+              Abrir em nova aba
+            </a>
+          </div>
+          <iframe
+            src="/mapeamento-processo.html"
+            title="Mapeamento de Processos"
+            style={{ width: '100%', height: '80vh', border: 'none', display: 'block' }}
+          />
         </div>
       )}
     </div>

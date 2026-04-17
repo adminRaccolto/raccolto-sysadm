@@ -6,11 +6,36 @@ import { Public } from '../common/decorators/public.decorator';
 import { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { ContratosService } from './contratos.service';
 import { CreateContratoDto } from './dto/create-contrato.dto';
+import { UpsertContratoModeloDto } from './dto/upsert-contrato-modelo.dto';
 
 @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA)
 @Controller('contratos')
 export class ContratosController {
   constructor(private readonly contratosService: ContratosService) {}
+
+  @Get('modelos')
+  async listModelos(@CurrentUser() user: AuthenticatedUser) {
+    return this.contratosService.listModelos(user.empresaId);
+  }
+
+  @Post('modelos')
+  async createModelo(@CurrentUser() user: AuthenticatedUser, @Body() body: UpsertContratoModeloDto) {
+    return this.contratosService.createModelo(user.empresaId, body);
+  }
+
+  @Put('modelos/:id')
+  async updateModelo(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: Partial<UpsertContratoModeloDto>,
+  ) {
+    return this.contratosService.updateModelo(user.empresaId, id, body);
+  }
+
+  @Delete('modelos/:id')
+  async removeModelo(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.contratosService.removeModelo(user.empresaId, id);
+  }
 
   @Get()
   async findAll(@CurrentUser() user: AuthenticatedUser) {
@@ -31,6 +56,11 @@ export class ContratosController {
   async enviarAssinatura(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     await this.contratosService.enviarParaAssinatura(user.empresaId, id);
     return { message: 'Contrato enviado para assinatura digital com sucesso.' };
+  }
+
+  @Post(':id/reenviar-link')
+  reenviarLink(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.contratosService.reenviarLink(user.empresaId, id);
   }
 
   @Put(':id')

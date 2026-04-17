@@ -46,25 +46,15 @@ export class StorageService {
 
     if (this.s3) {
       const bucket = process.env.R2_BUCKET_NAME ?? '';
-      const publicUrl = (process.env.R2_PUBLIC_URL ?? '').replace(/\/$/, '');
       const key = `${folder}/${filename}`;
-
-      this.logger.log(`R2 upload → bucket=${bucket} key=${key} mime=${mimeType} size=${buffer.length}`);
-
-      if (!bucket) throw new Error('R2_BUCKET_NAME não configurado.');
-      if (!publicUrl) throw new Error('R2_PUBLIC_URL não configurado.');
-
       await this.s3.send(
         new PutObjectCommand({ Bucket: bucket, Key: key, Body: buffer, ContentType: mimeType }),
       );
-
-      const url = `${publicUrl}/${key}`;
-      this.logger.log(`R2 upload concluído → ${url}`);
-      return url;
+      const publicUrl = (process.env.R2_PUBLIC_URL ?? '').replace(/\/$/, '');
+      return `${publicUrl}/${key}`;
     }
 
     // Fallback: salva no disco (desenvolvimento local)
-    this.logger.warn('R2 não configurado — salvando em disco local.');
     const dir = join(process.cwd(), 'uploads', folder);
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, filename), buffer);

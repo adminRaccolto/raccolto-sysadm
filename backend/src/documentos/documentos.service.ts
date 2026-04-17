@@ -40,9 +40,6 @@ export class DocumentosService {
         tipo: data.tipo ?? undefined,
         descricao: data.descricao !== undefined ? data.descricao?.trim() || null : undefined,
         arquivoUrl: data.arquivoUrl !== undefined ? data.arquivoUrl?.trim() || null : undefined,
-        arquivoNomeOriginal: data.arquivoNomeOriginal !== undefined ? data.arquivoNomeOriginal?.trim() || null : undefined,
-        arquivoMimeType: data.arquivoMimeType !== undefined ? data.arquivoMimeType?.trim() || null : undefined,
-        arquivoTamanho: data.arquivoTamanho !== undefined ? data.arquivoTamanho : undefined,
         versao: data.versao !== undefined ? data.versao?.trim() || null : undefined,
         status: data.status ?? undefined,
         exigeAssinatura: data.exigeAssinatura !== undefined ? data.exigeAssinatura : undefined,
@@ -70,7 +67,7 @@ export class DocumentosService {
     return { message: 'Documento excluído com sucesso.' };
   }
 
-  async findAll(user: AuthenticatedUser, filtros: { projetoId?: string; contratoId?: string; clienteId?: string; tipo?: string; semVinculo?: boolean }) {
+  async findAll(user: AuthenticatedUser, filtros: { projetoId?: string; contratoId?: string; tipo?: string }) {
     if (user.perfil === PerfilUsuario.CLIENTE && !user.clienteId) return [];
 
     return this.prisma.documento.findMany({
@@ -78,9 +75,7 @@ export class DocumentosService {
         empresaId: user.empresaId,
         ...(filtros.projetoId ? { projetoId: filtros.projetoId } : {}),
         ...(filtros.contratoId ? { contratoId: filtros.contratoId } : {}),
-        ...(filtros.clienteId ? { OR: [{ projeto: { clienteId: filtros.clienteId } }, { contrato: { clienteId: filtros.clienteId } }] } : {}),
         ...(filtros.tipo ? { tipo: filtros.tipo as TipoDocumento } : {}),
-        ...(filtros.semVinculo ? { projetoId: null, contratoId: null, tarefaId: null, entregavelId: null } : {}),
         ...(user.perfil === PerfilUsuario.CLIENTE
           ? {
               visivelCliente: true,
@@ -141,9 +136,6 @@ export class DocumentosService {
       tipo: data.tipo ?? TipoDocumento.OUTRO,
       descricao: data.descricao?.trim() || null,
       arquivoUrl: data.arquivoUrl?.trim() || null,
-      arquivoNomeOriginal: data.arquivoNomeOriginal?.trim() || null,
-      arquivoMimeType: data.arquivoMimeType?.trim() || null,
-      arquivoTamanho: data.arquivoTamanho ?? null,
       versao: data.versao?.trim() || null,
       status: data.status ?? StatusDocumento.RASCUNHO,
       exigeAssinatura: data.exigeAssinatura ?? false,

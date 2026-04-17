@@ -12,7 +12,6 @@ import { PropostasService } from './propostas.service';
 export class PropostasController {
   constructor(private readonly propostasService: PropostasService) {}
 
-
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.propostasService.findAll(user.empresaId);
@@ -48,6 +47,11 @@ export class PropostasController {
   async enviarAssinatura(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     await this.propostasService.enviarParaAssinatura(user.empresaId, id);
     return { message: 'Proposta enviada para assinatura digital com sucesso.' };
+  }
+
+  @Post(':id/reenviar-link')
+  reenviarLink(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.propostasService.reenviarLink(user.empresaId, id);
   }
 
   @Public()

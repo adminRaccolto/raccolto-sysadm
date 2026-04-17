@@ -6,7 +6,7 @@ import LoadingBlock from '../components/LoadingBlock';
 import Modal from '../components/Modal';
 import PageHeader from '../components/PageHeader';
 import FinanceiroNav from '../components/financeiro/FinanceiroNav';
-import type { ContaGerencial, ContaPagar, Recebivel } from '../types/api';
+import type { ContaBancaria, ContaGerencial, ContaPagar, Recebivel } from '../types/api';
 import { formatCurrency, maskCurrencyInputBRL, parseCurrencyInputBRL } from '../utils/format';
 import { monthKey, monthLabel, toDateKey, type SimulacaoFluxoItem } from '../utils/financeiro';
 
@@ -36,6 +36,13 @@ export default function FinanceiroPage() {
   const [receber, setReceber] = useState<Recebivel[]>([]);
   const [pagar, setPagar] = useState<ContaPagar[]>([]);
   const [contas, setContas] = useState<ContaGerencial[]>([]);
+  const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([]);
+  const [contasBancariasFluxo, setContasBancariasFluxo] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('raccolto_contas_fluxo');
+      return saved ? new Set(JSON.parse(saved) as string[]) : new Set();
+    } catch { return new Set(); }
+  });
   const [simulacoes, setSimulacoes] = useState<SimulacaoFluxoItem[]>(() => {
     try {
       const saved = localStorage.getItem('raccolto_simulacoes');
@@ -54,7 +61,7 @@ export default function FinanceiroPage() {
   const [tab, setTab] = useState<Tab>('painel');
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
 
-  // Persist simulacoes and active state
+  // Persist simulacoes, active state and selected bank accounts
   useEffect(() => {
     try { localStorage.setItem('raccolto_simulacoes', JSON.stringify(simulacoes)); } catch {}
   }, [simulacoes]);
@@ -64,18 +71,35 @@ export default function FinanceiroPage() {
   }, [simulacoesAtivas]);
 
   useEffect(() => {
+    try { localStorage.setItem('raccolto_contas_fluxo', JSON.stringify(Array.from(contasBancariasFluxo))); } catch {}
+  }, [contasBancariasFluxo]);
+
+  const saldoBancarioInicial = useMemo(
+    () => contasBancarias.filter((c) => contasBancariasFluxo.has(c.id)).reduce((sum, c) => sum + c.saldoAtual, 0),
+    [contasBancarias, contasBancariasFluxo],
+  );
+
+  useEffect(() => {
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const [receberResp, pagarResp, contasResp] = await Promise.all([
+        const [receberResp, pagarResp, contasResp, contasBancariaResp] = await Promise.all([
           http.get<{ itens: Recebivel[] }>('/financeiro/contas-receber'),
           http.get<{ itens: ContaPagar[] }>('/financeiro/contas-pagar'),
           http.get<ContaGerencial[]>('/financeiro/plano-contas'),
+          http.get<ContaBancaria[]>('/financeiro/contas-bancarias'),
         ]);
         setReceber(receberResp.data.itens);
         setPagar(pagarResp.data.itens);
         setContas(contasResp.data.filter((item) => item.aceitaLancamento));
+        const elegíveis = contasBancariaResp.data.filter((c) => c.ativo && c.tipo !== 'CAIXA' && c.tipo !== 'TRANSITORIA');
+        setContasBancarias(elegíveis);
+        setContasBancariasFluxo((prev) => {
+          if (prev.size > 0) return prev; // já tem seleção salva
+          const defaults = new Set(elegíveis.filter((c) => c.incluiFluxoCaixa).map((c) => c.id));
+          return defaults.size > 0 ? defaults : new Set(elegíveis.map((c) => c.id));
+        });
       } catch (err) {
         if (axios.isAxiosError(err)) {
           const payload = err.response?.data?.message;
@@ -256,23 +280,23 @@ export default function FinanceiroPage() {
     return result;
   }, [resultadoComSimPorMes, irpjPorMes, csllPorMes, meses]);
 
-  // Saldo acumulado operacional
+  // Saldo acumulado operacional — parte do saldo real das contas bancárias
   const saldoAcumuladoOp = useMemo(() => {
-    let acc = 0;
+    let acc = saldoBancarioInicial;
     return meses.map((mes) => {
       acc += lucroLiquidoOpPorMes[mes] ?? 0;
       return acc;
     });
-  }, [lucroLiquidoOpPorMes, meses]);
+  }, [lucroLiquidoOpPorMes, meses, saldoBancarioInicial]);
 
-  // Saldo acumulado com simulações
+  // Saldo acumulado com simulações — parte do saldo real das contas bancárias
   const saldoAcumuladoComSim = useMemo(() => {
-    let acc = 0;
+    let acc = saldoBancarioInicial;
     return meses.map((mes) => {
       acc += lucroLiquidoComSimPorMes[mes] ?? 0;
       return acc;
     });
-  }, [lucroLiquidoComSimPorMes, meses]);
+  }, [lucroLiquidoComSimPorMes, meses, saldoBancarioInicial]);
 
   const temSimulacoes = simulacoesAtivas && simulacoes.length > 0;
 
@@ -300,8 +324,8 @@ export default function FinanceiroPage() {
       if (event.simulacao) group.hasSimulacao = true;
       map.set(event.data, group);
     }
-    let saldoOpAcc = 0;
-    let saldoTotalAcc = 0;
+    let saldoOpAcc = saldoBancarioInicial;
+    let saldoTotalAcc = saldoBancarioInicial;
     return Array.from(map.values())
       .sort((a, b) => a.data.localeCompare(b.data))
       .map((group) => {
@@ -309,7 +333,7 @@ export default function FinanceiroPage() {
         saldoTotalAcc += group.totalEntradas - group.totalSaidas;
         return { ...group, saldoOp: saldoOpAcc, saldoTotal: saldoTotalAcc };
       });
-  }, [flowEvents]);
+  }, [flowEvents, saldoBancarioInicial]);
 
   function toggleDate(date: string) {
     setExpandedDates((prev) => {
@@ -407,12 +431,41 @@ export default function FinanceiroPage() {
 
           {tab === 'painel' ? (
             <>
-              <section className="stats-grid stats-grid--compact">
-                <div className="stat-card"><span className="stat-card__label">A receber em aberto</span><strong>{formatCurrency(indicadores.totalReceberAberto)}</strong><span className="stat-card__helper">Receitas abertas e previsões não recebidas.</span></div>
-                <div className="stat-card"><span className="stat-card__label">A pagar em aberto</span><strong>{formatCurrency(indicadores.totalPagarAberto)}</strong><span className="stat-card__helper">Compromissos futuros e vencidos não pagos.</span></div>
-                <div className="stat-card"><span className="stat-card__label">Saldo projetado</span><strong>{formatCurrency(indicadores.saldoProjetado)}</strong><span className="stat-card__helper">A receber menos a pagar no cenário atual.</span></div>
-                <div className="stat-card"><span className="stat-card__label">Impacto das simulações</span><strong style={{ color: '#7c3aed' }}>{formatCurrency(indicadores.totalSimulado)}</strong><span className="stat-card__helper">{simulacoesAtivas ? 'Cenário ativo no fluxo.' : 'Simulações desativadas.'}</span></div>
+              <section className="stats-grid stats-grid--compact" style={{ gridTemplateColumns: 'repeat(5, minmax(0,1fr))' }}>
+                <div className="stat-card"><span className="stat-card__label">Saldo bancário atual</span><strong style={{ color: saldoBancarioInicial >= 0 ? undefined : '#c2185b' }}>{formatCurrency(saldoBancarioInicial)}</strong></div>
+                <div className="stat-card"><span className="stat-card__label">A receber em aberto</span><strong>{formatCurrency(indicadores.totalReceberAberto)}</strong></div>
+                <div className="stat-card"><span className="stat-card__label">A pagar em aberto</span><strong>{formatCurrency(indicadores.totalPagarAberto)}</strong></div>
+                <div className="stat-card"><span className="stat-card__label">Saldo projetado</span><strong>{formatCurrency(indicadores.saldoProjetado)}</strong></div>
+                <div className="stat-card"><span className="stat-card__label">Impacto das simulações</span><strong style={{ color: '#7c3aed' }}>{formatCurrency(indicadores.totalSimulado)}</strong></div>
               </section>
+
+              {/* Seletor de contas bancárias para o fluxo */}
+              {contasBancarias.length > 0 ? (
+                <section className="panel panel--compact">
+                  <div className="panel__header panel__header--row">
+                    <div>
+                      <h3>Contas no fluxo de caixa</h3>
+                      <p>{contasBancariasFluxo.size} de {contasBancarias.length} conta(s) selecionada(s) · Tipos caixa e transitória não compõem o fluxo.</p>
+                    </div>
+                  </div>
+                  <div className="checkbox-list compact-gap" style={{ padding: '0 0 4px' }}>
+                    {contasBancarias.map((c) => (
+                      <label key={c.id} className="checkbox-inline">
+                        <input
+                          type="checkbox"
+                          checked={contasBancariasFluxo.has(c.id)}
+                          onChange={(e) => setContasBancariasFluxo((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(c.id); else next.delete(c.id);
+                            return next;
+                          })}
+                        />
+                        {c.nome}{c.banco ? ` · ${c.banco}` : ''}
+                      </label>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
 
               {/* Grid de simulações */}
               <section className="panel panel--compact">

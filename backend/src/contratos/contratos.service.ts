@@ -2,9 +2,10 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrioridadeNotificacao, Prisma, StatusAssinatura } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
-import { AutentiqueService } from '../autentique/autentique.service';
-import { ModelosDocumentoService } from '../modelos-documento/modelos-documento.service';
+import { AutentiqueService } from './autentique.service';
+import { MailService } from '../mail/mail.service';
 import { ContratoCobrancaDto, CreateContratoDto } from './dto/create-contrato.dto';
+import { ensureContratoModelosPadrao } from './contrato-modelos.seed';
 
 @Injectable()
 export class ContratosService {
@@ -14,8 +15,79 @@ export class ContratosService {
     private readonly prisma: PrismaService,
     private readonly notificacoesService: NotificacoesService,
     private readonly autentiqueService: AutentiqueService,
-    private readonly modelosService: ModelosDocumentoService,
+    private readonly mailService: MailService,
   ) {}
+
+
+  async listModelos(empresaId: string) {
+    await ensureContratoModelosPadrao(this.prisma as any, empresaId);
+    return this.prisma.contratoModelo.findMany({
+      where: { empresaId },
+      orderBy: [{ padrao: 'desc' }, { nome: 'asc' }],
+    });
+  }
+
+  async createModelo(empresaId: string, data: { nome: string; descricao?: string; conteudo: string; ativo?: boolean; padrao?: boolean }) {
+    const nome = data.nome.trim();
+    const existente = await this.prisma.contratoModelo.findFirst({ where: { empresaId, nome } });
+    if (existente) {
+      throw new BadRequestException('Já existe um modelo de contrato com este nome.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (data.padrao) {
+        await tx.contratoModelo.updateMany({ where: { empresaId, padrao: true }, data: { padrao: false } });
+      }
+      return tx.contratoModelo.create({
+        data: {
+          empresaId,
+          nome,
+          descricao: data.descricao?.trim() || null,
+          conteudo: data.conteudo,
+          ativo: data.ativo ?? true,
+          padrao: data.padrao ?? false,
+        },
+      });
+    });
+  }
+
+  async updateModelo(empresaId: string, id: string, data: { nome?: string; descricao?: string; conteudo?: string; ativo?: boolean; padrao?: boolean }) {
+    const atual = await this.prisma.contratoModelo.findFirst({ where: { id, empresaId } });
+    if (!atual) {
+      throw new BadRequestException('Modelo de contrato não encontrado.');
+    }
+
+    const nome = data.nome !== undefined ? data.nome.trim() : undefined;
+    if (nome && nome !== atual.nome) {
+      const existente = await this.prisma.contratoModelo.findFirst({ where: { empresaId, nome, id: { not: id } } });
+      if (existente) throw new BadRequestException('Já existe um modelo de contrato com este nome.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (data.padrao) {
+        await tx.contratoModelo.updateMany({ where: { empresaId, padrao: true, id: { not: id } }, data: { padrao: false } });
+      }
+      return tx.contratoModelo.update({
+        where: { id },
+        data: {
+          ...(nome !== undefined ? { nome } : {}),
+          ...(data.descricao !== undefined ? { descricao: data.descricao?.trim() || null } : {}),
+          ...(data.conteudo !== undefined ? { conteudo: data.conteudo } : {}),
+          ...(data.ativo !== undefined ? { ativo: data.ativo } : {}),
+          ...(data.padrao !== undefined ? { padrao: data.padrao } : {}),
+        },
+      });
+    });
+  }
+
+  async removeModelo(empresaId: string, id: string) {
+    const atual = await this.prisma.contratoModelo.findFirst({ where: { id, empresaId } });
+    if (!atual) {
+      throw new BadRequestException('Modelo de contrato não encontrado.');
+    }
+    await this.prisma.contratoModelo.delete({ where: { id } });
+    return { message: 'Modelo de contrato excluído com sucesso.' };
+  }
 
   async create(empresaId: string, data: CreateContratoDto) {
     const cliente = await this.validateCliente(empresaId, data.clienteId);
@@ -268,8 +340,12 @@ export class ContratosService {
     cobrancas?: { ordem: number; vencimento: Date; valor: number; descricao: string | null }[];
   }): Promise<string | null> {
     // Busca o modelo pelo nome ou o padrão
-    await this.modelosService.ensureModelosPadrao(contrato.empresaId);
-    const modelo = await this.modelosService.findPadrao(contrato.empresaId, 'CONTRATO', contrato.modeloContratoNome);
+    const modelo = await this.prisma.contratoModelo.findFirst({
+      where: {
+        empresaId: contrato.empresaId,
+        ...(contrato.modeloContratoNome ? { nome: contrato.modeloContratoNome } : { padrao: true }),
+      },
+    });
     if (!modelo) return null;
 
     const empresa = await this.prisma.empresa.findFirst({ where: { id: contrato.empresaId } });
@@ -333,10 +409,9 @@ export class ContratosService {
       || contrato.titulo;
     const signatarioNome = contrato.contatoClienteNome || contrato.cliente.contatoPrincipal || contrato.clienteRazaoSocial || 'Cliente';
 
-    const pdfBuffer = await this.autentiqueService.gerarPdfContrato(contrato.titulo, textoContrato);
     const { docId, signUrl } = await this.autentiqueService.enviarDocumento({
       nome: contrato.titulo,
-      pdfBuffer,
+      textoContrato,
       signatarioNome,
       signatarioEmail,
     });
@@ -350,6 +425,15 @@ export class ContratosService {
       },
     });
 
+    if (signUrl) {
+      void this.mailService.enviarLinkAssinatura({
+        to: signatarioEmail,
+        toNome: signatarioNome,
+        documento: contrato.titulo,
+        linkAssinatura: signUrl,
+      });
+    }
+
     await this.notificacoesService.notificarAdmins({
       empresaId,
       titulo: 'Assinatura enviada',
@@ -359,6 +443,30 @@ export class ContratosService {
     });
 
     this.logger.log(`Contrato ${contratoId} enviado ao Autentique (doc: ${docId})`);
+  }
+
+  async reenviarLink(empresaId: string, contratoId: string): Promise<{ message: string }> {
+    const contrato = await this.prisma.contrato.findFirst({
+      where: { id: contratoId, empresaId },
+      include: { cliente: true },
+    });
+    if (!contrato) throw new BadRequestException('Contrato não encontrado.');
+    if (!contrato.autentiqueSignUrl) throw new BadRequestException('Este contrato ainda não foi enviado para assinatura.');
+
+    const signatarioEmail = contrato.contatoClienteEmail || contrato.cliente.email;
+    if (!signatarioEmail) throw new BadRequestException('O cliente não possui e-mail cadastrado.');
+
+    const signatarioNome = contrato.contatoClienteNome || contrato.cliente.contatoPrincipal || contrato.clienteRazaoSocial || 'Cliente';
+
+    await this.mailService.enviarLinkAssinatura({
+      to: signatarioEmail,
+      toNome: signatarioNome,
+      documento: contrato.titulo,
+      linkAssinatura: contrato.autentiqueSignUrl,
+    });
+
+    this.logger.log(`Link de assinatura reenviado para ${signatarioEmail} (contrato: ${contratoId})`);
+    return { message: `Link reenviado para ${signatarioEmail}.` };
   }
 
   async processarWebhookAutentique(payload: Record<string, unknown>): Promise<void> {

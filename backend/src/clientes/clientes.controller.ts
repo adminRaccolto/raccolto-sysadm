@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
 import { PerfilUsuario } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -33,13 +33,8 @@ export class ClientesController {
   async update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() body: Record<string, unknown>,
+    @Body() body: CreateClienteDto,
   ) {
-    return this.clientesService.update(user.empresaId, id, body as Partial<CreateClienteDto>);
-  }
-
-  @Delete(':id')
-  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.clientesService.remove(user.empresaId, id);
+    return this.clientesService.update(user.empresaId, id, body);
   }
 }

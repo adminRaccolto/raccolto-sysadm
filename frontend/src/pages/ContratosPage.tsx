@@ -649,6 +649,17 @@ export default function ContratosPage() {
     }
   }
 
+  async function handleReenviarLink(contrato: Contrato) {
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await http.post<{ message: string }>(`/contratos/${contrato.id}/reenviar-link`);
+      setSuccess(res.data.message || 'Link reenviado com sucesso.');
+    } catch (err) {
+      handleApiError(err, 'Falha ao reenviar link.');
+    }
+  }
+
   async function handleDelete(contrato: Contrato) {
     const confirmed = window.confirm(
       `Excluir o contrato "${contrato.titulo}"? A exclusão só funciona se ele ainda não tiver vínculos operacionais.`,
@@ -727,7 +738,25 @@ export default function ContratosPage() {
                 {selectedContrato?.statusAssinatura === 'ASSINADO' ? 'Assinado' : selectedContrato?.autentiqueDocId ? 'Aguardando assinatura' : 'Enviar para assinar'}
               </button>
               {selectedContrato?.autentiqueSignUrl && selectedContrato.statusAssinatura !== 'ASSINADO' ? (
-                <a className="button button--ghost button--small" href={selectedContrato.autentiqueSignUrl} target="_blank" rel="noreferrer">Ver link</a>
+                <>
+                  <button
+                    className="button button--ghost button--small"
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(selectedContrato.autentiqueSignUrl!);
+                      setSuccess('Link copiado.');
+                    }}
+                  >
+                    Copiar link
+                  </button>
+                  <button
+                    className="button button--ghost button--small"
+                    type="button"
+                    onClick={() => void handleReenviarLink(selectedContrato)}
+                  >
+                    Reenviar por e-mail
+                  </button>
+                </>
               ) : null}
               {selectedContrato?.pdfAssinadoUrl ? (
                 <a className="button button--ghost button--small" href={selectedContrato.pdfAssinadoUrl} target="_blank" rel="noreferrer">PDF assinado</a>
@@ -752,6 +781,7 @@ export default function ContratosPage() {
                   <th>Assinatura</th>
                   <th>Vigência</th>
                   <th>Valor</th>
+                  <th>Link assinatura</th>
                 </tr>
               </thead>
               <tbody>
@@ -766,6 +796,21 @@ export default function ContratosPage() {
                     <td><span className={`status-pill status-pill--${contrato.statusAssinatura.toLowerCase()}`}>{labelize(contrato.statusAssinatura)}</span></td>
                     <td>{formatDate(contrato.dataInicio)} até {formatDate(contrato.dataFim)}</td>
                     <td>{formatCurrency(contrato.valor)}</td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {contrato.autentiqueSignUrl ? (
+                        <button
+                          className="button button--ghost button--small"
+                          type="button"
+                          title={contrato.autentiqueSignUrl}
+                          onClick={() => {
+                            void navigator.clipboard.writeText(contrato.autentiqueSignUrl!);
+                            setSuccess('Link copiado.');
+                          }}
+                        >
+                          Copiar link
+                        </button>
+                      ) : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
