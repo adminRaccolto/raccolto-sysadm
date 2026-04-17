@@ -716,6 +716,7 @@ export default function ProjetoWorkspacePage() {
               <tr><th>Prioridade</th><td>{labelize(projeto.prioridade)}</td></tr>
               <tr><th>Progresso</th><td>{projeto.painel?.percentualConclusao ?? projeto.percentualAndamento ?? 0}%</td></tr>
               <tr><th>Fases ativas</th><td>{etapas.filter((e) => e.status === 'ATIVA').length} / {etapas.length}</td></tr>
+              {!projeto.interno && (
               <tr>
                 <th>Diagnóstico</th>
                 <td>
@@ -733,6 +734,7 @@ export default function ProjetoWorkspacePage() {
                   </button>
                 </td>
               </tr>
+              )}
             </tbody></table></div>
           </div>
           <div className="panel compact-gap">
