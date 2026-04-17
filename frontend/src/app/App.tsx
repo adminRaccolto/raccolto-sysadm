@@ -30,6 +30,7 @@ import LearningPage from '../pages/LearningPage';
 import ModelosPage from '../pages/ModelosPage';
 import DeslocamentosPage from '../pages/DeslocamentosPage';
 import RepositorioPage from '../pages/RepositorioPage';
+import ChecklistDiagnosticoPage from '../pages/ChecklistDiagnosticoPage';
 import BancosPage from '../pages/sistema/BancosPage';
 import ContasBancariasPage from '../pages/sistema/ContasBancariasPage';
 import FuncionariosPage from '../pages/sistema/FuncionariosPage';
@@ -45,6 +46,7 @@ export default function App() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="clientes" element={<ClientesPage />} />
+        <Route path="clientes/:clienteId/checklist" element={<ChecklistDiagnosticoPage />} />
         <Route path="produtos-servicos" element={<ProdutosPage />} />
         <Route path="propostas" element={<PropostasPage />} />
         <Route path="faturamento" element={<FaturamentoPage />} />
