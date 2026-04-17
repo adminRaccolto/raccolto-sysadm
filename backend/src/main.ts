@@ -17,19 +17,21 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  const allowedOrigins = (process.env.CORS_ORIGIN ?? '')
-    .split(',')
-    .map((o) => o.trim().replace(/\/$/, ''))
-    .filter(Boolean);
+  const allowedOrigins = [
+    'https://app.raccolto.com.br',
+    'https://raccolto.com.br',
+    'https://app.arato.com.br',
+    ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()) : []),
+  ];
 
   app.enableCors({
     origin: (origin, callback) => {
       if (!origin || /^http:\/\/localhost:\d+$/.test(origin)) {
         callback(null, true);
-      } else if (allowedOrigins.includes(origin.replace(/\/$/, ''))) {
+      } else if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(null, false);
+        callback(new Error(`Origin ${origin} não permitida por CORS`));
       }
     },
     credentials: true,
@@ -47,7 +49,7 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3001;
-  await app.listen(port, '0.0.0.0');
+  await app.listen(port);
   console.log(`✅  Raccolto API em execução na porta ${port}`);
 }
 
