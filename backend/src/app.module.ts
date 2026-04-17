@@ -29,6 +29,7 @@ import { DeslocamentosModule } from './deslocamentos/deslocamentos.module';
 import { BancosModule } from './bancos/bancos.module';
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { FornecedoresModule } from './fornecedores/fornecedores.module';
+import { ChecklistDiagnosticoModule } from './checklist-diagnostico/checklist-diagnostico.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { FornecedoresModule } from './fornecedores/fornecedores.module';
     FornecedoresModule,
     SuporteModule,
     FaturamentoModule,
+    ChecklistDiagnosticoModule,
   ],
   providers: [
     {
