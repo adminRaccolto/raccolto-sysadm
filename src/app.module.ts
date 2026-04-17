@@ -20,6 +20,7 @@ import { ProdutosModule } from './produtos/produtos.module';
 import { ProjetosModule } from './projetos/projetos.module';
 import { PropostasModule } from './propostas/propostas.module';
 import { FaturamentoModule } from './faturamento/faturamento.module';
+import { ChecklistDiagnosticoModule } from './checklist-diagnostico/checklist-diagnostico.module';
 import { SuporteModule } from './suporte/suporte.module';
 import { TarefasModule } from './tarefas/tarefas.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
@@ -47,6 +48,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     CrmModule,
     SuporteModule,
     FaturamentoModule,
+    ChecklistDiagnosticoModule,
   ],
   providers: [
     {

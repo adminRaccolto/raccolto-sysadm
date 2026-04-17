@@ -493,7 +493,7 @@ export class PropostasService {
     clienteEnderecoFormatado: string | null;
     cobrancas: { ordem: number; vencimento: Date; valor: number; descricao: string | null }[];
   }): Promise<string | null> {
-    const modelo = await this.prisma.contratoModelo.findFirst({
+    const modelo = await (this.prisma as any).contratoModelo.findFirst({
       where: { empresaId: proposta.empresaId, padrao: true },
     });
     if (!modelo) return null;

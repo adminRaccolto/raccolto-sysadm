@@ -266,6 +266,7 @@ model Empresa {
   comentariosOportunidade OportunidadeCrmComentario[]
   faturamentos Faturamento[]
   checklistsDiagnostico ChecklistDiagnostico[]
+  contratosModelos      ContratoModelo[]
 }
 
 
@@ -414,6 +415,22 @@ model ContratoCobranca {
   @@unique([contratoId, ordem])
 }
 
+
+
+model ContratoModelo {
+  id          String    @id @default(cuid())
+  empresaId   String
+  nome        String
+  descricao   String?
+  conteudo    String
+  ativo       Boolean   @default(true)
+  padrao      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  empresa     Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+}
 
 
 enum TipoModeloDocumento {

@@ -21,7 +21,7 @@ export class ContratosService {
 
   async listModelos(empresaId: string) {
     await ensureContratoModelosPadrao(this.prisma as any, empresaId);
-    return this.prisma.contratoModelo.findMany({
+    return (this.prisma as any).contratoModelo.findMany({
       where: { empresaId },
       orderBy: [{ padrao: 'desc' }, { nome: 'asc' }],
     });
@@ -29,12 +29,12 @@ export class ContratosService {
 
   async createModelo(empresaId: string, data: { nome: string; descricao?: string; conteudo: string; ativo?: boolean; padrao?: boolean }) {
     const nome = data.nome.trim();
-    const existente = await this.prisma.contratoModelo.findFirst({ where: { empresaId, nome } });
+    const existente = await (this.prisma as any).contratoModelo.findFirst({ where: { empresaId, nome } });
     if (existente) {
       throw new BadRequestException('Já existe um modelo de contrato com este nome.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    return (this.prisma as any).$transaction(async (tx: any) => {
       if (data.padrao) {
         await tx.contratoModelo.updateMany({ where: { empresaId, padrao: true }, data: { padrao: false } });
       }
@@ -52,18 +52,18 @@ export class ContratosService {
   }
 
   async updateModelo(empresaId: string, id: string, data: { nome?: string; descricao?: string; conteudo?: string; ativo?: boolean; padrao?: boolean }) {
-    const atual = await this.prisma.contratoModelo.findFirst({ where: { id, empresaId } });
+    const atual = await (this.prisma as any).contratoModelo.findFirst({ where: { id, empresaId } });
     if (!atual) {
       throw new BadRequestException('Modelo de contrato não encontrado.');
     }
 
     const nome = data.nome !== undefined ? data.nome.trim() : undefined;
     if (nome && nome !== atual.nome) {
-      const existente = await this.prisma.contratoModelo.findFirst({ where: { empresaId, nome, id: { not: id } } });
+      const existente = await (this.prisma as any).contratoModelo.findFirst({ where: { empresaId, nome, id: { not: id } } });
       if (existente) throw new BadRequestException('Já existe um modelo de contrato com este nome.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    return (this.prisma as any).$transaction(async (tx: any) => {
       if (data.padrao) {
         await tx.contratoModelo.updateMany({ where: { empresaId, padrao: true, id: { not: id } }, data: { padrao: false } });
       }
@@ -81,11 +81,11 @@ export class ContratosService {
   }
 
   async removeModelo(empresaId: string, id: string) {
-    const atual = await this.prisma.contratoModelo.findFirst({ where: { id, empresaId } });
+    const atual = await (this.prisma as any).contratoModelo.findFirst({ where: { id, empresaId } });
     if (!atual) {
       throw new BadRequestException('Modelo de contrato não encontrado.');
     }
-    await this.prisma.contratoModelo.delete({ where: { id } });
+    await (this.prisma as any).contratoModelo.delete({ where: { id } });
     return { message: 'Modelo de contrato excluído com sucesso.' };
   }
 
@@ -340,7 +340,7 @@ export class ContratosService {
     cobrancas?: { ordem: number; vencimento: Date; valor: number; descricao: string | null }[];
   }): Promise<string | null> {
     // Busca o modelo pelo nome ou o padrão
-    const modelo = await this.prisma.contratoModelo.findFirst({
+    const modelo = await (this.prisma as any).contratoModelo.findFirst({
       where: {
         empresaId: contrato.empresaId,
         ...(contrato.modeloContratoNome ? { nome: contrato.modeloContratoNome } : { padrao: true }),
