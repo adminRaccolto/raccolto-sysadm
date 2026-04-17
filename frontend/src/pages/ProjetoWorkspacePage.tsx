@@ -262,8 +262,14 @@ export default function ProjetoWorkspacePage() {
     try {
       const res = await http.post<any>(`/checklist-diagnostico/projeto/${id}/criar`);
       setChecklist(res.data);
-    } catch { setError('Falha ao criar diagnóstico.'); }
-    finally { setChecklistSaving(false); }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const msg = err.response?.data?.message;
+        setError(Array.isArray(msg) ? msg.join(' | ') : msg || `Falha ao criar diagnóstico. (${err.response?.status})`);
+      } else {
+        setError('Falha ao criar diagnóstico.');
+      }
+    } finally { setChecklistSaving(false); }
   }
 
   async function marcarEnviado() {
@@ -646,8 +652,8 @@ export default function ProjetoWorkspacePage() {
     { key: 'tarefas',     label: 'Quadro' },
     { key: 'entregaveis', label: `Entregáveis (${projeto.entregaveis.length})` },
     { key: 'documentos',  label: `Docs (${projeto.documentos.length})` },
-    { key: 'perfil',      label: 'Perfil do Cliente' },
-  ] as const;
+    ...(projeto.interno ? [] : [{ key: 'perfil' as const, label: 'Perfil do Cliente' }]),
+  ];
 
   return (
     <div className="page-stack">
