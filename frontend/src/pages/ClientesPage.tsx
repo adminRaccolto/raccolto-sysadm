@@ -1,5 +1,4 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { http } from '../api/http';
 import EmptyState from '../components/EmptyState';
@@ -45,7 +44,6 @@ type ViaCepResponse = {
 };
 
 export default function ClientesPage() {
-  const navigate = useNavigate();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<ClienteForm>(initialForm);
@@ -265,14 +263,6 @@ export default function ClientesPage() {
               onClick={() => selectedCliente && startEdit(selectedCliente)}
             >
               Editar
-            </button>
-            <button
-              className="button button--ghost button--small"
-              type="button"
-              disabled={!selectedCliente}
-              onClick={() => selectedCliente && navigate(`/clientes/${selectedCliente.id}/checklist`)}
-            >
-              Diagnóstico
             </button>
             <button
               className="button button--danger button--small"
