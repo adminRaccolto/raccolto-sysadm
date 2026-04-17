@@ -58,6 +58,11 @@ export class ContratosController {
     return { message: 'Contrato enviado para assinatura digital com sucesso.' };
   }
 
+  @Post(':id/reenviar-link')
+  reenviarLink(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.contratosService.reenviarLink(user.empresaId, id);
+  }
+
   @Put(':id')
   async update(
     @CurrentUser() user: AuthenticatedUser,

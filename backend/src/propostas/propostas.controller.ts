@@ -49,6 +49,11 @@ export class PropostasController {
     return { message: 'Proposta enviada para assinatura digital com sucesso.' };
   }
 
+  @Post(':id/reenviar-link')
+  reenviarLink(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.propostasService.reenviarLink(user.empresaId, id);
+  }
+
   @Public()
   @Roles()
   @Post('webhook/autentique')

@@ -3,6 +3,7 @@ import { PrioridadeNotificacao, Prisma, StatusAssinatura } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AutentiqueService } from './autentique.service';
+import { MailService } from '../mail/mail.service';
 import { ContratoCobrancaDto, CreateContratoDto } from './dto/create-contrato.dto';
 import { ensureContratoModelosPadrao } from './contrato-modelos.seed';
 
@@ -14,6 +15,7 @@ export class ContratosService {
     private readonly prisma: PrismaService,
     private readonly notificacoesService: NotificacoesService,
     private readonly autentiqueService: AutentiqueService,
+    private readonly mailService: MailService,
   ) {}
 
 
@@ -423,6 +425,15 @@ export class ContratosService {
       },
     });
 
+    if (signUrl) {
+      void this.mailService.enviarLinkAssinatura({
+        to: signatarioEmail,
+        toNome: signatarioNome,
+        documento: contrato.titulo,
+        linkAssinatura: signUrl,
+      });
+    }
+
     await this.notificacoesService.notificarAdmins({
       empresaId,
       titulo: 'Assinatura enviada',
@@ -432,6 +443,30 @@ export class ContratosService {
     });
 
     this.logger.log(`Contrato ${contratoId} enviado ao Autentique (doc: ${docId})`);
+  }
+
+  async reenviarLink(empresaId: string, contratoId: string): Promise<{ message: string }> {
+    const contrato = await this.prisma.contrato.findFirst({
+      where: { id: contratoId, empresaId },
+      include: { cliente: true },
+    });
+    if (!contrato) throw new BadRequestException('Contrato não encontrado.');
+    if (!contrato.autentiqueSignUrl) throw new BadRequestException('Este contrato ainda não foi enviado para assinatura.');
+
+    const signatarioEmail = contrato.contatoClienteEmail || contrato.cliente.email;
+    if (!signatarioEmail) throw new BadRequestException('O cliente não possui e-mail cadastrado.');
+
+    const signatarioNome = contrato.contatoClienteNome || contrato.cliente.contatoPrincipal || contrato.clienteRazaoSocial || 'Cliente';
+
+    await this.mailService.enviarLinkAssinatura({
+      to: signatarioEmail,
+      toNome: signatarioNome,
+      documento: contrato.titulo,
+      linkAssinatura: contrato.autentiqueSignUrl,
+    });
+
+    this.logger.log(`Link de assinatura reenviado para ${signatarioEmail} (contrato: ${contratoId})`);
+    return { message: `Link reenviado para ${signatarioEmail}.` };
   }
 
   async processarWebhookAutentique(payload: Record<string, unknown>): Promise<void> {

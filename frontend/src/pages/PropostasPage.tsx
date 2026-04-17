@@ -494,6 +494,19 @@ export default function PropostasPage() {
     }
   }
 
+  async function handleReenviarLink(p: PropostaApi) {
+    setEnviando(true);
+    setError(null);
+    try {
+      const res = await http.post<{ message: string }>(`/propostas/${p.id}/reenviar-link`);
+      setSuccess(res.data.message || 'Link reenviado com sucesso.');
+    } catch (err) {
+      setError(getApiError(err, 'Erro ao reenviar link.'));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
   const podeEditar = (p: PropostaApi) => p.status === 'RASCUNHO';
   const podeExcluir = (p: PropostaApi) => p.status !== 'CONVERTIDA';
   const podeEnviar = (p: PropostaApi) => p.status === 'RASCUNHO' || p.status === 'RECUSADA';
@@ -688,6 +701,14 @@ export default function PropostasPage() {
                 >
                   Copiar link
                 </button>
+                <button
+                  className="button button--ghost button--small"
+                  type="button"
+                  disabled={enviando}
+                  onClick={() => void handleReenviarLink(selectedProposta)}
+                >
+                  {enviando ? 'Enviando…' : 'Reenviar por e-mail'}
+                </button>
                 <a className="button button--ghost button--small" href={selectedProposta.autentiqueSignUrl} target="_blank" rel="noreferrer">
                   Abrir
                 </a>
@@ -711,6 +732,7 @@ export default function PropostasPage() {
                   <th>Valor</th>
                   <th>Validade</th>
                   <th>Status</th>
+                  <th>Link assinatura</th>
                 </tr>
               </thead>
               <tbody>
@@ -732,6 +754,21 @@ export default function PropostasPage() {
                       <span className={`status-pill status-pill--${p.status.toLowerCase()}`}>
                         {labelStatus(p.status)}
                       </span>
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {p.autentiqueSignUrl ? (
+                        <button
+                          className="button button--ghost button--small"
+                          type="button"
+                          title={p.autentiqueSignUrl}
+                          onClick={() => {
+                            void navigator.clipboard.writeText(p.autentiqueSignUrl!);
+                            setSuccess('Link copiado.');
+                          }}
+                        >
+                          Copiar link
+                        </button>
+                      ) : '—'}
                     </td>
                   </tr>
                 ))}
