@@ -339,13 +339,17 @@ export class ContratosService {
     contatoClienteNome: string | null;
     cobrancas?: { ordem: number; vencimento: Date; valor: number; descricao: string | null }[];
   }): Promise<string | null> {
-    // Busca o modelo pelo nome ou o padrão
-    const modelo = await (this.prisma as any).contratoModelo.findFirst({
-      where: {
-        empresaId: contrato.empresaId,
-        ...(contrato.modeloContratoNome ? { nome: contrato.modeloContratoNome } : { padrao: true }),
-      },
-    });
+    let modelo: any;
+    try {
+      modelo = await (this.prisma as any).contratoModelo.findFirst({
+        where: {
+          empresaId: contrato.empresaId,
+          ...(contrato.modeloContratoNome ? { nome: contrato.modeloContratoNome } : { padrao: true }),
+        },
+      });
+    } catch {
+      return null;
+    }
     if (!modelo) return null;
 
     const empresa = await this.prisma.empresa.findFirst({ where: { id: contrato.empresaId } });
