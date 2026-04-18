@@ -22,6 +22,12 @@ import { PropostasModule } from './propostas/propostas.module';
 import { FaturamentoModule } from './faturamento/faturamento.module';
 import { ChecklistDiagnosticoModule } from './checklist-diagnostico/checklist-diagnostico.module';
 import { SuporteModule } from './suporte/suporte.module';
+import { CaptacaoModule } from './captacao/captacao.module';
+import { ModelosDocumentoModule } from './modelos-documento/modelos-documento.module';
+import { DeslocamentosModule } from './deslocamentos/deslocamentos.module';
+import { BancosModule } from './bancos/bancos.module';
+import { FuncionariosModule } from './funcionarios/funcionarios.module';
+import { FornecedoresModule } from './fornecedores/fornecedores.module';
 import { TarefasModule } from './tarefas/tarefas.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 
@@ -49,6 +55,12 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     SuporteModule,
     FaturamentoModule,
     ChecklistDiagnosticoModule,
+    CaptacaoModule,
+    ModelosDocumentoModule,
+    DeslocamentosModule,
+    BancosModule,
+    FuncionariosModule,
+    FornecedoresModule,
   ],
   providers: [
     {
