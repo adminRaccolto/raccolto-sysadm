@@ -449,6 +449,55 @@ export class ContratosService {
     this.logger.log(`Contrato ${contratoId} enviado ao Autentique (doc: ${docId})`);
   }
 
+  async reenviarAutentique(empresaId: string, contratoId: string): Promise<void> {
+    const contrato = await this.prisma.contrato.findFirst({
+      where: { id: contratoId, empresaId },
+      include: { cliente: true },
+    });
+    if (!contrato) throw new BadRequestException('Contrato não encontrado.');
+    if (contrato.statusAssinatura === StatusAssinatura.ASSINADO) throw new BadRequestException('Este contrato já foi assinado.');
+
+    await this.prisma.contrato.update({
+      where: { id: contratoId },
+      data: { autentiqueDocId: null, autentiqueSignUrl: null },
+    });
+
+    const signatarioEmail = contrato.contatoClienteEmail || contrato.cliente.email;
+    if (!signatarioEmail) throw new BadRequestException('O cliente não possui e-mail cadastrado.');
+
+    const textoContrato = contrato.textoContratoBase?.trim()
+      || await this.resolverTextoContrato(contrato)
+      || contrato.titulo;
+    const signatarioNome = contrato.contatoClienteNome || contrato.cliente.contatoPrincipal || contrato.clienteRazaoSocial || 'Cliente';
+
+    const { docId, signUrl } = await this.autentiqueService.enviarDocumento({
+      nome: contrato.titulo,
+      textoContrato,
+      signatarioNome,
+      signatarioEmail,
+    });
+
+    await this.prisma.contrato.update({
+      where: { id: contratoId },
+      data: {
+        autentiqueDocId: docId,
+        autentiqueSignUrl: signUrl,
+        statusAssinatura: StatusAssinatura.AGUARDANDO_ASSINATURA,
+      },
+    });
+
+    if (signUrl) {
+      void this.mailService.enviarLinkAssinatura({
+        to: signatarioEmail,
+        toNome: signatarioNome,
+        documento: contrato.titulo,
+        linkAssinatura: signUrl,
+      });
+    }
+
+    this.logger.log(`Contrato ${contratoId} reenviado ao Autentique (doc: ${docId})`);
+  }
+
   async reenviarLink(empresaId: string, contratoId: string): Promise<{ message: string }> {
     const contrato = await this.prisma.contrato.findFirst({
       where: { id: contratoId, empresaId },

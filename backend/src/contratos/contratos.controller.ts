@@ -58,6 +58,12 @@ export class ContratosController {
     return { message: 'Contrato enviado para assinatura digital com sucesso.' };
   }
 
+  @Post(':id/reenviar-autentique')
+  async reenviarAutentique(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    await this.contratosService.reenviarAutentique(user.empresaId, id);
+    return { message: 'Contrato reenviado ao Autentique com sucesso.' };
+  }
+
   @Post(':id/reenviar-link')
   reenviarLink(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.contratosService.reenviarLink(user.empresaId, id);

@@ -300,6 +300,55 @@ export class PropostasService {
     this.logger.log(`Proposta ${propostaId} enviada ao Autentique (doc: ${docId})`);
   }
 
+  async reenviarAutentique(empresaId: string, propostaId: string): Promise<void> {
+    const proposta = await this.prisma.proposta.findFirst({
+      where: { id: propostaId, empresaId },
+      include: { cliente: true, cobrancas: { orderBy: { ordem: 'asc' } } },
+    });
+    if (!proposta) throw new BadRequestException('Proposta não encontrada.');
+    if (proposta.statusAssinatura === StatusAssinatura.ASSINADO) throw new BadRequestException('Esta proposta já foi assinada.');
+
+    // Limpa doc anterior para permitir novo envio
+    await this.prisma.proposta.update({
+      where: { id: propostaId },
+      data: { autentiqueDocId: null, autentiqueSignUrl: null },
+    });
+
+    const signatarioEmail = proposta.contatoClienteEmail || proposta.cliente.email;
+    if (!signatarioEmail) throw new BadRequestException('O cliente não possui e-mail para receber o link de assinatura.');
+
+    const signatarioNome = proposta.contatoClienteNome || proposta.cliente.contatoPrincipal || proposta.clienteRazaoSocial || 'Cliente';
+    const textoContrato = proposta.textoPropostaBase?.trim() || await this.resolverTextoProposta(proposta) || proposta.titulo;
+
+    const { docId, signUrl } = await this.autentiqueService.enviarDocumento({
+      nome: `Proposta — ${proposta.titulo}`,
+      textoContrato,
+      signatarioNome,
+      signatarioEmail,
+    });
+
+    await this.prisma.proposta.update({
+      where: { id: propostaId },
+      data: {
+        autentiqueDocId: docId,
+        autentiqueSignUrl: signUrl,
+        status: StatusProposta.AGUARDANDO_ASSINATURA,
+        statusAssinatura: StatusAssinatura.AGUARDANDO_ASSINATURA,
+      },
+    });
+
+    if (signUrl) {
+      void this.mailService.enviarLinkAssinatura({
+        to: signatarioEmail,
+        toNome: signatarioNome,
+        documento: `Proposta — ${proposta.titulo}`,
+        linkAssinatura: signUrl,
+      });
+    }
+
+    this.logger.log(`Proposta ${propostaId} reenviada ao Autentique (doc: ${docId})`);
+  }
+
   async reenviarLink(empresaId: string, propostaId: string): Promise<{ message: string }> {
     const proposta = await this.prisma.proposta.findFirst({
       where: { id: propostaId, empresaId },
