@@ -9,6 +9,9 @@ import PageHeader from '../components/PageHeader';
 import type { Cliente, StatusCliente, TipoPessoa } from '../types/api';
 import { formatDate, labelize, maskCep, maskCpfCnpj, maskPhone, onlyDigits } from '../utils/format';
 
+const ARATO_URL = import.meta.env.VITE_ARATO_URL as string | undefined;
+const ARATO_KEY = import.meta.env.VITE_ARATO_ADMIN_KEY as string | undefined;
+
 const initialForm = {
   tipoPessoa: 'PESSOA_JURIDICA' as TipoPessoa,
   razaoSocial: '',
@@ -30,7 +33,15 @@ const initialForm = {
   distanciaKm: '',
   precoKmReembolso: '',
   status: 'ATIVO' as StatusCliente,
+  // Ativar no Arato
+  ativarArato:    false,
+  aratoFazArea:   '',
+  aratoUserNome:  '',
+  aratoUserEmail: '',
+  aratoUserSenha: 'Arato@2025',
 };
+
+type AratoCredenciais = { user_email: string; user_senha: string };
 
 type ClienteForm = typeof initialForm;
 
@@ -54,6 +65,8 @@ export default function ClientesPage() {
   const [loadingCep, setLoadingCep] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [aratoCredenciais, setAratoCredenciais] = useState<AratoCredenciais | null>(null);
+  const [copiado, setCopiado] = useState(false);
 
   const selectedCliente = useMemo(
     () => clientes.find((cliente) => cliente.id === selectedId) ?? null,
@@ -122,10 +135,49 @@ export default function ClientesPage() {
       distanciaKm: cliente.distanciaKm != null ? String(cliente.distanciaKm) : '',
       precoKmReembolso: cliente.precoKmReembolso != null ? String(cliente.precoKmReembolso) : '',
       status: cliente.status,
+      ativarArato: false,
+      aratoFazArea: '',
+      aratoUserNome: '',
+      aratoUserEmail: '',
+      aratoUserSenha: 'Arato@2025',
     });
+    setAratoCredenciais(null);
     setSuccess(null);
     setError(null);
     setIsModalOpen(true);
+  }
+
+  async function ativarNoArato(): Promise<AratoCredenciais | null> {
+    if (!ARATO_URL || !ARATO_KEY) return null;
+    try {
+      const tipo = form.tipoPessoa === 'PESSOA_FISICA' ? 'pf' : 'pj';
+      const res = await fetch(`${ARATO_URL}/api/admin/novo-cliente`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': ARATO_KEY },
+        body: JSON.stringify({
+          tipo,
+          nome:             form.razaoSocial,
+          cpf_cnpj:         form.cpfCnpj,
+          email_cliente:    form.email,
+          telefone:         form.telefone,
+          municipio_cliente:form.cidade,
+          estado_cliente:   form.estado,
+          fazenda_nome:     form.nomeFazenda || form.razaoSocial,
+          fazenda_municipio:form.cidade,
+          fazenda_estado:   form.estado,
+          fazenda_area:     form.aratoFazArea,
+          user_nome:        form.aratoUserNome,
+          user_email:       form.aratoUserEmail,
+          user_senha:       form.aratoUserSenha,
+        }),
+      });
+      const json = await res.json() as { ok: boolean; error?: string };
+      if (!json.ok) throw new Error(json.error ?? 'Erro desconhecido');
+      return { user_email: form.aratoUserEmail, user_senha: form.aratoUserSenha };
+    } catch (err) {
+      setError('Arato: ' + String(err).replace('Error: ', ''));
+      return null;
+    }
   }
 
   async function handleCepBlur() {
@@ -192,7 +244,17 @@ export default function ClientesPage() {
         setSuccess('Cliente atualizado com sucesso.');
       } else {
         await http.post('/clientes', payload);
-        setSuccess('Cliente cadastrado com sucesso.');
+        if (form.ativarArato && !editingId) {
+          const cred = await ativarNoArato();
+          if (cred) {
+            setAratoCredenciais(cred);
+            setSuccess('Cliente cadastrado e ativado no Arato.');
+          } else {
+            setSuccess('Cliente cadastrado. Falha ao ativar no Arato (ver erro acima).');
+          }
+        } else {
+          setSuccess('Cliente cadastrado com sucesso.');
+        }
       }
       closeModal();
       await loadClientes();
@@ -245,6 +307,51 @@ export default function ClientesPage() {
 
       {error ? <Feedback type="error" message={error} /> : null}
       {success ? <Feedback type="success" message={success} /> : null}
+
+      {aratoCredenciais ? (
+        <div style={{
+          background: '#e8faf2', border: '1px solid #1f9d6840', borderRadius: 14,
+          padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+        }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#1f9d68', marginBottom: 6 }}>
+              ✓ Acesso Arato criado — envie as credenciais ao cliente
+            </div>
+            <div style={{ fontSize: 13 }}>
+              <b>E-mail:</b> {aratoCredenciais.user_email} &nbsp;|&nbsp;
+              <b>Senha provisória:</b>{' '}
+              <code style={{ fontFamily: 'monospace', background: '#d1fae5', padding: '1px 6px', borderRadius: 4 }}>
+                {aratoCredenciais.user_senha}
+              </code>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+              O cliente será obrigado a trocar a senha no primeiro acesso.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button
+              className="button button--ghost button--small"
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(
+                  `E-mail: ${aratoCredenciais.user_email}\nSenha provisória: ${aratoCredenciais.user_senha}`
+                );
+                setCopiado(true);
+                setTimeout(() => setCopiado(false), 2500);
+              }}
+            >
+              {copiado ? '✓ Copiado!' : 'Copiar'}
+            </button>
+            <button
+              className="button button--ghost button--small"
+              type="button"
+              onClick={() => setAratoCredenciais(null)}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <section className="panel">
         <div className="panel__header panel__header--row panel__header--sticky">
@@ -436,9 +543,80 @@ export default function ClientesPage() {
             <input type="number" min="0" step="0.01" value={form.precoKmReembolso} onChange={(e) => setForm((c) => ({ ...c, precoKmReembolso: e.target.value }))} placeholder="0,00" />
           </div>
 
+          {/* ── Ativar no Arato ── */}
+          {!editingId ? (
+            <>
+              <div className="field field--span-2 field--checkbox" style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
+                <label htmlFor="ativar-arato" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <input
+                    id="ativar-arato"
+                    type="checkbox"
+                    checked={form.ativarArato}
+                    onChange={(e) => setForm((c) => ({ ...c, ativarArato: e.target.checked }))}
+                  />
+                  <span>
+                    <strong>Ativar no Arato</strong>
+                    <span style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 6 }}>
+                      — cria fazenda e login provisório no sistema agrícola
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              {form.ativarArato ? (
+                <>
+                  <div className="field">
+                    <label>Área da fazenda (ha)</label>
+                    <input
+                      type="number" min="0" step="0.01"
+                      value={form.aratoFazArea}
+                      onChange={(e) => setForm((c) => ({ ...c, aratoFazArea: e.target.value }))}
+                      placeholder="1500"
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Nome do usuário admin *</label>
+                    <input
+                      value={form.aratoUserNome}
+                      onChange={(e) => setForm((c) => ({ ...c, aratoUserNome: e.target.value }))}
+                      placeholder="João da Silva"
+                      required={form.ativarArato}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>E-mail de acesso ao Arato *</label>
+                    <input
+                      type="email"
+                      value={form.aratoUserEmail}
+                      onChange={(e) => setForm((c) => ({ ...c, aratoUserEmail: e.target.value }))}
+                      placeholder="joao@fazenda.com.br"
+                      required={form.ativarArato}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Senha provisória *</label>
+                    <input
+                      value={form.aratoUserSenha}
+                      onChange={(e) => setForm((c) => ({ ...c, aratoUserSenha: e.target.value }))}
+                      required={form.ativarArato}
+                      style={{ fontFamily: 'monospace' }}
+                    />
+                    <small>O cliente será obrigado a trocar no primeiro acesso.</small>
+                  </div>
+                </>
+              ) : null}
+            </>
+          ) : null}
+
           <div className="field field--span-2">
             <button className="button" type="submit" disabled={saving}>
-              {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar cliente'}
+              {saving
+                ? 'Salvando...'
+                : editingId
+                  ? 'Salvar alterações'
+                  : form.ativarArato
+                    ? 'Cadastrar e ativar no Arato'
+                    : 'Cadastrar cliente'}
             </button>
           </div>
         </form>
