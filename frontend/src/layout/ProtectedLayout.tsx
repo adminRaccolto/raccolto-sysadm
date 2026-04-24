@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Archive,
@@ -30,63 +30,63 @@ import type { Notificacao, NotificacoesResponse } from '../types/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDate } from '../utils/format';
 
-type MenuItem = { to: string; label: string; Icon: React.ElementType };
-type MenuGroup = { label: string; Icon: React.ElementType; items: MenuItem[] };
+type MenuItem = { to: string; label: string; Icon: React.ElementType; chave?: string };
+type MenuGroup = { label: string; Icon: React.ElementType; items: MenuItem[]; chave?: string };
 type NavEntry = { type: 'link' } & MenuItem | { type: 'group' } & MenuGroup;
 
 const navEntries: NavEntry[] = [
-  { type: 'link',  to: '/dashboard', label: 'Início', Icon: LayoutDashboard },
+  { type: 'link',  to: '/dashboard', label: 'Início', Icon: LayoutDashboard, chave: 'dashboard' },
   {
-    type: 'group', label: 'Cadastros', Icon: Users,
+    type: 'group', label: 'Cadastros', Icon: Users, chave: 'clientes',
     items: [
-      { to: '/clientes',             label: 'Clientes',     Icon: Users },
-      { to: '/sistema/fornecedores', label: 'Fornecedores', Icon: Building2 },
-      { to: '/produtos-servicos',    label: 'Produtos',     Icon: Package },
+      { to: '/clientes',             label: 'Clientes',     Icon: Users,     chave: 'clientes' },
+      { to: '/sistema/fornecedores', label: 'Fornecedores', Icon: Building2, chave: 'clientes' },
+      { to: '/produtos-servicos',    label: 'Produtos',     Icon: Package,   chave: 'clientes' },
     ],
   },
   {
-    type: 'group', label: 'Comercial', Icon: FileSignature,
+    type: 'group', label: 'Comercial', Icon: FileSignature, chave: 'contratos',
     items: [
-      { to: '/propostas',  label: 'Propostas', Icon: FileText },
-      { to: '/contratos',  label: 'Contratos', Icon: FileSignature },
-      { to: '/crm',        label: 'CRM',       Icon: Target },
-      { to: '/captacao',   label: 'Captação',  Icon: Megaphone },
+      { to: '/propostas',  label: 'Propostas', Icon: FileText,      chave: 'contratos' },
+      { to: '/contratos',  label: 'Contratos', Icon: FileSignature, chave: 'contratos' },
+      { to: '/crm',        label: 'CRM',       Icon: Target,        chave: 'crm' },
+      { to: '/captacao',   label: 'Captação',  Icon: Megaphone,     chave: 'crm' },
     ],
   },
   {
-    type: 'group', label: 'Projetos', Icon: KanbanSquare,
+    type: 'group', label: 'Projetos', Icon: KanbanSquare, chave: 'projetos',
     items: [
-      { to: '/projetos',                label: 'Todos os Projetos', Icon: FolderKanban },
-      { to: '/projetos/minhas-tarefas', label: 'Minhas Tarefas',   Icon: CheckSquare },
+      { to: '/projetos',                label: 'Todos os Projetos', Icon: FolderKanban, chave: 'projetos' },
+      { to: '/projetos/minhas-tarefas', label: 'Minhas Tarefas',   Icon: CheckSquare,  chave: 'tarefas' },
     ],
   },
   {
-    type: 'group', label: 'Operacional', Icon: Briefcase,
+    type: 'group', label: 'Operacional', Icon: Briefcase, chave: 'projetos',
     items: [
-      { to: '/deslocamentos',  label: 'Deslocamentos',  Icon: Car },
+      { to: '/deslocamentos',  label: 'Deslocamentos',  Icon: Car,       chave: 'projetos' },
       { to: '/modelos',        label: 'Modelos',        Icon: FolderOpen },
-      { to: '/repositorio',    label: 'Repositório',    Icon: Archive },
+      { to: '/repositorio',    label: 'Repositório',    Icon: Archive,   chave: 'documentos' },
     ],
   },
   {
-    type: 'group', label: 'Financeiro', Icon: Wallet,
+    type: 'group', label: 'Financeiro', Icon: Wallet, chave: 'financeiro',
     items: [
-      { to: '/faturamento', label: 'Faturamento', Icon: Receipt },
-      { to: '/financeiro',  label: 'Financeiro',  Icon: Wallet },
+      { to: '/faturamento', label: 'Faturamento', Icon: Receipt, chave: 'financeiro' },
+      { to: '/financeiro',  label: 'Financeiro',  Icon: Wallet,  chave: 'financeiro' },
     ],
   },
-  { type: 'link', to: '/bi',         label: 'BI',      Icon: BarChart3 },
+  { type: 'link', to: '/bi', label: 'BI', Icon: BarChart3, chave: 'financeiro' },
   {
-    type: 'group', label: 'Sistema', Icon: Settings,
+    type: 'group', label: 'Sistema', Icon: Settings, chave: 'empresas',
     items: [
-      { to: '/sistema',              label: 'Empresa',      Icon: Settings },
-      { to: '/sistema/funcionarios', label: 'Funcionários', Icon: Users },
-      { to: '/sistema/bancos',       label: 'Bancos',       Icon: Wallet },
-      { to: '/sistema/contas',       label: 'Contas Banc.', Icon: Receipt },
-      { to: '/usuarios',             label: 'Usuários',     Icon: Users },
+      { to: '/sistema',              label: 'Empresa',      Icon: Settings, chave: 'empresas' },
+      { to: '/sistema/funcionarios', label: 'Funcionários', Icon: Users,    chave: 'usuarios' },
+      { to: '/sistema/bancos',       label: 'Bancos',       Icon: Wallet,   chave: 'financeiro' },
+      { to: '/sistema/contas',       label: 'Contas Banc.', Icon: Receipt,  chave: 'financeiro' },
+      { to: '/usuarios',             label: 'Usuários',     Icon: Users,    chave: 'usuarios' },
     ],
   },
-  { type: 'link', to: '/aprendizado',label: 'Aprenda', Icon: GraduationCap },
+  { type: 'link', to: '/aprendizado', label: 'Aprenda', Icon: GraduationCap },
 ];
 
 export default function ProtectedLayout() {
@@ -105,6 +105,20 @@ export default function ProtectedLayout() {
 
   const empresaNome = useMemo(() => user?.empresa?.nomeFantasia || user?.empresa?.nome || 'Raccolto', [user]);
   const primeiroNome = useMemo(() => user?.nome?.split(' ')[0] || '', [user]);
+
+  const canView = useCallback((chave?: string) => {
+    if (!chave) return true;
+    if (!user?.permissoes?.length) return true; // sem permissões configuradas = acesso total
+    const p = user.permissoes.find((p) => p.chave === chave);
+    return p ? p.visualizar : false;
+  }, [user?.permissoes]);
+
+  const visibleNavEntries = useMemo(() => navEntries.map((entry) => {
+    if (entry.type === 'link') return canView(entry.chave) ? entry : null;
+    const visibleItems = (entry as MenuGroup).items.filter((item) => canView(item.chave));
+    if (visibleItems.length === 0) return null;
+    return { ...entry, items: visibleItems } as NavEntry;
+  }).filter(Boolean) as NavEntry[], [canView]);
 
   async function loadNotificacoes() {
     try {
@@ -175,7 +189,7 @@ export default function ProtectedLayout() {
 
         {/* Navigation */}
         <nav className="topnav__nav" ref={navRef}>
-          {navEntries.map((entry) => {
+          {visibleNavEntries.map((entry) => {
             if (entry.type === 'link') {
               return (
                 <NavLink

@@ -1,8 +1,8 @@
 {
   "name": "raccolto-api",
-  "version": "0.17.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "Raccolto API - versão 17 com CRM clássico integrado",
+  "description": "Raccolto API - versão 4 com consolidação funcional, clientes e contratos expandidos e base administrativa",
   "scripts": {
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -15,21 +15,16 @@
     "prisma:studio": "prisma studio --config prisma.config.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1027.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
     "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
-    "@types/pdfkit": "^0.17.5",
-    "axios": "^1.15.0",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "dotenv": "^16.4.5",
-    "multer": "^2.0.0",
-    "pdfkit": "^0.18.0",
     "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
@@ -40,7 +35,6 @@
     "@nestjs/testing": "^11.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.0",
-    "@types/multer": "^2.1.0",
     "@types/node": "^22.10.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

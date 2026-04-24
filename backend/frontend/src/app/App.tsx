@@ -30,6 +30,7 @@ import LearningPage from '../pages/LearningPage';
 import ModelosPage from '../pages/ModelosPage';
 import DeslocamentosPage from '../pages/DeslocamentosPage';
 import RepositorioPage from '../pages/RepositorioPage';
+import DiagnosticoPublicoPage from '../pages/DiagnosticoPublicoPage';
 import BancosPage from '../pages/sistema/BancosPage';
 import ContasBancariasPage from '../pages/sistema/ContasBancariasPage';
 import FuncionariosPage from '../pages/sistema/FuncionariosPage';
@@ -40,6 +41,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/captacao/:slug" element={<CaptacaoPublicPage />} />
+      <Route path="/diagnostico/:token" element={<DiagnosticoPublicoPage />} />
       <Route path="propostas/:id/preview" element={<ProtectedRoute><PropostaPreviewPage /></ProtectedRoute>} />
       <Route path="/" element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />

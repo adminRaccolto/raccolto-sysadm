@@ -17,6 +17,7 @@ const initialForm = {
   perfil: 'ANALISTA' as PerfilUsuario,
   perfilAcessoId: '',
   empresaIdsAcesso: [] as string[],
+  ativo: true,
 };
 
 export default function UsuariosPage() {
@@ -24,6 +25,8 @@ export default function UsuariosPage() {
   const [profiles, setProfiles] = useState<PerfilAcesso[]>([]);
   const [companies, setCompanies] = useState<Empresa[]>([]);
   const [form, setForm] = useState(initialForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +44,8 @@ export default function UsuariosPage() {
       setUsers(usersResponse.data);
       setProfiles(profilesResponse.data);
       setCompanies(companiesResponse.data);
-      if (!form.empresaIdsAcesso.length && companiesResponse.data.length > 0) {
-        setForm((current) => ({ ...current, empresaIdsAcesso: [companiesResponse.data[0].id] }));
+      if (!editingId && !form.empresaIdsAcesso.length && companiesResponse.data.length > 0) {
+        setForm((c) => ({ ...c, empresaIdsAcesso: [companiesResponse.data[0].id] }));
       }
     } catch (err) {
       handleError(err, 'Falha ao carregar usuários.');
@@ -51,9 +54,37 @@ export default function UsuariosPage() {
     }
   }
 
-  useEffect(() => {
-    void load();
-  }, []);
+  useEffect(() => { void load(); }, []);
+
+  function resetForm() {
+    setEditingId(null);
+    setShowForm(false);
+    setForm({ ...initialForm, empresaIdsAcesso: companies.length > 0 ? [companies[0].id] : [] });
+  }
+
+  function openNew() {
+    setEditingId(null);
+    setForm({ ...initialForm, empresaIdsAcesso: companies.length > 0 ? [companies[0].id] : [] });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function startEdit(user: UsuarioAdmin) {
+    setEditingId(user.id);
+    const empresaIds = user.empresasDisponiveis?.map((e) => e.id) ?? [];
+    const perfilAcessoId = user.perfilAcessoAtual?.id ?? '';
+    setForm({
+      nome: user.nome,
+      email: user.email ?? '',
+      senha: '',
+      perfil: user.perfil as PerfilUsuario,
+      perfilAcessoId,
+      empresaIdsAcesso: empresaIds,
+      ativo: user.ativo ?? true,
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -61,19 +92,28 @@ export default function UsuariosPage() {
     setError(null);
     setSuccess(null);
     try {
-      await http.post('/usuarios', {
+      const payload: Record<string, any> = {
         nome: form.nome,
         email: form.email,
-        senha: form.senha,
         perfil: form.perfil,
         perfilAcessoId: form.perfilAcessoId || undefined,
         empresaIdsAcesso: form.empresaIdsAcesso,
-      });
-      setForm(initialForm);
-      setSuccess('Usuário criado com sucesso.');
+        ativo: form.ativo,
+      };
+      if (form.senha) payload.senha = form.senha;
+      if (!editingId) {
+        if (!form.senha) { setError('Senha é obrigatória para novos usuários.'); setSaving(false); return; }
+        payload.senha = form.senha;
+        await http.post('/usuarios', payload);
+        setSuccess('Usuário criado com sucesso.');
+      } else {
+        await http.patch(`/usuarios/${editingId}`, payload);
+        setSuccess('Usuário atualizado com sucesso.');
+      }
+      resetForm();
       await load();
     } catch (err) {
-      handleError(err, 'Falha ao criar usuário.');
+      handleError(err, editingId ? 'Falha ao atualizar usuário.' : 'Falha ao criar usuário.');
     } finally {
       setSaving(false);
     }
@@ -90,94 +130,159 @@ export default function UsuariosPage() {
 
   return (
     <div className="page-stack page-stack--compact">
-      <PageHeader title="Usuários" subtitle="Cadastre usuários e vincule o acesso deles a perfis e empresas." actions={<BackButton fallbackPath="/sistema" />} />
+      <PageHeader title="Usuários" subtitle="Cadastre e gerencie usuários, perfis e acessos por empresa." actions={<BackButton fallbackPath="/sistema" />} />
       <SystemNav />
       {error ? <Feedback type="error" message={error} /> : null}
       {success ? <Feedback type="success" message={success} /> : null}
 
-      <section className="two-columns two-columns--left-wide two-columns--compact">
-        <form className="panel form-grid panel--compact" onSubmit={handleSubmit}>
-          <div className="panel__header">
-            <h3>Novo usuário</h3>
-            <p>O usuário nasce com uma empresa principal e pode receber acesso adicional a outras empresas.</p>
-          </div>
-          <div className="field">
-            <label>Nome</label>
-            <input required value={form.nome} onChange={(e) => setForm((c) => ({ ...c, nome: e.target.value }))} />
-          </div>
-          <div className="field">
-            <label>E-mail</label>
-            <input required value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} />
-          </div>
-          <div className="field">
-            <label>Senha</label>
-            <input type="password" required value={form.senha} onChange={(e) => setForm((c) => ({ ...c, senha: e.target.value }))} />
-          </div>
-          <div className="field">
-            <label>Perfil base</label>
-            <select value={form.perfil} onChange={(e) => setForm((c) => ({ ...c, perfil: e.target.value as PerfilUsuario }))}>
-              <option value="ADMIN">ADMIN</option>
-              <option value="ANALISTA">ANALISTA</option>
-              <option value="CLIENTE">CLIENTE</option>
-            </select>
-          </div>
-          <div className="field field--span-2">
-            <label>Perfil de acesso da empresa atual</label>
-            <select value={form.perfilAcessoId} onChange={(e) => setForm((c) => ({ ...c, perfilAcessoId: e.target.value }))}>
-              <option value="">Selecionar automaticamente pelo perfil base</option>
-              {profiles.map((profile) => (
-                <option key={profile.id} value={profile.id}>{profile.nome}</option>
-              ))}
-            </select>
-          </div>
-          <div className="field field--span-2">
-            <label>Empresas com acesso</label>
-            <div className="checkbox-list compact-gap">
-              {companies.map((company) => (
-                <label key={company.id} className="checkbox-inline">
-                  <input
-                    type="checkbox"
-                    checked={form.empresaIdsAcesso.includes(company.id)}
-                    onChange={(e) => setForm((current) => ({
-                      ...current,
-                      empresaIdsAcesso: e.target.checked
-                        ? Array.from(new Set([...current.empresaIdsAcesso, company.id]))
-                        : current.empresaIdsAcesso.filter((item) => item !== company.id),
-                    }))}
-                  />
-                  {company.nomeFantasia || company.nome}
-                </label>
-              ))}
+      {showForm ? (
+        <div className="panel panel--compact" style={{ maxWidth: 640 }}>
+          <div className="panel__header panel__header--row panel__header--sticky">
+            <div>
+              <h3>{editingId ? <>Editando: <span style={{ color: 'var(--primary)' }}>{form.nome}</span></> : 'Novo usuário'}</h3>
+              <p>{editingId ? 'Deixe a senha em branco para não alterar.' : 'Preencha os dados do novo usuário.'}</p>
             </div>
+            <button className="button button--ghost button--small" type="button" onClick={resetForm}>Cancelar</button>
           </div>
-          <button className="button" type="submit" disabled={saving}>{saving ? 'Salvando...' : 'Cadastrar usuário'}</button>
-        </form>
 
-        <div className="panel panel--compact">
-          <div className="panel__header">
+          <form className="form-grid" onSubmit={handleSubmit} style={{ padding: '16px 20px 20px' }}>
+            <div className="field">
+              <label>Nome completo</label>
+              <input required value={form.nome} onChange={(e) => setForm((c) => ({ ...c, nome: e.target.value }))} />
+            </div>
+            <div className="field">
+              <label>E-mail</label>
+              <input required type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} />
+            </div>
+            <div className="field">
+              <label>{editingId ? 'Nova senha (opcional)' : 'Senha'}</label>
+              <input type="password" required={!editingId} value={form.senha} onChange={(e) => setForm((c) => ({ ...c, senha: e.target.value }))} />
+            </div>
+            <div className="field" style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 500 }}>
+                <input type="checkbox" checked={form.ativo} onChange={(e) => setForm((c) => ({ ...c, ativo: e.target.checked }))} />
+                Usuário ativo
+              </label>
+            </div>
+            <div className="field">
+              <label>Perfil base</label>
+              <select
+                value={form.perfil}
+                onChange={(e) => {
+                  const novoPerfil = e.target.value as PerfilUsuario;
+                  const nomeEsperado = novoPerfil === 'ADMIN' ? 'Administrador' : 'Analista';
+                  const matching = profiles.find((p) => p.nome === nomeEsperado);
+                  setForm((c) => ({ ...c, perfil: novoPerfil, perfilAcessoId: matching?.id || '' }));
+                }}
+              >
+                <option value="ADMIN">Administrador</option>
+                <option value="ANALISTA">Analista / Operacional</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Perfil de acesso</label>
+              <select value={form.perfilAcessoId} onChange={(e) => setForm((c) => ({ ...c, perfilAcessoId: e.target.value }))}>
+                <option value="">— Automático pelo perfil base —</option>
+                {profiles.filter((p) => p.nome !== 'Cliente').map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field field--span-2">
+              <label>Empresas com acesso</label>
+              <div className="checkbox-list compact-gap">
+                {companies.map((company) => (
+                  <label key={company.id} className="checkbox-inline">
+                    <input
+                      type="checkbox"
+                      checked={form.empresaIdsAcesso.includes(company.id)}
+                      onChange={(e) => setForm((c) => ({
+                        ...c,
+                        empresaIdsAcesso: e.target.checked
+                          ? Array.from(new Set([...c.empresaIdsAcesso, company.id]))
+                          : c.empresaIdsAcesso.filter((id) => id !== company.id),
+                      }))}
+                    />
+                    {company.nomeFantasia || company.nome}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="field--span-2" style={{ display: 'flex', gap: 10 }}>
+              <button className="button" type="submit" disabled={saving}>
+                {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar usuário'}
+              </button>
+              <button className="button button--ghost" type="button" onClick={resetForm}>Cancelar</button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
+      <div className="panel panel--compact">
+        <div className="panel__header panel__header--row">
+          <div>
             <h3>Usuários da empresa atual</h3>
             <p>{users.length} usuário(s) com acesso ao contexto selecionado.</p>
           </div>
-          {loading ? <LoadingBlock label="Carregando usuários..." /> : null}
-          {!loading && users.length === 0 ? <EmptyState message="Nenhum usuário encontrado." /> : null}
-          {!loading && users.length > 0 ? (
-            <div className="stack-list stack-list--compact">
-              {users.map((item) => (
-                <div key={item.id} className="list-card list-card--compact">
-                  <div>
-                    <strong>{item.nome}</strong>
-                    <p className="muted">{item.email}</p>
-                    <small className="muted">Perfil base: {item.perfil} · Perfil dinâmico: {item.perfilAcessoAtual?.nome || 'Não vinculado'}</small>
-                  </div>
-                  <div className="table-actions">
-                    <span className="compact-chip">{item.empresasDisponiveis?.length || 1} empresa(s)</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {!showForm ? (
+            <button className="button button--small" type="button" onClick={openNew}>+ Novo usuário</button>
           ) : null}
         </div>
-      </section>
+        {loading ? <LoadingBlock label="Carregando usuários..." /> : null}
+        {!loading && users.length === 0 ? <EmptyState message="Nenhum usuário encontrado." /> : null}
+        {!loading && users.length > 0 ? (
+          <div className="table-wrap table-wrap--full">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>E-mail</th>
+                  <th>Perfil base</th>
+                  <th>Perfil de acesso</th>
+                  <th>Empresas</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((item) => (
+                  <tr key={item.id} style={editingId === item.id ? { background: 'var(--primary-soft)' } : undefined}>
+                    <td><strong>{item.nome}</strong></td>
+                    <td className="muted">{item.email}</td>
+                    <td><span className="compact-chip">{item.perfil}</span></td>
+                    <td className="muted">{item.perfilAcessoAtual?.nome || <span style={{ color: '#94a3b8' }}>—</span>}</td>
+                    <td className="muted">{item.empresasDisponiveis?.length ?? 1}</td>
+                    <td>
+                      <span className={`compact-chip${item.ativo === false ? ' compact-chip--danger' : ' compact-chip--success'}`}>
+                        {item.ativo === false ? 'Inativo' : 'Ativo'}
+                      </span>
+                    </td>
+                    <td style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
+                      <button className="button button--ghost button--small" type="button" onClick={() => startEdit(item)}>
+                        Editar
+                      </button>
+                      <button
+                        className="button button--ghost button--small"
+                        type="button"
+                        style={{ color: item.ativo === false ? '#16a34a' : '#dc2626' }}
+                        onClick={async () => {
+                          if (!confirm(`${item.ativo === false ? 'Ativar' : 'Desativar'} o usuário ${item.nome}?`)) return;
+                          try {
+                            await http.patch(`/usuarios/${item.id}`, { ativo: !item.ativo });
+                            await load();
+                          } catch { setError('Falha ao alterar status do usuário.'); }
+                        }}
+                      >
+                        {item.ativo === false ? 'Ativar' : 'Desativar'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

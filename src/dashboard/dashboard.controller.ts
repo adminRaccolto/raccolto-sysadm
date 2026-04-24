@@ -11,9 +11,4 @@ export class DashboardController {
   async getResumo(@CurrentUser() user: AuthenticatedUser) {
     return this.dashboardService.getResumo(user);
   }
-
-  @Get('bi')
-  async getBi(@CurrentUser() user: AuthenticatedUser) {
-    return this.dashboardService.getBi(user.empresaId);
-  }
 }

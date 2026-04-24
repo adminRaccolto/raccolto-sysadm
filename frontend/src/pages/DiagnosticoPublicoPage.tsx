@@ -40,12 +40,12 @@ function emptyFazenda(): Fazenda {
 
 function YesNo({ value, onChange }: { value?: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 8 }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-        <input type="radio" checked={value === true} onChange={() => onChange(true)} /> Sim
+    <div style={{ display: 'flex', gap: 16 }}>
+      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        <input type="radio" style={{ flexShrink: 0, accentColor: '#e8a020' }} checked={value === true} onChange={() => onChange(true)} /> Sim
       </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-        <input type="radio" checked={value === false} onChange={() => onChange(false)} /> Não
+      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        <input type="radio" style={{ flexShrink: 0, accentColor: '#e8a020' }} checked={value === false} onChange={() => onChange(false)} /> Não
       </label>
     </div>
   );
@@ -54,7 +54,7 @@ function YesNo({ value, onChange }: { value?: boolean; onChange: (v: boolean) =>
 export default function DiagnosticoPublicoPage() {
   const { token } = useParams<{ token: string }>();
   const [cliente, setCliente] = useState<any>(null);
-  const [checklistStatus, setChecklistStatus] = useState<string>('PENDENTE');
+  const [, setChecklistStatus] = useState<string>('PENDENTE');
   const [form, setForm] = useState<FormState>({ fazendas: [emptyFazenda()] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -155,27 +155,28 @@ export default function DiagnosticoPublicoPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
-        <p style={{ color: '#64748b' }}>Carregando...</p>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a3d55' }}>
+        <p style={{ color: '#94b8c8' }}>Carregando...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#f8fafc' }}>
-        <p style={{ color: '#dc2626', fontWeight: 600 }}>{error}</p>
-        <p style={{ color: '#64748b', fontSize: 14 }}>Verifique o link recebido ou entre em contato com a Raccolto.</p>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#0a3d55' }}>
+        <p style={{ color: '#fca5a5', fontWeight: 600 }}>{error}</p>
+        <p style={{ color: '#94b8c8', fontSize: 14 }}>Verifique o link recebido ou entre em contato com a Raccolto.</p>
       </div>
     );
   }
 
   if (enviado) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: '#f8fafc', padding: 24 }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>✓</div>
-        <h2 style={{ margin: 0, color: '#166534' }}>Diagnóstico enviado!</h2>
-        <p style={{ color: '#64748b', textAlign: 'center', maxWidth: 420 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: '#0a3d55', padding: 24 }}>
+        <img src="/Ativo 9.png" alt="Raccolto" style={{ height: 56, marginBottom: 8 }} />
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#e8a020', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: '#fff' }}>✓</div>
+        <h2 style={{ margin: 0, color: '#fff' }}>Diagnóstico enviado!</h2>
+        <p style={{ color: '#94b8c8', textAlign: 'center', maxWidth: 420 }}>
           Obrigado por preencher o diagnóstico. Nossa equipe da Raccolto irá analisar suas respostas e entrar em contato em breve.
         </p>
       </div>
@@ -185,17 +186,14 @@ export default function DiagnosticoPublicoPage() {
   const nomeCliente = cliente?.nomeFantasia || cliente?.razaoSocial || '';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f1f5f9', padding: '24px 16px 48px' }}>
-      <div style={{ maxWidth: 760, margin: '0 auto' }}>
-
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 20px', marginBottom: 16 }}>
-            <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 18 }}>Raccolto</span>
-          </div>
-          <h1 style={{ margin: '0 0 8px', color: '#1e293b', fontSize: 24 }}>Diagnóstico Inicial</h1>
-          {nomeCliente ? <p style={{ margin: 0, color: '#64748b' }}>Olá, <strong>{nomeCliente}</strong>! Preencha o formulário abaixo.</p> : null}
-        </div>
+    <div style={{ minHeight: '100vh', background: '#0a3d55', padding: '0 0 48px' }}>
+      {/* Header strip */}
+      <div style={{ background: '#0a3d55', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '20px 16px', textAlign: 'center', marginBottom: 32 }}>
+        <img src="/Ativo 9.png" alt="Raccolto" style={{ height: 48, marginBottom: 20 }} />
+        <h1 style={{ margin: '0 0 6px', color: '#fff', fontSize: 26, fontWeight: 700 }}>Diagnóstico Inicial</h1>
+        {nomeCliente ? <p style={{ margin: 0, color: '#e8a020', fontSize: 15 }}>Olá, <strong>{nomeCliente}</strong>! Preencha o formulário abaixo.</p> : null}
+      </div>
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 16px' }}>
 
         <form onSubmit={handleSubmit}>
 
@@ -254,8 +252,8 @@ export default function DiagnosticoPublicoPage() {
                   <label style={{ display: 'block', fontSize: 13, color: '#374151', marginBottom: 8 }}>Culturas Aplicadas</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     {CULTURAS_OPCOES.map((opt) => (
-                      <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
-                        <input type="checkbox" checked={fazenda.culturas.includes(opt.value)} onChange={() => toggleCultura(fi, opt.value)} style={{ accentColor: '#e8a020' }} />
+                      <label key={opt.value} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14, whiteSpace: 'nowrap' }}>
+                        <input type="checkbox" checked={fazenda.culturas.includes(opt.value)} onChange={() => toggleCultura(fi, opt.value)} style={{ accentColor: '#e8a020', flexShrink: 0 }} />
                         {opt.label}
                       </label>
                     ))}
@@ -329,8 +327,8 @@ export default function DiagnosticoPublicoPage() {
                     <div>
                       <label style={{ display: 'block', fontSize: 13, color: '#374151', marginBottom: 8 }}>As decisões são tomadas em conselho ou pelo gestor?</label>
                       <div style={{ display: 'flex', gap: 12 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}><input type="radio" checked={form.decisaoPorConselho === true} onChange={() => setForm((c) => ({ ...c, decisaoPorConselho: true }))} /> Conselho</label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}><input type="radio" checked={form.decisaoPorConselho === false} onChange={() => setForm((c) => ({ ...c, decisaoPorConselho: false }))} /> Somente pelo gestor</label>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14, whiteSpace: 'nowrap' }}><input type="radio" style={{ flexShrink: 0, accentColor: '#e8a020' }} checked={form.decisaoPorConselho === true} onChange={() => setForm((c) => ({ ...c, decisaoPorConselho: true }))} /> Conselho</label>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14, whiteSpace: 'nowrap' }}><input type="radio" style={{ flexShrink: 0, accentColor: '#e8a020' }} checked={form.decisaoPorConselho === false} onChange={() => setForm((c) => ({ ...c, decisaoPorConselho: false }))} /> Somente pelo gestor</label>
                       </div>
                     </div>
                   </div>
@@ -388,8 +386,8 @@ export default function DiagnosticoPublicoPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 13, color: '#374151', marginBottom: 8 }}>Sua comercialização é feita baseada no mercado somente ou seus custos te auxiliam na decisão?</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}><input type="radio" checked={form.baseComercializacao === 'SOMENTE_MERCADO'} onChange={() => setForm((c) => ({ ...c, baseComercializacao: 'SOMENTE_MERCADO' }))} /> Somente Mercado</label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}><input type="radio" checked={form.baseComercializacao === 'CONJUNTO_FATORES'} onChange={() => setForm((c) => ({ ...c, baseComercializacao: 'CONJUNTO_FATORES' }))} /> Tomo decisão baseado num conjunto de fatores</label>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}><input type="radio" style={{ flexShrink: 0 }} checked={form.baseComercializacao === 'SOMENTE_MERCADO'} onChange={() => setForm((c) => ({ ...c, baseComercializacao: 'SOMENTE_MERCADO' }))} /> Somente Mercado</label>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}><input type="radio" style={{ flexShrink: 0 }} checked={form.baseComercializacao === 'CONJUNTO_FATORES'} onChange={() => setForm((c) => ({ ...c, baseComercializacao: 'CONJUNTO_FATORES' }))} /> Tomo decisão baseado num conjunto de fatores</label>
                 </div>
               </div>
               {[
@@ -421,3 +419,4 @@ export default function DiagnosticoPublicoPage() {
     </div>
   );
 }
+

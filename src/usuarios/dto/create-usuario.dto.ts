@@ -1,12 +1,4 @@
-import {
-  IsArray,
-  IsBoolean,
-  IsEmail,
-  IsEnum,
-  IsOptional,
-  IsString,
-  MinLength,
-} from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 import { PerfilUsuario } from '@prisma/client';
 
 export class CreateUsuarioDto {
@@ -30,13 +22,4 @@ export class CreateUsuarioDto {
   @IsOptional()
   @IsBoolean()
   ativo?: boolean;
-
-  @IsOptional()
-  @IsString()
-  perfilAcessoId?: string;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  empresaIdsAcesso?: string[];
 }

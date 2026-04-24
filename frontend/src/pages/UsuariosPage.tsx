@@ -7,7 +7,7 @@ import LoadingBlock from '../components/LoadingBlock';
 import PageHeader from '../components/PageHeader';
 import BackButton from '../components/BackButton';
 import SystemNav from '../components/SystemNav';
-import type { Empresa, PerfilAcesso, UsuarioAdmin } from '../types/api';
+import type { Cliente, Empresa, PerfilAcesso, UsuarioAdmin } from '../types/api';
 import type { PerfilUsuario } from '../types/auth';
 
 const initialForm = {
@@ -16,6 +16,7 @@ const initialForm = {
   senha: '',
   perfil: 'ANALISTA' as PerfilUsuario,
   perfilAcessoId: '',
+  clienteId: '',
   empresaIdsAcesso: [] as string[],
   ativo: true,
 };
@@ -24,6 +25,7 @@ export default function UsuariosPage() {
   const [users, setUsers] = useState<UsuarioAdmin[]>([]);
   const [profiles, setProfiles] = useState<PerfilAcesso[]>([]);
   const [companies, setCompanies] = useState<Empresa[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -36,14 +38,16 @@ export default function UsuariosPage() {
     setLoading(true);
     setError(null);
     try {
-      const [usersResponse, profilesResponse, companiesResponse] = await Promise.all([
+      const [usersResponse, profilesResponse, companiesResponse, clientesResponse] = await Promise.all([
         http.get<UsuarioAdmin[]>('/usuarios'),
         http.get<PerfilAcesso[]>('/perfis-acesso'),
         http.get<Empresa[]>('/empresas'),
+        http.get<Cliente[]>('/clientes'),
       ]);
       setUsers(usersResponse.data);
       setProfiles(profilesResponse.data);
       setCompanies(companiesResponse.data);
+      setClientes(clientesResponse.data);
       if (!editingId && !form.empresaIdsAcesso.length && companiesResponse.data.length > 0) {
         setForm((c) => ({ ...c, empresaIdsAcesso: [companiesResponse.data[0].id] }));
       }
@@ -79,6 +83,7 @@ export default function UsuariosPage() {
       senha: '',
       perfil: user.perfil as PerfilUsuario,
       perfilAcessoId,
+      clienteId: user.clienteId ?? '',
       empresaIdsAcesso: empresaIds,
       ativo: user.ativo ?? true,
     });
@@ -97,6 +102,7 @@ export default function UsuariosPage() {
         email: form.email,
         perfil: form.perfil,
         perfilAcessoId: form.perfilAcessoId || undefined,
+        clienteId: form.perfil === 'CLIENTE' ? (form.clienteId || undefined) : undefined,
         empresaIdsAcesso: form.empresaIdsAcesso,
         ativo: form.ativo,
       };
@@ -170,20 +176,32 @@ export default function UsuariosPage() {
                 value={form.perfil}
                 onChange={(e) => {
                   const novoPerfil = e.target.value as PerfilUsuario;
-                  const nomeEsperado = novoPerfil === 'ADMIN' ? 'Administrador' : 'Analista';
+                  const nomeEsperado = novoPerfil === 'ADMIN' ? 'Administrador' : novoPerfil === 'CLIENTE' ? 'Cliente' : 'Analista';
                   const matching = profiles.find((p) => p.nome === nomeEsperado);
-                  setForm((c) => ({ ...c, perfil: novoPerfil, perfilAcessoId: matching?.id || '' }));
+                  setForm((c) => ({ ...c, perfil: novoPerfil, perfilAcessoId: matching?.id || '', clienteId: novoPerfil !== 'CLIENTE' ? '' : c.clienteId }));
                 }}
               >
                 <option value="ADMIN">Administrador</option>
                 <option value="ANALISTA">Analista / Operacional</option>
+                <option value="CLIENTE">Cliente</option>
               </select>
             </div>
+            {form.perfil === 'CLIENTE' ? (
+              <div className="field">
+                <label>Cliente vinculado</label>
+                <select value={form.clienteId} onChange={(e) => setForm((c) => ({ ...c, clienteId: e.target.value }))}>
+                  <option value="">— Selecione um cliente —</option>
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nomeFantasia || c.razaoSocial}</option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             <div className="field">
               <label>Perfil de acesso</label>
               <select value={form.perfilAcessoId} onChange={(e) => setForm((c) => ({ ...c, perfilAcessoId: e.target.value }))}>
                 <option value="">— Automático pelo perfil base —</option>
-                {profiles.filter((p) => p.nome !== 'Cliente').map((p) => (
+                {profiles.filter((p) => form.perfil === 'CLIENTE' ? p.nome === 'Cliente' : p.nome !== 'Cliente').map((p) => (
                   <option key={p.id} value={p.id}>{p.nome}</option>
                 ))}
               </select>

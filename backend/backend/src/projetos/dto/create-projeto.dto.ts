@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBoolean,
   IsDateString,
   IsEnum,
@@ -30,24 +31,12 @@ export class CreateProjetoDto {
   @IsString()
   responsavelId?: string;
 
-  @IsOptional()
-  @IsString()
-  gerenteId?: string;
-
   @IsString()
   nome!: string;
 
   @IsOptional()
   @IsString()
   descricao?: string;
-
-  @IsOptional()
-  @IsString()
-  cor?: string;
-
-  @IsOptional()
-  @IsString({ each: true })
-  membroIds?: string[];
 
   @IsOptional()
   @IsString()
@@ -104,4 +93,17 @@ export class CreateProjetoDto {
   @IsOptional()
   @IsBoolean()
   visivelCliente?: boolean;
+
+  @IsOptional()
+  @IsString()
+  gerenteId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  membroIds?: string[];
+
+  @IsOptional()
+  @IsString()
+  cor?: string;
 }

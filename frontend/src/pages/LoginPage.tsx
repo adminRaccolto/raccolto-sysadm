@@ -148,6 +148,13 @@ export default function LoginPage() {
 
       {/* ── Painel de login (direita) ─────────────────────────── */}
       <section className="auth-panel">
+        <div className="auth-panel__mobile-brand">
+          {import.meta.env.VITE_BRAND_LOGO_URL ? (
+            <img src={import.meta.env.VITE_BRAND_LOGO_URL as string} alt="Raccolto" />
+          ) : (
+            <img src="/Ativo 9.png" alt="Raccolto" />
+          )}
+        </div>
         <p className="auth-panel__title">Bem-vindo de volta</p>
         <p className="auth-panel__subtitle">
           {mode === 'login' ? 'Selecione a empresa e entre com seu acesso.' : 'Configure o ambiente inicial da plataforma.'}

@@ -45,12 +45,4 @@ export class CreateEntregavelDto {
   @IsOptional()
   @IsString()
   observacaoCliente?: string;
-
-  @IsOptional()
-  @IsString()
-  anexoUrl?: string;
-
-  @IsOptional()
-  @IsString()
-  comentarioResumo?: string;
 }

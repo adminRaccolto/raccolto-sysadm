@@ -1,15 +1,20 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { PerfilUsuario } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { CreateTarefaDto } from './dto/create-tarefa.dto';
-import { AddTarefaComentarioDto } from './dto/add-tarefa-comentario.dto';
 import { TarefasService } from './tarefas.service';
 
 @Controller('tarefas')
 export class TarefasController {
   constructor(private readonly tarefasService: TarefasService) {}
+
+  @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA, PerfilUsuario.CLIENTE)
+  @Get('minhas')
+  async findMinhas(@CurrentUser() user: AuthenticatedUser) {
+    return this.tarefasService.findMinhas(user);
+  }
 
   @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA, PerfilUsuario.CLIENTE)
   @Get()
@@ -38,28 +43,12 @@ export class TarefasController {
   }
 
   @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA)
-  @Put(':id')
+  @Patch(':id')
   async update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() body: Record<string, unknown>,
+    @Body() body: Partial<CreateTarefaDto>,
   ) {
-    return this.tarefasService.update(user.empresaId, id, body as Partial<CreateTarefaDto>);
-  }
-
-
-  @Post(':id/comentarios')
-  async addComentario(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-    @Body() body: AddTarefaComentarioDto,
-  ) {
-    return this.tarefasService.addComentario(user, id, body.mensagem);
-  }
-
-  @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA)
-  @Delete(':id')
-  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.tarefasService.remove(user.empresaId, id);
+    return this.tarefasService.update(user, id, body);
   }
 }

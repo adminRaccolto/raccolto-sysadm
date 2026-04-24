@@ -78,32 +78,45 @@ export class ProjetosService {
 
     const responsavelId = await this.resolveResponsavel(empresaId, data.responsavelId);
 
-    return this.prisma.projeto.create({
-      data: {
-        empresaId,
-        clienteId,
-        contratoId,
-        produtoServicoId,
-        responsavelId,
-        interno,
-        nome: data.nome.trim(),
-        descricao: data.descricao?.trim() || null,
-        equipeEnvolvida: data.equipeEnvolvida?.trim() || null,
-        tipoServicoProjeto: data.tipoServicoProjeto?.trim() || null,
-        faseAtual: data.faseAtual?.trim() || null,
-        percentualAndamento: data.percentualAndamento ?? 0,
-        prioridade: data.prioridade,
-        recorrente: data.recorrente ?? false,
-        checklistInicialHabilitado: data.checklistInicialHabilitado ?? false,
-        modeloPadraoNome: data.modeloPadraoNome?.trim() || null,
-        dataInicio,
-        dataFimPrevista,
-        dataInicioReal: data.dataInicioReal ? new Date(data.dataInicioReal) : null,
-        dataFimReal: data.dataFimReal ? new Date(data.dataFimReal) : null,
-        status: data.status,
-        visivelCliente: interno ? false : data.visivelCliente ?? true,
-      },
-      include: this.defaultInclude(),
+    return this.prisma.$transaction(async (tx) => {
+      const projeto = await tx.projeto.create({
+        data: {
+          empresaId,
+          clienteId,
+          contratoId,
+          produtoServicoId,
+          responsavelId,
+          gerenteId: data.gerenteId || null,
+          interno,
+          nome: data.nome.trim(),
+          descricao: data.descricao?.trim() || null,
+          equipeEnvolvida: data.equipeEnvolvida?.trim() || null,
+          tipoServicoProjeto: data.tipoServicoProjeto?.trim() || null,
+          faseAtual: data.faseAtual?.trim() || null,
+          percentualAndamento: data.percentualAndamento ?? 0,
+          prioridade: data.prioridade,
+          recorrente: data.recorrente ?? false,
+          checklistInicialHabilitado: data.checklistInicialHabilitado ?? false,
+          modeloPadraoNome: data.modeloPadraoNome?.trim() || null,
+          dataInicio,
+          dataFimPrevista,
+          dataInicioReal: data.dataInicioReal ? new Date(data.dataInicioReal) : null,
+          dataFimReal: data.dataFimReal ? new Date(data.dataFimReal) : null,
+          status: data.status,
+          visivelCliente: interno ? false : data.visivelCliente ?? true,
+          cor: data.cor ?? '#6366f1',
+        },
+        include: this.defaultInclude(),
+      });
+
+      if (data.membroIds?.length) {
+        await tx.projetoMembro.createMany({
+          data: data.membroIds.map((usuarioId) => ({ projetoId: projeto.id, usuarioId })),
+          skipDuplicates: true,
+        });
+      }
+
+      return projeto;
     });
   }
 
@@ -178,39 +191,52 @@ export class ProjetosService {
         ? await this.resolveResponsavel(empresaId, data.responsavelId)
         : undefined;
 
-    await this.prisma.projeto.update({
-      where: { id },
-      data: {
-        clienteId,
-        contratoId,
-        produtoServicoId,
-        responsavelId,
-        interno,
-        nome: data.nome?.trim() ?? undefined,
-        descricao: data.descricao !== undefined ? data.descricao?.trim() || null : undefined,
-        equipeEnvolvida:
-          data.equipeEnvolvida !== undefined ? data.equipeEnvolvida?.trim() || null : undefined,
-        tipoServicoProjeto:
-          data.tipoServicoProjeto !== undefined ? data.tipoServicoProjeto?.trim() || null : undefined,
-        faseAtual: data.faseAtual !== undefined ? data.faseAtual?.trim() || null : undefined,
-        percentualAndamento:
-          data.percentualAndamento !== undefined ? data.percentualAndamento : undefined,
-        prioridade: data.prioridade ?? undefined,
-        recorrente: data.recorrente !== undefined ? data.recorrente : undefined,
-        checklistInicialHabilitado:
-          data.checklistInicialHabilitado !== undefined ? data.checklistInicialHabilitado : undefined,
-        modeloPadraoNome:
-          data.modeloPadraoNome !== undefined ? data.modeloPadraoNome?.trim() || null : undefined,
-        dataInicio,
-        dataFimPrevista,
-        dataInicioReal:
-          data.dataInicioReal !== undefined ? (data.dataInicioReal ? new Date(data.dataInicioReal) : null) : undefined,
-        dataFimReal:
-          data.dataFimReal !== undefined ? (data.dataFimReal ? new Date(data.dataFimReal) : null) : undefined,
-        status: data.status ?? undefined,
-        visivelCliente: interno ? false : data.visivelCliente !== undefined ? data.visivelCliente : undefined,
-      },
-      include: this.defaultInclude(),
+    await this.prisma.$transaction(async (tx) => {
+      await tx.projeto.update({
+        where: { id },
+        data: {
+          clienteId,
+          contratoId,
+          produtoServicoId,
+          responsavelId,
+          gerenteId: data.gerenteId !== undefined ? (data.gerenteId || null) : undefined,
+          interno,
+          nome: data.nome?.trim() ?? undefined,
+          descricao: data.descricao !== undefined ? data.descricao?.trim() || null : undefined,
+          equipeEnvolvida:
+            data.equipeEnvolvida !== undefined ? data.equipeEnvolvida?.trim() || null : undefined,
+          tipoServicoProjeto:
+            data.tipoServicoProjeto !== undefined ? data.tipoServicoProjeto?.trim() || null : undefined,
+          faseAtual: data.faseAtual !== undefined ? data.faseAtual?.trim() || null : undefined,
+          percentualAndamento:
+            data.percentualAndamento !== undefined ? data.percentualAndamento : undefined,
+          prioridade: data.prioridade ?? undefined,
+          recorrente: data.recorrente !== undefined ? data.recorrente : undefined,
+          checklistInicialHabilitado:
+            data.checklistInicialHabilitado !== undefined ? data.checklistInicialHabilitado : undefined,
+          modeloPadraoNome:
+            data.modeloPadraoNome !== undefined ? data.modeloPadraoNome?.trim() || null : undefined,
+          dataInicio,
+          dataFimPrevista,
+          dataInicioReal:
+            data.dataInicioReal !== undefined ? (data.dataInicioReal ? new Date(data.dataInicioReal) : null) : undefined,
+          dataFimReal:
+            data.dataFimReal !== undefined ? (data.dataFimReal ? new Date(data.dataFimReal) : null) : undefined,
+          status: data.status ?? undefined,
+          visivelCliente: interno ? false : data.visivelCliente !== undefined ? data.visivelCliente : undefined,
+          cor: data.cor !== undefined ? data.cor : undefined,
+        },
+      });
+
+      if (data.membroIds !== undefined) {
+        await tx.projetoMembro.deleteMany({ where: { projetoId: id } });
+        if (data.membroIds.length) {
+          await tx.projetoMembro.createMany({
+            data: data.membroIds.map((usuarioId) => ({ projetoId: id, usuarioId })),
+            skipDuplicates: true,
+          });
+        }
+      }
     });
 
     return this.findOne({ id: '', sub: '', empresaId, clienteId: null, email: '', nome: '', perfil: PerfilUsuario.ADMIN } as AuthenticatedUser, id);
@@ -502,19 +528,16 @@ export class ProjetosService {
       contrato: true,
       produtoServico: true,
       responsavel: {
-        select: {
-          id: true,
-          nome: true,
-          email: true,
-          perfil: true,
-        },
+        select: { id: true, nome: true, email: true, perfil: true },
+      },
+      gerente: {
+        select: { id: true, nome: true, email: true, perfil: true },
+      },
+      membros: {
+        select: { usuarioId: true, papel: true, usuario: { select: { id: true, nome: true, email: true } } },
       },
       _count: {
-        select: {
-          tarefas: true,
-          entregaveis: true,
-          documentos: true,
-        },
+        select: { tarefas: true, entregaveis: true, documentos: true },
       },
     };
   }

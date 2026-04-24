@@ -2,8 +2,8 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrioridadeNotificacao, StatusAssinatura, StatusProposta } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
-import { AutentiqueService } from '../autentique/autentique.service';
-import { ModelosDocumentoService } from '../modelos-documento/modelos-documento.service';
+import { AutentiqueService } from '../contratos/autentique.service';
+import { MailService } from '../mail/mail.service';
 import { CreatePropostaDto } from './dto/create-proposta.dto';
 
 @Injectable()
@@ -14,7 +14,7 @@ export class PropostasService {
     private readonly prisma: PrismaService,
     private readonly notificacoesService: NotificacoesService,
     private readonly autentiqueService: AutentiqueService,
-    private readonly modelosService: ModelosDocumentoService,
+    private readonly mailService: MailService,
   ) {}
 
   private defaultInclude() {
@@ -25,8 +25,6 @@ export class PropostasService {
       cobrancas: { orderBy: { ordem: 'asc' as const } },
     };
   }
-
-  // ── Propostas ────────────────────────────────────────────────────────────
 
   async findAll(empresaId: string) {
     return this.prisma.proposta.findMany({
@@ -263,12 +261,32 @@ export class PropostasService {
     if (!signatarioEmail) throw new BadRequestException('O cliente não possui e-mail para receber o link de assinatura.');
 
     const signatarioNome = proposta.contatoClienteNome || proposta.cliente.contatoPrincipal || proposta.clienteRazaoSocial || 'Cliente';
-    const textoContrato = proposta.textoPropostaBase?.trim() || await this.resolverTextoProposta(proposta) || proposta.titulo;
+    const textoBaseEnviar = proposta.textoPropostaBase?.trim()
+      ? this.resolverVariaveisPropostaBase(proposta.textoPropostaBase.trim(), proposta)
+      : null;
+    const textoFinal = textoBaseEnviar || await this.resolverTextoProposta(proposta) || proposta.titulo;
 
-    const pdfBuffer = await this.autentiqueService.gerarPdfContrato(`Proposta — ${proposta.titulo}`, textoContrato);
-    const { docId, signUrl } = await this.autentiqueService.enviarDocumento({
-      nome: `Proposta — ${proposta.titulo}`,
-      pdfBuffer,
+    const empresa = await this.prisma.empresa.findFirst({ where: { id: empresaId } });
+
+    const { docId, signUrl } = await this.autentiqueService.enviarPropostaDocumento({
+      titulo: proposta.titulo,
+      objeto: proposta.objeto,
+      empresaNome: empresa?.nomeFantasia || empresa?.nome || 'Raccolto',
+      empresaCnpj: empresa?.cnpj,
+      empresaCidade: empresa?.cidade ? `${empresa.cidade}${empresa.estado ? ` — ${empresa.estado}` : ''}` : null,
+      empresaEmail: empresa?.email,
+      empresaRepresentanteNome: empresa?.representanteNome,
+      empresaRepresentanteCargo: empresa?.representanteCargo,
+      logoUrl: empresa?.logoUrl,
+      clienteNome: proposta.clienteRazaoSocial || proposta.cliente?.razaoSocial || 'Cliente',
+      clienteFantasia: proposta.cliente?.nomeFantasia,
+      clienteCpfCnpj: proposta.clienteCpfCnpj,
+      contatoNome: proposta.contatoClienteNome || proposta.cliente?.contatoPrincipal,
+      dataInicio: proposta.dataInicio,
+      dataFim: proposta.dataFim,
+      validadeAte: proposta.validadeAte,
+      cobrancas: proposta.cobrancas,
+      textoFinal,
       signatarioNome,
       signatarioEmail,
     });
@@ -283,6 +301,15 @@ export class PropostasService {
       },
     });
 
+    if (signUrl) {
+      void this.mailService.enviarLinkAssinatura({
+        to: signatarioEmail,
+        toNome: signatarioNome,
+        documento: `Proposta — ${proposta.titulo}`,
+        linkAssinatura: signUrl,
+      });
+    }
+
     await this.notificacoesService.notificarAdmins({
       empresaId,
       titulo: 'Proposta enviada para assinatura',
@@ -292,6 +319,100 @@ export class PropostasService {
     });
 
     this.logger.log(`Proposta ${propostaId} enviada ao Autentique (doc: ${docId})`);
+  }
+
+  async reenviarAutentique(empresaId: string, propostaId: string): Promise<void> {
+    const proposta = await this.prisma.proposta.findFirst({
+      where: { id: propostaId, empresaId },
+      include: { cliente: true, cobrancas: { orderBy: { ordem: 'asc' } } },
+    });
+    if (!proposta) throw new BadRequestException('Proposta não encontrada.');
+    if (proposta.statusAssinatura === StatusAssinatura.ASSINADO) throw new BadRequestException('Esta proposta já foi assinada.');
+
+    // Limpa doc anterior para permitir novo envio
+    await this.prisma.proposta.update({
+      where: { id: propostaId },
+      data: { autentiqueDocId: null, autentiqueSignUrl: null },
+    });
+
+    const signatarioEmail = proposta.contatoClienteEmail || proposta.cliente.email;
+    if (!signatarioEmail) throw new BadRequestException('O cliente não possui e-mail para receber o link de assinatura.');
+
+    const signatarioNome = proposta.contatoClienteNome || proposta.cliente.contatoPrincipal || proposta.clienteRazaoSocial || 'Cliente';
+    const textoBaseReenviar = proposta.textoPropostaBase?.trim()
+      ? this.resolverVariaveisPropostaBase(proposta.textoPropostaBase.trim(), proposta)
+      : null;
+    const textoFinalReenviar = textoBaseReenviar || await this.resolverTextoProposta(proposta) || proposta.titulo;
+
+    const empresaReenviar = await this.prisma.empresa.findFirst({ where: { id: empresaId } });
+
+    const { docId, signUrl } = await this.autentiqueService.enviarPropostaDocumento({
+      titulo: proposta.titulo,
+      objeto: proposta.objeto,
+      empresaNome: empresaReenviar?.nomeFantasia || empresaReenviar?.nome || 'Raccolto',
+      empresaCnpj: empresaReenviar?.cnpj,
+      empresaCidade: empresaReenviar?.cidade ? `${empresaReenviar.cidade}${empresaReenviar.estado ? ` — ${empresaReenviar.estado}` : ''}` : null,
+      empresaEmail: empresaReenviar?.email,
+      empresaRepresentanteNome: empresaReenviar?.representanteNome,
+      empresaRepresentanteCargo: empresaReenviar?.representanteCargo,
+      logoUrl: empresaReenviar?.logoUrl,
+      clienteNome: proposta.clienteRazaoSocial || proposta.cliente?.razaoSocial || 'Cliente',
+      clienteFantasia: proposta.cliente?.nomeFantasia,
+      clienteCpfCnpj: proposta.clienteCpfCnpj,
+      contatoNome: proposta.contatoClienteNome || proposta.cliente?.contatoPrincipal,
+      dataInicio: proposta.dataInicio,
+      dataFim: proposta.dataFim,
+      validadeAte: proposta.validadeAte,
+      cobrancas: proposta.cobrancas,
+      textoFinal: textoFinalReenviar,
+      signatarioNome,
+      signatarioEmail,
+    });
+
+    await this.prisma.proposta.update({
+      where: { id: propostaId },
+      data: {
+        autentiqueDocId: docId,
+        autentiqueSignUrl: signUrl,
+        status: StatusProposta.AGUARDANDO_ASSINATURA,
+        statusAssinatura: StatusAssinatura.AGUARDANDO_ASSINATURA,
+      },
+    });
+
+    if (signUrl) {
+      void this.mailService.enviarLinkAssinatura({
+        to: signatarioEmail,
+        toNome: signatarioNome,
+        documento: `Proposta — ${proposta.titulo}`,
+        linkAssinatura: signUrl,
+      });
+    }
+
+    this.logger.log(`Proposta ${propostaId} reenviada ao Autentique (doc: ${docId})`);
+  }
+
+  async reenviarLink(empresaId: string, propostaId: string): Promise<{ message: string }> {
+    const proposta = await this.prisma.proposta.findFirst({
+      where: { id: propostaId, empresaId },
+      include: { cliente: true },
+    });
+    if (!proposta) throw new BadRequestException('Proposta não encontrada.');
+    if (!proposta.autentiqueSignUrl) throw new BadRequestException('Esta proposta ainda não foi enviada para assinatura.');
+
+    const signatarioEmail = proposta.contatoClienteEmail || proposta.cliente.email;
+    if (!signatarioEmail) throw new BadRequestException('O cliente não possui e-mail cadastrado.');
+
+    const signatarioNome = proposta.contatoClienteNome || proposta.cliente.contatoPrincipal || proposta.clienteRazaoSocial || 'Cliente';
+
+    await this.mailService.enviarLinkAssinatura({
+      to: signatarioEmail,
+      toNome: signatarioNome,
+      documento: `Proposta — ${proposta.titulo}`,
+      linkAssinatura: proposta.autentiqueSignUrl,
+    });
+
+    this.logger.log(`Link de assinatura reenviado para ${signatarioEmail} (proposta: ${propostaId})`);
+    return { message: `Link reenviado para ${signatarioEmail}.` };
   }
 
   async processarWebhookAutentique(payload: Record<string, unknown>): Promise<void> {
@@ -463,7 +584,14 @@ export class PropostasService {
     clienteEnderecoFormatado: string | null;
     cobrancas: { ordem: number; vencimento: Date; valor: number; descricao: string | null }[];
   }): Promise<string | null> {
-    const modelo = await this.modelosService.findPadrao(proposta.empresaId, 'PROPOSTA');
+    let modelo: any;
+    try {
+      modelo = await (this.prisma as any).contratoModelo.findFirst({
+        where: { empresaId: proposta.empresaId, padrao: true },
+      });
+    } catch {
+      return null;
+    }
     if (!modelo) return null;
 
     const empresa = await this.prisma.empresa.findFirst({ where: { id: proposta.empresaId } });
@@ -498,6 +626,40 @@ export class PropostasService {
     };
 
     return modelo.conteudo.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key: string) => variaveis[key] ?? '');
+  }
+
+  private resolverVariaveisPropostaBase(
+    texto: string,
+    proposta: {
+      valor: number | null;
+      dataInicio: Date | null;
+      dataFim: Date | null;
+      validadeAte: Date | null;
+      formaPagamento: string | null;
+      periodicidadeCobranca: string | null;
+      cobrancas: { ordem: number; vencimento: Date; valor: number; descricao: string | null }[];
+    },
+  ): string {
+    const valorFmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+    const qtd = proposta.cobrancas.length || null;
+    const grade = proposta.cobrancas.length
+      ? proposta.cobrancas
+          .map((c) => `| ${c.ordem} | ${c.vencimento.toLocaleDateString('pt-BR')} | Parcela ${c.ordem}/${qtd} | ${valorFmt(c.valor)} |`)
+          .join('\n')
+      : '';
+
+    const variaveis: Record<string, string> = {
+      valor_total: proposta.valor ? valorFmt(proposta.valor) : '',
+      forma_pagamento: proposta.formaPagamento || '',
+      qtd_parcelas: qtd ? String(qtd) : '',
+      periodicidade: proposta.periodicidadeCobranca || '',
+      data_inicio: proposta.dataInicio?.toLocaleDateString('pt-BR') || '',
+      data_fim: proposta.dataFim?.toLocaleDateString('pt-BR') || '',
+      validade: proposta.validadeAte?.toLocaleDateString('pt-BR') || '',
+      grade_parcelas: grade,
+    };
+
+    return texto.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key: string) => variaveis[key] ?? '');
   }
 
   private formatEndereco(cliente: { logradouro?: string | null; numero?: string | null; cidade?: string | null; estado?: string | null }): string | null {

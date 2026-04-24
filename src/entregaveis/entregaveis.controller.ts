@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { PerfilUsuario } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -12,8 +12,11 @@ export class EntregaveisController {
 
   @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA, PerfilUsuario.CLIENTE)
   @Get()
-  async findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.entregaveisService.findAll(user);
+  async findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('projetoId') projetoId?: string,
+  ) {
+    return this.entregaveisService.findAll(user, projetoId);
   }
 
   @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA, PerfilUsuario.CLIENTE)
@@ -29,21 +32,5 @@ export class EntregaveisController {
     @Body() body: CreateEntregavelDto,
   ) {
     return this.entregaveisService.create(user.empresaId, body);
-  }
-
-  @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA)
-  @Put(':id')
-  async update(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-    @Body() body: Record<string, unknown>,
-  ) {
-    return this.entregaveisService.update(user.empresaId, id, body as Partial<CreateEntregavelDto>);
-  }
-
-  @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA)
-  @Delete(':id')
-  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.entregaveisService.remove(user.empresaId, id);
   }
 }

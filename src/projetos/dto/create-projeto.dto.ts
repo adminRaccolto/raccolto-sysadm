@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBoolean,
   IsDateString,
   IsEnum,
@@ -10,13 +11,8 @@ import { Type } from 'class-transformer';
 import { PrioridadeProjeto, StatusProjeto } from '@prisma/client';
 
 export class CreateProjetoDto {
-  @IsOptional()
   @IsString()
-  clienteId?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  interno?: boolean;
+  clienteId!: string;
 
   @IsOptional()
   @IsString()
@@ -29,6 +25,19 @@ export class CreateProjetoDto {
   @IsOptional()
   @IsString()
   responsavelId?: string;
+
+  @IsOptional()
+  @IsString()
+  gerenteId?: string;
+
+  @IsOptional()
+  @IsString()
+  cor?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  membroIds?: string[];
 
   @IsString()
   nome!: string;

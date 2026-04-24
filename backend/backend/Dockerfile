@@ -1,19 +1,19 @@
 FROM node:22-alpine
 WORKDIR /app
 
-COPY backend/package*.json ./
-COPY backend/tsconfig*.json ./
-COPY backend/nest-cli.json ./
-COPY backend/prisma.config.ts ./
-COPY backend/prisma/ ./prisma/
-COPY backend/src/ ./src/
+COPY package*.json ./
+COPY tsconfig*.json ./
+COPY nest-cli.json ./
+COPY prisma.config.ts ./
+COPY prisma/ ./prisma/
+COPY src/ ./src/
 
-RUN npm ci --include=dev
+RUN npm ci
 
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN npx prisma generate
 
-RUN npx tsc -p tsconfig.build.json && ls dist/src/main.js
+RUN npm run build
 
 EXPOSE 3001
 

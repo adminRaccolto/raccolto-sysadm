@@ -218,8 +218,10 @@ export default function ClientesPage() {
     setSuccess(null);
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { ativarArato, aratoFazArea, aratoUserNome, aratoUserEmail, aratoUserSenha, ...formBase } = form;
       const payload = {
-        ...form,
+        ...formBase,
         nomeFantasia: form.nomeFantasia || undefined,
         cpfCnpj: form.cpfCnpj || undefined,
         inscricaoEstadual: form.inscricaoEstadual || undefined,

@@ -21,47 +21,6 @@ export class BootstrapAdminDto {
   @IsString()
   empresaTelefone?: string;
 
-
-  @IsOptional()
-  @IsString()
-  empresaLogradouro?: string;
-
-  @IsOptional()
-  @IsString()
-  empresaNumero?: string;
-
-  @IsOptional()
-  @IsString()
-  empresaComplemento?: string;
-
-  @IsOptional()
-  @IsString()
-  empresaBairro?: string;
-
-  @IsOptional()
-  @IsString()
-  empresaCidade?: string;
-
-  @IsOptional()
-  @IsString()
-  empresaEstado?: string;
-
-  @IsOptional()
-  @IsString()
-  empresaCep?: string;
-
-  @IsOptional()
-  @IsString()
-  empresaRepresentanteNome?: string;
-
-  @IsOptional()
-  @IsString()
-  empresaRepresentanteCargo?: string;
-
-  @IsOptional()
-  @IsString()
-  empresaLogoUrl?: string;
-
   @IsString()
   @IsNotEmpty()
   nome!: string;

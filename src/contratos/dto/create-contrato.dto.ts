@@ -1,5 +1,4 @@
 import {
-  IsArray,
   IsBoolean,
   IsDateString,
   IsEnum,
@@ -7,29 +6,9 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  Min,
-  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { StatusAssinatura, StatusContrato } from '@prisma/client';
-
-export class ContratoCobrancaDto {
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  ordem!: number;
-
-  @IsDateString()
-  vencimento!: string;
-
-  @Type(() => Number)
-  @IsNumber()
-  valor!: number;
-
-  @IsOptional()
-  @IsString()
-  descricao?: string;
-}
 
 export class CreateContratoDto {
   @IsString()
@@ -160,10 +139,4 @@ export class CreateContratoDto {
   @IsOptional()
   @IsString()
   observacoes?: string;
-
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => ContratoCobrancaDto)
-  cobrancas?: ContratoCobrancaDto[];
 }

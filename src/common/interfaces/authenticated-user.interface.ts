@@ -8,5 +8,4 @@ export interface AuthenticatedUser {
   email: string;
   nome: string;
   perfil: PerfilUsuario;
-  perfilAcessoId?: string | null;
 }

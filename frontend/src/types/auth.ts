@@ -45,6 +45,16 @@ export interface PerfilAcessoAtual {
   descricao?: string | null;
 }
 
+export interface Permissao {
+  chave: string;
+  visualizar: boolean;
+  criar: boolean;
+  editar: boolean;
+  excluir: boolean;
+  aprovar: boolean;
+  administrar: boolean;
+}
+
 export interface UsuarioAutenticado {
   id?: string;
   nome: string;
@@ -54,6 +64,7 @@ export interface UsuarioAutenticado {
   clienteId?: string | null;
   empresa?: EmpresaAutenticada | null;
   perfilAcessoAtual?: PerfilAcessoAtual | null;
+  permissoes?: Permissao[] | null;
   empresasDisponiveis?: EmpresaDisponivel[];
 }
 

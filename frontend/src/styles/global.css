@@ -1030,8 +1030,8 @@ th {
 .company-picker-card--active          { border-color: var(--primary); background: var(--primary-soft); }
 .company-picker-card__logo-wrap       { flex: 0 0 auto; }
 .company-picker-card__logo,
-.company-picker-card__placeholder     { width: 38px; height: 38px; border-radius: 10px; }
-.company-picker-card__logo            { object-fit: cover; }
+.company-picker-card__placeholder     { width: 48px; height: 48px; border-radius: 10px; }
+.company-picker-card__logo            { object-fit: contain; background: #f8fafc; padding: 4px; }
 .company-picker-card__placeholder     { display: inline-flex; align-items: center; justify-content: center; font-weight: 800; color: var(--primary); background: var(--primary-soft); }
 .company-picker-card strong,
 .company-picker-card span             { display: block; }
@@ -1103,7 +1103,7 @@ th {
   position: fixed; inset: 0;
   background: rgba(15,23,42,0.45);
   display: flex; align-items: center; justify-content: center;
-  padding: 20px; z-index: 1000;
+  padding: 20px; z-index: 1200;
 }
 .modal-shell {
   width: min(960px, 100%);
@@ -1115,11 +1115,11 @@ th {
   box-shadow: var(--shadow-lg);
 }
 .modal-shell--xl {
-  width: min(1200px, calc(100vw - 24px));
-  max-height: calc(100vh - 16px);
+  width: min(860px, calc(100vw - 40px));
+  max-height: calc(100vh - 72px);
 }
 .modal-shell--xl .modal-shell__header { padding: 11px 18px; }
-.modal-shell--xl .modal-shell__body   { padding: 10px 16px 12px; }
+.modal-shell--xl .modal-shell__body   { padding: 10px 16px 12px; max-height: calc(100vh - 180px); }
 .modal-shell__header {
   display: flex; justify-content: space-between;
   gap: 14px; align-items: flex-start;
@@ -1224,6 +1224,16 @@ th {
   overflow-y: auto;
 }
 .auth-panel__logo { margin-bottom: 28px; }
+.auth-panel__mobile-brand {
+  display: none;
+  margin-bottom: 28px;
+  text-align: center;
+}
+.auth-panel__mobile-brand img {
+  max-height: 64px;
+  max-width: 180px;
+  object-fit: contain;
+}
 .auth-panel__title {
   font-size: 22px;
   font-weight: 800;
@@ -1593,6 +1603,7 @@ th {
   .auth-shell { grid-template-columns: 1fr; }
   .auth-hero { display: none; }
   .auth-panel { padding: 32px 24px; }
+  .auth-panel__mobile-brand { display: block; }
 
 }
 
@@ -1627,6 +1638,7 @@ th {
   .auth-shell { grid-template-columns: 1fr; }
   .auth-hero { display: none; }
   .auth-panel { padding: 32px 24px; }
+  .auth-panel__mobile-brand { display: block; }
 }
 
 @media (max-width: 600px) {

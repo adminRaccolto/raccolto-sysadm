@@ -9,15 +9,18 @@ import PageHeader from '../components/PageHeader';
 import type { Cliente, Documento, Projeto, TipoDocumento } from '../types/api';
 import { formatDate } from '../utils/format';
 
-const TIPOS: { value: TipoDocumento; label: string }[] = [
-  { value: 'CONTRATO', label: 'Contrato' },
-  { value: 'RELATORIO_CONSULTORIA', label: 'Rel. Consultoria' },
-  { value: 'RELATORIO_DESLOCAMENTO', label: 'Rel. Deslocamento' },
-  { value: 'REEMBOLSO', label: 'Reembolso' },
-  { value: 'TERMO_ENTREGA', label: 'Termo de Entrega' },
-  { value: 'APROVACAO', label: 'Aprovação' },
-  { value: 'ENTREGAVEL', label: 'Entregável' },
-  { value: 'OUTRO', label: 'Outro' },
+// ─── Constantes ─────────────────────────────────────────────────────────────
+
+const AREAS: { value: TipoDocumento | 'TODOS'; label: string; icon: string }[] = [
+  { value: 'TODOS',                   label: 'Todos',                  icon: '📂' },
+  { value: 'CONTRATO',                label: 'Contratos',              icon: '📃' },
+  { value: 'RELATORIO_CONSULTORIA',   label: 'Rel. Consultoria',       icon: '📊' },
+  { value: 'RELATORIO_DESLOCAMENTO',  label: 'Rel. Deslocamento',      icon: '🚗' },
+  { value: 'REEMBOLSO',               label: 'Reembolsos',             icon: '💰' },
+  { value: 'TERMO_ENTREGA',           label: 'Termos de Entrega',      icon: '✅' },
+  { value: 'APROVACAO',               label: 'Aprovações',             icon: '👍' },
+  { value: 'ENTREGAVEL',              label: 'Entregáveis',            icon: '📦' },
+  { value: 'OUTRO',                   label: 'Outros',                 icon: '📄' },
 ];
 
 const STATUS_LABELS: Record<string, string> = {
@@ -29,6 +32,25 @@ const STATUS_LABELS: Record<string, string> = {
   ARQUIVADO: 'Arquivado',
   CANCELADO: 'Cancelado',
 };
+
+const initialForm = {
+  nome: '',
+  tipo: 'OUTRO' as TipoDocumento,
+  descricao: '',
+  clienteId: '',
+  projetoId: '',
+  contratoId: '',
+  versao: '',
+  visivelCliente: false,
+  arquivoUrl: '',
+  arquivoNomeOriginal: '',
+  arquivoMimeType: '',
+  arquivoTamanho: 0,
+};
+
+type DocForm = typeof initialForm;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatBytes(bytes?: number | null): string {
   if (!bytes) return '';
@@ -56,21 +78,17 @@ function fileIcon(mime?: string | null): string {
   return '📄';
 }
 
-const initialForm = {
-  nome: '',
-  tipo: 'OUTRO' as TipoDocumento,
-  descricao: '',
-  projetoId: '',
-  contratoId: '',
-  versao: '',
-  visivelCliente: false,
-  arquivoUrl: '',
-  arquivoNomeOriginal: '',
-  arquivoMimeType: '',
-  arquivoTamanho: 0,
-};
+// Resolve o clienteId efetivo de um documento (direto, via projeto, ou via contrato)
+function resolveClienteId(d: Documento): string | null {
+  const direct = (d as unknown as { clienteId?: string }).clienteId;
+  if (direct) return direct;
+  const viaProjeto = (d.projeto as unknown as { clienteId?: string } | undefined)?.clienteId;
+  if (viaProjeto) return viaProjeto;
+  const viaContrato = (d.contrato as unknown as { clienteId?: string } | undefined)?.clienteId;
+  return viaContrato ?? null;
+}
 
-type DocForm = typeof initialForm;
+// ─── Componente principal ────────────────────────────────────────────────────
 
 export default function RepositorioPage() {
   const [documentos, setDocumentos] = useState<Documento[]>([]);
@@ -84,12 +102,15 @@ export default function RepositorioPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DocForm>(initialForm);
-  const [filtroTipo, setFiltroTipo] = useState('');
-  const [filtroProjeto, setFiltroProjeto] = useState('');
-  const [filtroCliente, setFiltroCliente] = useState('');
+
+  // Navegação por pastas
+  const [clienteSelecionado, setClienteSelecionado] = useState<string | null>(null); // null = "Geral"
+  const [areaSelecionada, setAreaSelecionada] = useState<TipoDocumento | 'TODOS'>('TODOS');
   const [busca, setBusca] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Carregamento ──────────────────────────────────────────────────────────
   async function loadData() {
     setLoading(true);
     setError(null);
@@ -111,27 +132,66 @@ export default function RepositorioPage() {
 
   useEffect(() => { void loadData(); }, []);
 
-  const filtered = useMemo(() => {
-    let list = documentos;
-    if (filtroTipo) list = list.filter((d) => d.tipo === filtroTipo);
-    if (filtroProjeto) list = list.filter((d) => d.projeto?.id === filtroProjeto);
-    if (filtroCliente) {
-      list = list.filter((d) =>
-        (d.projeto as unknown as { clienteId?: string } | undefined)?.clienteId === filtroCliente ||
-        (d.contrato as unknown as { clienteId?: string } | undefined)?.clienteId === filtroCliente,
-      );
+  // ── Agrupamento por cliente ────────────────────────────────────────────────
+  // Monta mapa: clienteId (ou 'GERAL') → documentos[]
+  const docsPorCliente = useMemo(() => {
+    const mapa = new Map<string, Documento[]>();
+    for (const d of documentos) {
+      const cid = resolveClienteId(d) ?? 'GERAL';
+      if (!mapa.has(cid)) mapa.set(cid, []);
+      mapa.get(cid)!.push(d);
     }
+    return mapa;
+  }, [documentos]);
+
+  // Lista de clientes que têm documentos (ordenada por nome)
+  const clientesComDocs = useMemo(() => {
+    const ids = [...docsPorCliente.keys()].filter((k) => k !== 'GERAL');
+    const lista = clientes.filter((c) => ids.includes(c.id));
+    lista.sort((a, b) => (a.nomeFantasia || a.razaoSocial).localeCompare(b.nomeFantasia || b.razaoSocial));
+    return lista;
+  }, [clientes, docsPorCliente]);
+
+  const temGeral = docsPorCliente.has('GERAL');
+
+  // ── Documentos visíveis no painel direito ─────────────────────────────────
+  const docsVisiveis = useMemo(() => {
+    const base = clienteSelecionado === null
+      ? (docsPorCliente.get('GERAL') ?? [])
+      : (docsPorCliente.get(clienteSelecionado) ?? []);
+
+    let lista = areaSelecionada === 'TODOS' ? base : base.filter((d) => d.tipo === areaSelecionada);
+
     if (busca) {
       const q = busca.toLowerCase();
-      list = list.filter((d) =>
+      lista = lista.filter((d) =>
         d.nome.toLowerCase().includes(q) ||
         d.descricao?.toLowerCase().includes(q) ||
         (d as unknown as { arquivoNomeOriginal?: string }).arquivoNomeOriginal?.toLowerCase().includes(q),
       );
     }
-    return list;
-  }, [documentos, filtroTipo, filtroProjeto, filtroCliente, busca]);
+    return lista;
+  }, [documentos, clienteSelecionado, areaSelecionada, busca, docsPorCliente]);
 
+  // Contagem por área dentro do cliente selecionado
+  const contagemPorArea = useMemo(() => {
+    const base = clienteSelecionado === null
+      ? (docsPorCliente.get('GERAL') ?? [])
+      : (docsPorCliente.get(clienteSelecionado) ?? []);
+    const cnt: Record<string, number> = { TODOS: base.length };
+    for (const d of base) {
+      cnt[d.tipo] = (cnt[d.tipo] ?? 0) + 1;
+    }
+    return cnt;
+  }, [documentos, clienteSelecionado, docsPorCliente]);
+
+  // Projetos filtrados pelo cliente selecionado no form
+  const projetosFiltrados = useMemo(() => {
+    if (!form.clienteId) return projetos;
+    return projetos.filter((p) => (p as unknown as { clienteId?: string }).clienteId === form.clienteId);
+  }, [projetos, form.clienteId]);
+
+  // ── Upload ────────────────────────────────────────────────────────────────
   async function handleUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -162,8 +222,14 @@ export default function RepositorioPage() {
     }
   }
 
+  // ── Modal ─────────────────────────────────────────────────────────────────
   function openNew() {
-    setForm(initialForm);
+    setForm({
+      ...initialForm,
+      // pré-preenche cliente da pasta aberta
+      clienteId: clienteSelecionado ?? '',
+      tipo: areaSelecionada !== 'TODOS' ? areaSelecionada as TipoDocumento : 'OUTRO',
+    });
     setEditingId(null);
     setError(null);
     setSuccess(null);
@@ -175,6 +241,7 @@ export default function RepositorioPage() {
       nome: d.nome,
       tipo: d.tipo as TipoDocumento,
       descricao: d.descricao || '',
+      clienteId: (d as unknown as { clienteId?: string }).clienteId || '',
       projetoId: d.projeto?.id || '',
       contratoId: d.contrato?.id || '',
       versao: d.versao || '',
@@ -210,6 +277,7 @@ export default function RepositorioPage() {
         nome: form.nome,
         tipo: form.tipo,
         descricao: form.descricao || undefined,
+        clienteId: form.clienteId || undefined,
         projetoId: form.projetoId || undefined,
         contratoId: form.contratoId || undefined,
         versao: form.versao || undefined,
@@ -248,133 +316,296 @@ export default function RepositorioPage() {
     }
   }
 
+  // Nome de exibição do cliente selecionado
+  const clienteAtual = clienteSelecionado
+    ? clientes.find((c) => c.id === clienteSelecionado)
+    : null;
+  const nomeClienteAtual = clienteAtual
+    ? (clienteAtual.nomeFantasia || clienteAtual.razaoSocial)
+    : 'Documentos Gerais';
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="page-stack">
       <PageHeader
         title="Repositório de documentos"
-        subtitle="Armazenamento centralizado de arquivos da empresa no R2. Vincule a projetos, contratos ou mantenha como documentos gerais."
-        chips={loading ? [] : [
-          { label: `${documentos.length} documento(s)` },
-        ]}
+        subtitle="Arquivos organizados por cliente e área. Vincule a projetos, contratos ou mantenha como documentos gerais."
+        chips={loading ? [] : [{ label: `${documentos.length} documento(s)` }]}
       />
 
       {error ? <Feedback type="error" message={error} /> : null}
       {success ? <Feedback type="success" message={success} /> : null}
 
-      <section className="panel">
-        <div className="panel__header panel__header--row panel__header--sticky">
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', flex: 1 }}>
-            <input
-              placeholder="Buscar por nome..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              style={{ minWidth: 180 }}
-            />
-            <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} style={{ minWidth: 160 }}>
-              <option value="">Todos os tipos</option>
-              {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-            <select value={filtroProjeto} onChange={(e) => setFiltroProjeto(e.target.value)} style={{ minWidth: 160 }}>
-              <option value="">Todos os projetos</option>
-              {projetos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-            </select>
-            <select value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} style={{ minWidth: 160 }}>
-              <option value="">Todos os clientes</option>
-              {clientes.map((c) => <option key={c.id} value={c.id}>{c.razaoSocial}</option>)}
-            </select>
+      {loading ? <LoadingBlock label="Carregando repositório..." /> : null}
+
+      {!loading && (
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+
+          {/* ── Sidebar de clientes ───────────────────────────────────────── */}
+          <div style={{
+            width: 220,
+            flexShrink: 0,
+            background: 'var(--surface)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border)',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--border)',
+              fontSize: 11,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              color: 'var(--muted)',
+            }}>
+              Clientes
+            </div>
+
+            {clientesComDocs.length === 0 && !temGeral ? (
+              <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--muted)' }}>
+                Nenhum documento ainda.
+              </div>
+            ) : null}
+
+            {clientesComDocs.map((c) => {
+              const count = (docsPorCliente.get(c.id) ?? []).length;
+              const ativo = clienteSelecionado === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => { setClienteSelecionado(c.id); setAreaSelecionada('TODOS'); setBusca(''); }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 16px',
+                    border: 'none',
+                    borderLeft: ativo ? '3px solid var(--primary)' : '3px solid transparent',
+                    background: ativo ? 'rgba(var(--primary-rgb, 10,61,85), 0.07)' : 'transparent',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    gap: 8,
+                  }}
+                >
+                  <span style={{ fontSize: 13, color: ativo ? 'var(--primary)' : 'var(--text)', fontWeight: ativo ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    📁 {c.nomeFantasia || c.razaoSocial}
+                  </span>
+                  <span style={{
+                    fontSize: 11,
+                    background: ativo ? 'var(--primary)' : 'var(--border)',
+                    color: ativo ? '#fff' : 'var(--muted)',
+                    borderRadius: 20,
+                    padding: '1px 7px',
+                    flexShrink: 0,
+                  }}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+
+            {temGeral ? (
+              <button
+                type="button"
+                onClick={() => { setClienteSelecionado(null); setAreaSelecionada('TODOS'); setBusca(''); }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 16px',
+                  border: 'none',
+                  borderLeft: clienteSelecionado === null ? '3px solid var(--primary)' : '3px solid transparent',
+                  borderTop: '1px solid var(--border)',
+                  background: clienteSelecionado === null ? 'rgba(var(--primary-rgb, 10,61,85), 0.07)' : 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 13, color: clienteSelecionado === null ? 'var(--primary)' : 'var(--muted)', fontWeight: clienteSelecionado === null ? 600 : 400 }}>
+                  📂 Documentos Gerais
+                </span>
+                <span style={{
+                  fontSize: 11,
+                  background: clienteSelecionado === null ? 'var(--primary)' : 'var(--border)',
+                  color: clienteSelecionado === null ? '#fff' : 'var(--muted)',
+                  borderRadius: 20,
+                  padding: '1px 7px',
+                  flexShrink: 0,
+                }}>
+                  {(docsPorCliente.get('GERAL') ?? []).length}
+                </span>
+              </button>
+            ) : null}
           </div>
-          <button className="button button--ghost button--small" type="button" onClick={openNew}>
-            + Novo documento
-          </button>
-        </div>
 
-        {loading ? <LoadingBlock label="Carregando repositório..." /> : null}
+          {/* ── Painel direito ─────────────────────────────────────────────── */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="panel">
 
-        {!loading && filtered.length === 0 ? (
-          <EmptyState message="Nenhum documento encontrado. Faça upload do primeiro arquivo." />
-        ) : null}
+              {/* Cabeçalho do painel com nome do cliente e botão */}
+              <div className="panel__header panel__header--row panel__header--sticky">
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
+                    {nomeClienteAtual}
+                  </div>
+                  {clienteAtual?.razaoSocial && clienteAtual.nomeFantasia ? (
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                      {clienteAtual.razaoSocial}
+                    </div>
+                  ) : null}
+                </div>
+                <button className="button button--ghost button--small" type="button" onClick={openNew}>
+                  + Novo documento
+                </button>
+              </div>
 
-        {!loading && filtered.length > 0 ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Arquivo</th>
-                  <th>Tipo</th>
-                  <th>Vínculo</th>
-                  <th>Status</th>
-                  <th>Data</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((d) => {
-                  const mime = (d as unknown as { arquivoMimeType?: string }).arquivoMimeType;
-                  const nomeOriginal = (d as unknown as { arquivoNomeOriginal?: string }).arquivoNomeOriginal;
-                  const tamanho = (d as unknown as { arquivoTamanho?: number }).arquivoTamanho;
+              {/* Abas de área */}
+              <div style={{
+                display: 'flex',
+                gap: 4,
+                padding: '8px 16px',
+                borderBottom: '1px solid var(--border)',
+                flexWrap: 'wrap',
+              }}>
+                {AREAS.map((a) => {
+                  const count = contagemPorArea[a.value] ?? 0;
+                  if (a.value !== 'TODOS' && count === 0) return null;
+                  const ativa = areaSelecionada === a.value;
                   return (
-                    <tr key={d.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 20 }}>{fileIcon(mime)}</span>
-                          <div>
-                            <strong>{d.nome}</strong>
-                            {nomeOriginal && nomeOriginal !== d.nome ? (
-                              <div className="table-subline">{nomeOriginal} {tamanho ? `· ${formatBytes(tamanho)}` : ''}</div>
-                            ) : tamanho ? (
-                              <div className="table-subline">{formatBytes(tamanho)}</div>
-                            ) : null}
-                          </div>
-                        </div>
-                      </td>
-                      <td>{TIPOS.find((t) => t.value === d.tipo)?.label ?? d.tipo}</td>
-                      <td>
-                        {d.projeto ? <span className="badge badge--info">{d.projeto.nome}</span> : null}
-                        {d.contrato ? <span className="badge badge--muted">{d.contrato.titulo}</span> : null}
-                        {!d.projeto && !d.contrato ? <span className="table-subline">Geral</span> : null}
-                      </td>
-                      <td>
-                        <span className={`badge ${d.status === 'APROVADO' || d.status === 'ASSINADO' ? 'badge--success' : d.status === 'ARQUIVADO' || d.status === 'CANCELADO' ? 'badge--muted' : 'badge--accent'}`}>
-                          {STATUS_LABELS[d.status] ?? d.status}
-                        </span>
-                      </td>
-                      <td>{formatDate(d.createdAt)}</td>
-                      <td>
-                        <div className="table-actions-toolbar">
-                          {d.arquivoUrl ? (
-                            <a
-                              href={d.arquivoUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="button button--ghost button--small"
-                            >
-                              Abrir
-                            </a>
-                          ) : null}
-                          <button className="button button--ghost button--small" type="button" onClick={() => openEdit(d)}>
-                            Editar
-                          </button>
-                          <button className="button button--danger button--small" type="button" onClick={() => void handleDelete(d)}>
-                            Excluir
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                    <button
+                      key={a.value}
+                      type="button"
+                      onClick={() => setAreaSelecionada(a.value)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '4px 10px',
+                        borderRadius: 20,
+                        border: '1px solid',
+                        borderColor: ativa ? 'var(--primary)' : 'var(--border)',
+                        background: ativa ? 'var(--primary)' : 'transparent',
+                        color: ativa ? '#fff' : 'var(--muted)',
+                        fontSize: 12,
+                        fontWeight: ativa ? 600 : 400,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <span>{a.icon}</span>
+                      <span>{a.label}</span>
+                      {count > 0 ? <span style={{ opacity: 0.7 }}>({count})</span> : null}
+                    </button>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </section>
 
+                <input
+                  placeholder="Buscar..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  style={{ marginLeft: 'auto', width: 160, fontSize: 12 }}
+                />
+              </div>
+
+              {/* Estado vazio */}
+              {docsVisiveis.length === 0 ? (
+                <EmptyState message={
+                  clienteSelecionado === null && !temGeral
+                    ? 'Selecione um cliente na barra lateral ou faça upload do primeiro documento.'
+                    : 'Nenhum documento nesta área. Clique em "+ Novo documento" para adicionar.'
+                } />
+              ) : null}
+
+              {/* Tabela de documentos */}
+              {docsVisiveis.length > 0 ? (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Arquivo</th>
+                        <th>Área</th>
+                        <th>Vínculo</th>
+                        <th>Status</th>
+                        <th>Data</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {docsVisiveis.map((d) => {
+                        const mime = (d as unknown as { arquivoMimeType?: string }).arquivoMimeType;
+                        const nomeOriginal = (d as unknown as { arquivoNomeOriginal?: string }).arquivoNomeOriginal;
+                        const tamanho = (d as unknown as { arquivoTamanho?: number }).arquivoTamanho;
+                        const area = AREAS.find((a) => a.value === d.tipo);
+                        return (
+                          <tr key={d.id}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 20 }}>{fileIcon(mime)}</span>
+                                <div>
+                                  <strong>{d.nome}</strong>
+                                  {nomeOriginal && nomeOriginal !== d.nome ? (
+                                    <div className="table-subline">{nomeOriginal} {tamanho ? `· ${formatBytes(tamanho)}` : ''}</div>
+                                  ) : tamanho ? (
+                                    <div className="table-subline">{formatBytes(tamanho)}</div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: 12 }}>{area?.icon} {area?.label ?? d.tipo}</span>
+                            </td>
+                            <td>
+                              {d.projeto ? <span className="badge badge--info">{d.projeto.nome}</span> : null}
+                              {d.contrato ? <span className="badge badge--muted">{d.contrato.titulo}</span> : null}
+                              {!d.projeto && !d.contrato ? <span className="table-subline">Geral</span> : null}
+                            </td>
+                            <td>
+                              <span className={`badge ${d.status === 'APROVADO' || d.status === 'ASSINADO' ? 'badge--success' : d.status === 'ARQUIVADO' || d.status === 'CANCELADO' ? 'badge--muted' : 'badge--accent'}`}>
+                                {STATUS_LABELS[d.status] ?? d.status}
+                              </span>
+                            </td>
+                            <td>{formatDate(d.createdAt)}</td>
+                            <td>
+                              <div className="table-actions-toolbar">
+                                {d.arquivoUrl ? (
+                                  <a href={d.arquivoUrl} target="_blank" rel="noopener noreferrer" className="button button--ghost button--small">
+                                    Abrir
+                                  </a>
+                                ) : null}
+                                <button className="button button--ghost button--small" type="button" onClick={() => openEdit(d)}>
+                                  Editar
+                                </button>
+                                <button className="button button--danger button--small" type="button" onClick={() => void handleDelete(d)}>
+                                  Excluir
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de upload / edição ──────────────────────────────────────── */}
       <Modal
         open={isModalOpen}
         title={editingId ? 'Editar documento' : 'Novo documento'}
-        subtitle="Faça upload do arquivo e preencha os metadados para organizar o repositório."
+        subtitle="Faça upload do arquivo, selecione o cliente e a área para organizar no repositório."
         onClose={closeModal}
       >
         <form className="form-grid" onSubmit={(e) => void handleSubmit(e)}>
+
           {/* Upload */}
           <div className="field field--span-2">
             <label>Arquivo</label>
@@ -388,7 +619,7 @@ export default function RepositorioPage() {
                 <button
                   type="button"
                   className="button button--ghost button--small"
-                  onClick={() => { setForm((f) => ({ ...f, arquivoUrl: '', arquivoNomeOriginal: '', arquivoMimeType: '', arquivoTamanho: 0 })); }}
+                  onClick={() => setForm((f) => ({ ...f, arquivoUrl: '', arquivoNomeOriginal: '', arquivoMimeType: '', arquivoTamanho: 0 }))}
                 >
                   Trocar
                 </button>
@@ -415,15 +646,19 @@ export default function RepositorioPage() {
             )}
           </div>
 
+          {/* Nome */}
           <div className="field field--span-2">
             <label>Nome do documento</label>
             <input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} required />
           </div>
 
+          {/* Tipo e Versão */}
           <div className="field">
-            <label>Tipo</label>
+            <label>Área / Tipo</label>
             <select value={form.tipo} onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value as TipoDocumento }))}>
-              {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {AREAS.filter((a) => a.value !== 'TODOS').map((a) => (
+                <option key={a.value} value={a.value}>{a.icon} {a.label}</option>
+              ))}
             </select>
           </div>
           <div className="field">
@@ -431,18 +666,36 @@ export default function RepositorioPage() {
             <input value={form.versao} onChange={(e) => setForm((f) => ({ ...f, versao: e.target.value }))} placeholder="v1.0" />
           </div>
 
+          {/* Descrição */}
           <div className="field field--span-2">
             <label>Descrição</label>
             <input value={form.descricao} onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))} />
           </div>
 
+          {/* Cliente */}
+          <div className="field field--span-2">
+            <label>Cliente</label>
+            <select
+              value={form.clienteId}
+              onChange={(e) => setForm((f) => ({ ...f, clienteId: e.target.value, projetoId: '', contratoId: '' }))}
+            >
+              <option value="">Sem cliente (documento geral)</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>{c.nomeFantasia || c.razaoSocial}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Projeto */}
           <div className="field">
             <label>Vincular a projeto</label>
             <select value={form.projetoId} onChange={(e) => setForm((f) => ({ ...f, projetoId: e.target.value }))}>
-              <option value="">Nenhum (documento geral)</option>
-              {projetos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+              <option value="">Nenhum</option>
+              {projetosFiltrados.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           </div>
+
+          {/* Visível para cliente */}
           <div className="field">
             <label className="checkbox-label" style={{ marginTop: 24 }}>
               <input type="checkbox" checked={form.visivelCliente} onChange={(e) => setForm((f) => ({ ...f, visivelCliente: e.target.checked }))} />

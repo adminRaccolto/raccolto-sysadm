@@ -8,7 +8,6 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { ContratosModule } from './contratos/contratos.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { CrmModule } from './crm/crm.module';
-import { CaptacaoModule } from './captacao/captacao.module';
 import { EmpresasModule } from './empresas/empresas.module';
 import { EntregaveisModule } from './entregaveis/entregaveis.module';
 import { FinanceiroModule } from './financeiro/financeiro.module';
@@ -21,14 +20,16 @@ import { ProdutosModule } from './produtos/produtos.module';
 import { ProjetosModule } from './projetos/projetos.module';
 import { PropostasModule } from './propostas/propostas.module';
 import { FaturamentoModule } from './faturamento/faturamento.module';
+import { ChecklistDiagnosticoModule } from './checklist-diagnostico/checklist-diagnostico.module';
 import { SuporteModule } from './suporte/suporte.module';
-import { TarefasModule } from './tarefas/tarefas.module';
-import { UsuariosModule } from './usuarios/usuarios.module';
+import { CaptacaoModule } from './captacao/captacao.module';
 import { ModelosDocumentoModule } from './modelos-documento/modelos-documento.module';
 import { DeslocamentosModule } from './deslocamentos/deslocamentos.module';
 import { BancosModule } from './bancos/bancos.module';
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { FornecedoresModule } from './fornecedores/fornecedores.module';
+import { TarefasModule } from './tarefas/tarefas.module';
+import { UsuariosModule } from './usuarios/usuarios.module';
 
 @Module({
   imports: [
@@ -51,14 +52,15 @@ import { FornecedoresModule } from './fornecedores/fornecedores.module';
     FinanceiroModule,
     DashboardModule,
     CrmModule,
+    SuporteModule,
+    FaturamentoModule,
+    ChecklistDiagnosticoModule,
     CaptacaoModule,
     ModelosDocumentoModule,
     DeslocamentosModule,
     BancosModule,
     FuncionariosModule,
     FornecedoresModule,
-    SuporteModule,
-    FaturamentoModule,
   ],
   providers: [
     {

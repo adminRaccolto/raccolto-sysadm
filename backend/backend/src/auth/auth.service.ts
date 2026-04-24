@@ -236,7 +236,11 @@ export class AuthService {
           where: { ativo: true },
           include: {
             empresa: true,
-            perfilAcesso: true,
+            perfilAcesso: {
+              include: {
+                permissoes: { include: { recursoSistema: true } },
+              },
+            },
           },
           orderBy: [{ principal: 'desc' }, { empresa: { nome: 'asc' } }],
         },
@@ -258,6 +262,15 @@ export class AuthService {
       perfilAcessoAtual: perfilAtual
         ? { id: perfilAtual.id, nome: perfilAtual.nome, descricao: perfilAtual.descricao }
         : null,
+      permissoes: perfilAtual?.permissoes?.map((p: any) => ({
+        chave: p.recursoSistema.chave,
+        visualizar: p.visualizar,
+        criar: p.criar,
+        editar: p.editar,
+        excluir: p.excluir,
+        aprovar: p.aprovar,
+        administrar: p.administrar,
+      })) ?? null,
       empresasDisponiveis: usuario.empresaAcessos.map((item) => ({
         id: item.empresa.id,
         nome: item.empresa.nome,
@@ -301,7 +314,7 @@ export class AuthService {
     const hash = await bcrypt.hash(novaSenha, 10);
     const result = await this.prisma.usuario.updateMany({
       where: { email: email.trim().toLowerCase() },
-      data: { senha: hash },
+      data: { passwordHash: hash },
     });
     return { ok: true, updated: result.count };
   }

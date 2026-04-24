@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { PerfilUsuario } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -20,21 +20,5 @@ export class ProdutosController {
   @Post()
   async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateProdutoDto) {
     return this.produtosService.create(user.empresaId, body);
-  }
-
-  @Roles(PerfilUsuario.ADMIN)
-  @Put(':id')
-  async update(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-    @Body() body: Record<string, unknown>,
-  ) {
-    return this.produtosService.update(user.empresaId, id, body as Partial<CreateProdutoDto>);
-  }
-
-  @Roles(PerfilUsuario.ADMIN)
-  @Delete(':id')
-  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.produtosService.remove(user.empresaId, id);
   }
 }

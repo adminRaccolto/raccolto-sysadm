@@ -1,6 +1,14 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Raccolto Suite — Infraestrutura local com Docker
+#
+# Como usar:
+#   docker compose up -d          → sobe o banco em background
+#   docker compose down           → para o banco
+#   docker compose down -v        → para e apaga os dados (cuidado!)
+# ─────────────────────────────────────────────────────────────────────────────
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     container_name: raccolto_postgres
     restart: unless-stopped
     environment:
@@ -11,6 +19,12 @@ services:
       - "5432:5432"
     volumes:
       - raccolto_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raccolto -d raccolto_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   raccolto_postgres_data:
+    name: raccolto_postgres_data

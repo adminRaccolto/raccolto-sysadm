@@ -265,6 +265,8 @@ model Empresa {
   tarefaLabels  TarefaLabel[]
   comentariosOportunidade OportunidadeCrmComentario[]
   faturamentos Faturamento[]
+  checklistsDiagnostico ChecklistDiagnostico[]
+  contratosModelos      ContratoModelo[]
 }
 
 
@@ -325,7 +327,8 @@ model Cliente {
   recebiveis         Recebivel[]
   oportunidadesCrm   OportunidadeCrm[]
   faturamentos       Faturamento[]
-  deslocamentos      Deslocamento[]
+  deslocamentos          Deslocamento[]
+  checklistsDiagnostico  ChecklistDiagnostico[]
 
   @@index([empresaId])
 }
@@ -412,6 +415,22 @@ model ContratoCobranca {
   @@unique([contratoId, ordem])
 }
 
+
+
+model ContratoModelo {
+  id          String    @id @default(cuid())
+  empresaId   String
+  nome        String
+  descricao   String?
+  conteudo    String
+  ativo       Boolean   @default(true)
+  padrao      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  empresa     Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+}
 
 
 enum TipoModeloDocumento {
@@ -539,6 +558,7 @@ model Projeto {
   deslocamentos             Deslocamento[]
   etapas                    ProjetoEtapa[]
   membros                   ProjetoMembro[]
+  checklistDiagnostico      ChecklistDiagnostico?
 
   @@index([empresaId])
   @@index([clienteId])
@@ -1254,4 +1274,67 @@ model FormularioSubmissao {
 
   @@index([formularioId])
   @@index([oportunidadeId])
+}
+
+model ChecklistDiagnostico {
+  id          String    @id @default(cuid())
+  empresaId   String
+  clienteId   String
+  projetoId   String    @unique
+  token       String    @unique @default(cuid())
+  status      String    @default("PENDENTE")
+  respondidoAt DateTime?
+
+  // Bloco 3 - Estrutura Familiar
+  negocioFamiliar      Boolean?
+  membrosEnvolvidos    Int?
+  decisaoPorConselho   Boolean?
+  emSucessao           Boolean?
+  geracaoSucessao      String?
+  funcoesDefinidas     Boolean?
+  governancaImplantada Boolean?
+
+  // Bloco 4 - Conhecimento do Negócio
+  utilizaSistemaGestao   Boolean?
+  qualSistema            String?
+  sabeCustoProduzir      Boolean?
+  temFluxoCaixaProjetado Boolean?
+  sabeCompromissoFuturo  Boolean?
+  baseComercializacao    String?
+  travaComercializacao   Boolean?
+  negocioAlavancado      Boolean?
+
+  // Bloco 5
+  expectativaParceria String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente  Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  projeto  Projeto  @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  fazendas FazendaDiagnostico[]
+
+  @@index([empresaId])
+  @@index([clienteId])
+}
+
+model FazendaDiagnostico {
+  id                   String  @id @default(cuid())
+  checklistId          String
+  ordem                Int     @default(0)
+  nomeFazenda          String
+  areaTotal            Float?
+  areaPlantio          Float?
+  areaPlantioPropia    Float?
+  areaPlantioArrendada Float?
+  culturas             Json    @default("[]")
+  culturaOutro         String?
+  culturasAreas        Json    @default("[]")
+  frustracaoSafra      Boolean @default(false)
+  frustracoes          Json    @default("[]")
+
+  checklist ChecklistDiagnostico @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@index([checklistId])
 }

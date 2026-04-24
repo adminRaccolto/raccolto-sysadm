@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { NotificacoesModule } from '../notificacoes/notificacoes.module';
-import { ModelosDocumentoModule } from '../modelos-documento/modelos-documento.module';
-import { AutentiqueModule } from '../autentique/autentique.module';
+import { MailModule } from '../mail/mail.module';
+import { AutentiqueService } from '../contratos/autentique.service';
 import { PropostasController } from './propostas.controller';
 import { PropostasService } from './propostas.service';
 
 @Module({
-  imports: [NotificacoesModule, ModelosDocumentoModule, AutentiqueModule],
+  imports: [NotificacoesModule, MailModule],
   controllers: [PropostasController],
-  providers: [PropostasService],
+  providers: [PropostasService, AutentiqueService],
 })
 export class PropostasModule {}

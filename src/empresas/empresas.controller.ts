@@ -1,59 +1,21 @@
-import { Body, Controller, Get, Post, Put, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { PerfilUsuario } from '@prisma/client';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
-import { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
 import { CreateEmpresaDto } from './dto/create-empresa.dto';
-import { UpdateEmpresaDto } from './dto/update-empresa.dto';
 import { EmpresasService } from './empresas.service';
-import { StorageService } from '../storage/storage.service';
 
+@Roles(PerfilUsuario.ADMIN)
 @Controller('empresas')
 export class EmpresasController {
-  constructor(
-    private readonly empresasService: EmpresasService,
-    private readonly storageService: StorageService,
-  ) {}
+  constructor(private readonly empresasService: EmpresasService) {}
 
   @Get()
-  async findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.empresasService.findAllForUser(user.id);
+  async findAll() {
+    return this.empresasService.findAll();
   }
 
-  @Get('me')
-  async findCurrent(@CurrentUser() user: AuthenticatedUser) {
-    return this.empresasService.findCurrent(user.empresaId);
-  }
-
-  @Roles(PerfilUsuario.ADMIN)
-  @Put('me')
-  async updateCurrent(@CurrentUser() user: AuthenticatedUser, @Body() body: UpdateEmpresaDto) {
-    return this.empresasService.updateCurrent(user.empresaId, body);
-  }
-
-  @Roles(PerfilUsuario.ADMIN)
-  @Post('me/logo')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  async uploadLogo(
-    @CurrentUser() user: AuthenticatedUser,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    if (!file) throw new BadRequestException('Nenhum arquivo de logo foi enviado.');
-
-    const url = await this.storageService.uploadFile(
-      file.buffer,
-      file.originalname,
-      file.mimetype,
-      'branding',
-    );
-    return this.empresasService.updateCurrentLogo(user.empresaId, url);
-  }
-
-  @Roles(PerfilUsuario.ADMIN)
   @Post()
-  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateEmpresaDto) {
-    return this.empresasService.create(body, user.id);
+  async create(@Body() body: CreateEmpresaDto) {
+    return this.empresasService.create(body);
   }
 }
