@@ -246,7 +246,7 @@ export default function ClientesPage() {
         setSuccess('Cliente atualizado com sucesso.');
       } else {
         await http.post('/clientes', payload);
-        if (form.ativarArato && !editingId) {
+        if (form.ativarArato) {
           const cred = await ativarNoArato();
           if (cred) {
             setAratoCredenciais(cred);
@@ -546,8 +546,7 @@ export default function ClientesPage() {
           </div>
 
           {/* ── Ativar no Arato ── */}
-          {!editingId ? (
-            <>
+          <>
               <div className="field field--span-2 field--checkbox" style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
                 <label htmlFor="ativar-arato" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                   <input
@@ -607,8 +606,7 @@ export default function ClientesPage() {
                   </div>
                 </>
               ) : null}
-            </>
-          ) : null}
+          </>
 
           <div className="field field--span-2">
             <button className="button" type="submit" disabled={saving}>
