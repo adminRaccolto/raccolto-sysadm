@@ -244,6 +244,7 @@ export default function ClientesPage() {
       if (editingId) {
         await http.put(`/clientes/${editingId}`, payload);
         setSuccess('Cliente atualizado com sucesso.');
+        closeModal();
       } else {
         await http.post('/clientes', payload);
         if (form.ativarArato) {
@@ -251,14 +252,18 @@ export default function ClientesPage() {
           if (cred) {
             setAratoCredenciais(cred);
             setSuccess('Cliente cadastrado e ativado no Arato.');
+            closeModal();
           } else {
-            setSuccess('Cliente cadastrado. Falha ao ativar no Arato (ver erro acima).');
+            // mantém modal aberto para o erro ficar visível
+            await loadClientes();
+            setSaving(false);
+            return;
           }
         } else {
           setSuccess('Cliente cadastrado com sucesso.');
+          closeModal();
         }
       }
-      closeModal();
       await loadClientes();
     } catch (err) {
       handleApiError(err, editingId ? 'Falha ao atualizar cliente.' : 'Falha ao cadastrar cliente.');
