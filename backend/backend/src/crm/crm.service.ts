@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PerfilUsuario, Prisma, StatusContrato, StatusProjeto } from '@prisma/client';
+import { EtapaCrm, PerfilUsuario, Prisma, StatusContrato, StatusProjeto } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
@@ -94,7 +94,7 @@ export class CrmService {
     return this.prisma.oportunidadeCrm.findMany({
       where: {
         empresaId,
-        ...(filtros?.etapa ? { etapa: filtros.etapa } : {}),
+        ...(filtros?.etapa ? { etapa: filtros.etapa as EtapaCrm } : {}),
         ...(filtros?.responsavelId ? { responsavelId: filtros.responsavelId } : {}),
         ...(filtros?.produtoServicoId ? { produtoServicoId: filtros.produtoServicoId } : {}),
       },
@@ -131,7 +131,7 @@ export class CrmService {
         whatsapp: data.whatsapp?.trim() || null,
         origemLead: data.origemLead?.trim() || null,
         valorEstimado: data.valorEstimado ?? null,
-        etapa: data.etapa ?? 'LEAD_RECEBIDO',
+        etapa: (data.etapa as EtapaCrm) ?? EtapaCrm.LEAD_RECEBIDO,
         probabilidade: data.probabilidade ?? this.defaultProbability(data.etapa ?? 'LEAD_RECEBIDO'),
         previsaoFechamento: data.previsaoFechamento ? new Date(data.previsaoFechamento) : null,
         proximaAcao: data.proximaAcao?.trim() || null,
@@ -164,7 +164,7 @@ export class CrmService {
         whatsapp: data.whatsapp !== undefined ? data.whatsapp?.trim() || null : undefined,
         origemLead: data.origemLead !== undefined ? data.origemLead?.trim() || null : undefined,
         valorEstimado: data.valorEstimado !== undefined ? data.valorEstimado : undefined,
-        etapa: data.etapa !== undefined ? data.etapa : undefined,
+        etapa: data.etapa !== undefined ? (data.etapa as EtapaCrm) : undefined,
         probabilidade: data.probabilidade !== undefined ? data.probabilidade : undefined,
         previsaoFechamento: data.previsaoFechamento !== undefined ? (data.previsaoFechamento ? new Date(data.previsaoFechamento) : null) : undefined,
         proximaAcao: data.proximaAcao !== undefined ? data.proximaAcao?.trim() || null : undefined,
@@ -287,7 +287,7 @@ export class CrmService {
         where: { id: oportunidade.id },
         data: {
           clienteId,
-          etapa: 'FECHADO_GANHO',
+          etapa: EtapaCrm.FECHADO_GANHO,
           probabilidade: 100,
         },
         include: this.include(),

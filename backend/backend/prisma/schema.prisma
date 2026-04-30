@@ -834,7 +834,7 @@ model OportunidadeCrm {
   whatsapp          String?
   origemLead        String?
   valorEstimado     Float?
-  etapa             String    @default("LEAD_RECEBIDO")
+  etapa             EtapaCrm  @default(LEAD_RECEBIDO)
   probabilidade     Int       @default(10)
   previsaoFechamento DateTime?
   proximaAcao       String?
