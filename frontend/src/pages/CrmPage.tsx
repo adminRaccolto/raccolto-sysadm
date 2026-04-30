@@ -72,6 +72,9 @@ export default function CrmPage() {
   const [etapaForm, setEtapaForm] = useState({ nome: '', cor: '#6366f1' });
   const [editingEtapaId, setEditingEtapaId] = useState<string | null>(null);
   const [savingEtapa, setSavingEtapa] = useState(false);
+  const [etapaError, setEtapaError] = useState<string | null>(null);
+  const [etapaSuccess, setEtapaSuccess] = useState<string | null>(null);
+  const [loadingEtapas, setLoadingEtapas] = useState(false);
 
   const selected = useMemo(() => oportunidades.find((item) => item.id === selectedId) || null, [oportunidades, selectedId]);
   const comentarios = selected?.comentarios ?? [];
@@ -86,10 +89,18 @@ export default function CrmPage() {
   function etapaCor(chave: string) { return etapaMap[chave]?.cor ?? '#6b7280'; }
 
   async function loadEtapas() {
+    setLoadingEtapas(true);
     try {
       const res = await http.get<CrmEtapa[]>('/crm/etapas');
       setEtapas(res.data);
-    } catch { /* noop */ }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const msg = err.response?.data?.message;
+        setEtapaError(Array.isArray(msg) ? msg.join(' | ') : msg || 'Falha ao carregar etapas.');
+      }
+    } finally {
+      setLoadingEtapas(false);
+    }
   }
 
   async function loadData() {
@@ -302,18 +313,27 @@ export default function CrmPage() {
   async function handleSaveEtapa(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSavingEtapa(true);
+    setEtapaError(null);
+    setEtapaSuccess(null);
     try {
       if (editingEtapaId) {
         await http.put(`/crm/etapas/${editingEtapaId}`, { nome: etapaForm.nome, cor: etapaForm.cor });
+        setEtapaSuccess('Etapa atualizada com sucesso.');
       } else {
         const chave = etapaForm.nome.trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
         await http.post('/crm/etapas', { chave, nome: etapaForm.nome, cor: etapaForm.cor });
+        setEtapaSuccess('Etapa adicionada com sucesso.');
       }
       setEtapaForm({ nome: '', cor: '#6366f1' });
       setEditingEtapaId(null);
       await loadEtapas();
     } catch (err) {
-      handleApiError(err, 'Falha ao salvar etapa.');
+      if (axios.isAxiosError(err)) {
+        const msg = err.response?.data?.message;
+        setEtapaError(Array.isArray(msg) ? msg.join(' | ') : msg || 'Falha ao salvar etapa.');
+      } else {
+        setEtapaError('Falha ao salvar etapa.');
+      }
     } finally {
       setSavingEtapa(false);
     }
@@ -321,11 +341,19 @@ export default function CrmPage() {
 
   async function handleDeleteEtapa(etapa: CrmEtapa) {
     if (!window.confirm(`Excluir a etapa "${etapa.nome}"? As oportunidades nesta etapa não serão excluídas.`)) return;
+    setEtapaError(null);
+    setEtapaSuccess(null);
     try {
       await http.delete(`/crm/etapas/${etapa.id}`);
+      setEtapaSuccess(`Etapa "${etapa.nome}" excluída.`);
       await loadEtapas();
     } catch (err) {
-      handleApiError(err, 'Falha ao excluir etapa.');
+      if (axios.isAxiosError(err)) {
+        const msg = err.response?.data?.message;
+        setEtapaError(Array.isArray(msg) ? msg.join(' | ') : msg || 'Falha ao excluir etapa.');
+      } else {
+        setEtapaError('Falha ao excluir etapa.');
+      }
     }
   }
 
@@ -356,6 +384,7 @@ export default function CrmPage() {
             <button className="button button--danger button--small" type="button" onClick={() => void handleDelete()} disabled={!selected}>Excluir</button>
             <button className="button button--ghost button--small crm-settings-btn" type="button" onClick={() => setIsEtapasModalOpen(true)} title="Configurar etapas do funil">
               <Settings size={14} strokeWidth={2} />
+              <span>Etapas</span>
             </button>
           </div>
         }
@@ -638,17 +667,32 @@ export default function CrmPage() {
         open={isEtapasModalOpen}
         title="Configurar etapas do funil"
         subtitle="Personalize os rótulos, cores e ordem das etapas do seu CRM."
-        onClose={() => { setIsEtapasModalOpen(false); setEditingEtapaId(null); setEtapaForm({ nome: '', cor: '#6366f1' }); }}
+        onClose={() => { setIsEtapasModalOpen(false); setEditingEtapaId(null); setEtapaForm({ nome: '', cor: '#6366f1' }); setEtapaError(null); setEtapaSuccess(null); }}
       >
         <div className="crm-etapas-manager">
+          {etapaError ? <Feedback type="error" message={etapaError} /> : null}
+          {etapaSuccess ? <Feedback type="success" message={etapaSuccess} /> : null}
+
           <div className="crm-etapas-list">
+            {loadingEtapas ? <p style={{ color: 'var(--muted)', fontSize: 13 }}>Carregando etapas...</p> : null}
+            {!loadingEtapas && etapas.length === 0 ? (
+              <p style={{ color: 'var(--muted)', fontSize: 13 }}>
+                Nenhuma etapa encontrada. Adicione a primeira etapa abaixo.
+              </p>
+            ) : null}
             {etapas.map((etapa) => (
               <div key={etapa.id} className="crm-etapa-row">
                 <div className="crm-etapa-row__swatch" style={{ background: etapa.cor }} />
                 <span className="crm-etapa-row__nome">{etapa.nome}</span>
                 <span className="crm-etapa-row__chave">{etapa.chave}</span>
                 <div className="crm-etapa-row__actions">
-                  <button type="button" className="button button--ghost button--tiny" onClick={() => { setEditingEtapaId(etapa.id); setEtapaForm({ nome: etapa.nome, cor: etapa.cor }); }}>Editar</button>
+                  <button
+                    type="button"
+                    className="button button--ghost button--tiny"
+                    onClick={() => { setEditingEtapaId(etapa.id); setEtapaForm({ nome: etapa.nome, cor: etapa.cor }); setEtapaError(null); setEtapaSuccess(null); }}
+                  >
+                    Editar
+                  </button>
                   <button type="button" className="button button--danger button--tiny" onClick={() => void handleDeleteEtapa(etapa)}>
                     <X size={12} strokeWidth={2.5} />
                   </button>
@@ -671,7 +715,7 @@ export default function CrmPage() {
             </div>
             <div className="crm-etapa-form__btns">
               <button className="button button--small" type="submit" disabled={savingEtapa || !etapaForm.nome.trim()}>
-                {savingEtapa ? 'Salvando...' : editingEtapaId ? 'Salvar' : 'Adicionar etapa'}
+                {savingEtapa ? 'Salvando...' : editingEtapaId ? 'Salvar alterações' : 'Adicionar etapa'}
               </button>
               {editingEtapaId ? (
                 <button type="button" className="button button--ghost button--small" onClick={() => { setEditingEtapaId(null); setEtapaForm({ nome: '', cor: '#6366f1' }); }}>
