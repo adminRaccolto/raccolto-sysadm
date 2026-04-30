@@ -7,6 +7,7 @@ COPY nest-cli.json ./
 COPY prisma.config.ts ./
 COPY prisma/ ./prisma/
 COPY src/ ./src/
+COPY premigrate.js ./
 
 RUN npm ci
 
@@ -17,4 +18,4 @@ RUN npm run build
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/src/main.js"]
+CMD ["sh", "-c", "node premigrate.js && npx prisma db push --accept-data-loss && node dist/src/main.js"]
