@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mapeamento de Processos — Raccolto</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      color: #1a2a3a;
+      padding: 32px 24px;
+    }
+    .doc-header {
+      background: #0a3d55;
+      color: #fff;
+      padding: 32px 40px;
+      border-radius: 12px;
+      margin-bottom: 32px;
+    }
+    .doc-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+    .doc-header p { color: #b0cfe0; font-size: 14px; }
+    .doc-header .badge {
+      display: inline-block;
+      background: #e9a84c;
+      color: #1a2a3a;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-top: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .toc {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px 28px;
+      margin-bottom: 32px;
+      border-left: 4px solid #0a3d55;
+    }
+    .toc h2 { font-size: 14px; font-weight: 700; color: #0a3d55; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .toc ol { padding-left: 18px; }
+    .toc li { margin-bottom: 4px; }
+    .toc a { color: #0a3d55; text-decoration: none; font-size: 14px; }
+    .toc a:hover { text-decoration: underline; color: #e9a84c; }
+
+    .section {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 28px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .section-num {
+      background: #0a3d55;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .section h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0a3d55;
+    }
+    .section p.desc {
+      color: #5a7080;
+      font-size: 13.5px;
+      margin-bottom: 20px;
+      margin-top: 4px;
+      line-height: 1.6;
+    }
+    .mermaid {
+      background: #f7fafc;
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #4a6580;
+    }
+    .legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .status-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      background: #f7fafc;
+    }
+    .status-card h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0a3d55;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .status-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin: 2px 2px;
+    }
+    .pill-gray  { background: #e9ecef; color: #495057; }
+    .pill-blue  { background: #cce5ff; color: #004085; }
+    .pill-green { background: #d4edda; color: #155724; }
+    .pill-red   { background: #f8d7da; color: #721c24; }
+    .pill-yellow{ background: #fff3cd; color: #856404; }
+    .pill-purple{ background: #e2d9f3; color: #4a235a; }
+    .pill-orange{ background: #fde8d4; color: #8a3c00; }
+
+    @media print {
+      body { background: #fff; padding: 10px; }
+      .doc-header { break-after: avoid; }
+      .section { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="doc-header">
+  <h1>Mapeamento de Processos — Raccolto</h1>
+  <p>Documento técnico com fluxogramas, ciclos e lógica de negócio de todos os módulos do sistema.</p>
+  <span class="badge">Versão 1.0 — Abril 2026</span>
+</div>
+
+<div class="toc">
+  <h2>Índice</h2>
+  <ol>
+    <li><a href="#fluxo-geral">Visão Geral — Arquitetura Modular</a></li>
+    <li><a href="#ciclo-comercial">Ciclo Comercial (CRM → Proposta → Contrato)</a></li>
+    <li><a href="#ciclo-projetos">Ciclo de Projetos e Tarefas</a></li>
+    <li><a href="#ciclo-financeiro">Ciclo Financeiro</a></li>
+    <li><a href="#status-flows">Fluxos de Status por Entidade</a></li>
+    <li><a href="#entidades">Mapa de Entidades e Relacionamentos</a></li>
+    <li><a href="#usuarios">Controle de Acesso e Empresas</a></li>
+  </ol>
+</div>
+
+<!-- ===== 1. VISÃO GERAL ===== -->
+<div class="section" id="fluxo-geral">
+  <div class="section-title">
+    <div class="section-num">1</div>
+    <h2>Visão Geral — Arquitetura Modular</h2>
+  </div>
+  <p class="desc">
+    O sistema é organizado em módulos funcionais que seguem o ciclo de vida completo de um cliente agrícola:
+    da prospecção e captação, passando pela proposta e contrato, até a execução de projetos e gestão financeira.
+    Cada módulo se conecta ao anterior e ao seguinte formando um fluxo contínuo de trabalho.
+  </p>
+  <div class="mermaid">
+flowchart TB
+    subgraph AUTH["🔐 Autenticação"]
+        LOGIN[Login/JWT] --> EMPRESA[Empresa Ativa]
+    end
+
+    subgraph CADASTROS["📋 Cadastros Base"]
+        CLIENTES[Clientes\nProspect / Ativo / Inativo]
+        PRODUTOS[Produtos & Serviços]
+        FORNECEDORES[Fornecedores]
+        FUNCIONARIOS[Funcionários]
+    end
+
+    subgraph COMERCIAL["💼 Comercial"]
+        CRM[CRM\nOportunidades]
+        CAPTACAO[Captação\nFormulários Públicos]
+        PROPOSTAS[Propostas]
+        CONTRATOS[Contratos]
+    end
+
+    subgraph OPERACIONAL["⚙️ Operacional"]
+        PROJETOS[Projetos]
+        TAREFAS[Tarefas]
+        ENTREGAVEIS[Entregáveis]
+        DESLOCAMENTOS[Deslocamentos]
+        REPOSITORIO[Repositório]
+        MODELOS[Modelos de Texto]
+    end
+
+    subgraph FINANCEIRO["💰 Financeiro"]
+        RECEBIVEIS[Contas a Receber]
+        PAGAR[Contas a Pagar]
+        FATURAMENTO[Faturamento/NF]
+        TESOURARIA[Tesouraria\nFluxo de Caixa]
+        PLANOCONTAS[Plano de Contas]
+    end
+
+    subgraph SISTEMA["🏢 Sistema / Config"]
+        EMPRESAS[Empresas]
+        USUARIOS[Usuários]
+        PERFIS[Perfis de Acesso]
+        BANCOS[Bancos]
+        CONTAS[Contas Bancárias]
+    end
+
+    subgraph BI["📊 Inteligência"]
+        BISEC[BI & Relatórios]
+        APRENDIZADO[Aprendizado / LMS]
+    end
+
+    AUTH --> CADASTROS
+    AUTH --> SISTEMA
+    CAPTACAO -->|Gera lead| CLIENTES
+    CRM -->|Avança oportunidade| PROPOSTAS
+    CLIENTES -->|Vincula| PROPOSTAS
+    PRODUTOS -->|Itens de| PROPOSTAS
+    PROPOSTAS -->|Converte em| CONTRATOS
+    CONTRATOS -->|Origina| PROJETOS
+    CONTRATOS -->|Gera parcelas| RECEBIVEIS
+    PROJETOS --> TAREFAS
+    PROJETOS --> ENTREGAVEIS
+    PROJETOS --> DESLOCAMENTOS
+    RECEBIVEIS -->|Baixa| FATURAMENTO
+    RECEBIVEIS --> TESOURARIA
+    PAGAR --> TESOURARIA
+    TESOURARIA --> BISEC
+    RECEBIVEIS --> BISEC
+
+    style AUTH fill:#e8f4fd,stroke:#0a3d55
+    style CADASTROS fill:#e8f4fd,stroke:#0a3d55
+    style COMERCIAL fill:#fef9e7,stroke:#e9a84c
+    style OPERACIONAL fill:#eaf7ea,stroke:#2e7d32
+    style FINANCEIRO fill:#fce8e8,stroke:#c0392b
+    style SISTEMA fill:#f3e8fd,stroke:#6a1b9a
+    style BI fill:#e8f0fe,stroke:#1a56db
+  </div>
+</div>
+
+<!-- ===== 2. CICLO COMERCIAL ===== -->
+<div class="section" id="ciclo-comercial">
+  <div class="section-title">
+    <div class="section-num">2</div>
+    <h2>Ciclo Comercial — CRM → Proposta → Contrato</h2>
+  </div>
+  <p class="desc">
+    Um novo cliente pode entrar pelo formulário público de captação (link compartilhável), pelo CRM manual,
+    ou diretamente como cadastro de cliente. Após qualificação, recebe uma proposta que, se aceita, gera um contrato.
+  </p>
+  <div class="mermaid">
+flowchart LR
+    subgraph ENTRADA["Entrada de Lead"]
+        FORM["Formulário Público\n/captacao/:slug"]
+        CRM_MANUAL["CRM Manual\nNova Oportunidade"]
+        CADASTRO_DIRETO["Cadastro Direto\nde Cliente"]
+    end
+
+    subgraph QUALIFICACAO["Qualificação"]
+        LEAD["Lead\n(CRM)"]
+        CLI_PROSPECT["Cliente\nProspect"]
+    end
+
+    subgraph PROPOSTA["Proposta"]
+        P_RASCUNHO["Rascunho"]
+        P_ENVIADA["Aguardando\nAssinatura"]
+        P_ASSINADA["Assinada"]
+        P_RECUSADA["Recusada"]
+        P_EXPIRADA["Expirada"]
+        P_CONVERTIDA["Convertida"]
+    end
+
+    subgraph CONTRATO["Contrato"]
+        C_RASCUNHO["Rascunho"]
+        C_ATIVO["Ativo"]
+        C_SUSPENSO["Suspenso"]
+        C_ENCERRADO["Encerrado"]
+    end
+
+    FORM -->|Auto-cria lead| LEAD
+    CRM_MANUAL --> LEAD
+    CADASTRO_DIRETO --> CLI_PROSPECT
+
+    LEAD -->|Converte| CLI_PROSPECT
+    CLI_PROSPECT -->|Status → ATIVO| CLIENTE_ATIVO["Cliente Ativo"]
+
+    CLI_PROSPECT -->|Nova proposta| P_RASCUNHO
+    CLIENTE_ATIVO -->|Nova proposta| P_RASCUNHO
+
+    P_RASCUNHO -->|Enviar| P_ENVIADA
+    P_ENVIADA -->|Cliente assina| P_ASSINADA
+    P_ENVIADA -->|Cliente recusa| P_RECUSADA
+    P_ENVIADA -->|Prazo vence| P_EXPIRADA
+    P_ASSINADA -->|Gerar contrato| P_CONVERTIDA
+    P_CONVERTIDA -->|Cria| C_RASCUNHO
+
+    C_RASCUNHO -->|Ativar| C_ATIVO
+    C_ATIVO -->|Suspender| C_SUSPENSO
+    C_SUSPENSO -->|Reativar| C_ATIVO
+    C_ATIVO -->|Encerrar| C_ENCERRADO
+
+    C_ATIVO -->|Gera parcelas| RECEBIVEIS_ICON["Contas a Receber"]
+    C_ATIVO -->|Dispara| PROJETO_ICON["Projeto"]
+
+    style P_RASCUNHO fill:#e9ecef,stroke:#868e96
+    style P_ENVIADA fill:#fff3cd,stroke:#ffc107
+    style P_ASSINADA fill:#d4edda,stroke:#28a745
+    style P_RECUSADA fill:#f8d7da,stroke:#dc3545
+    style P_EXPIRADA fill:#f8d7da,stroke:#dc3545
+    style P_CONVERTIDA fill:#cce5ff,stroke:#004085
+    style C_RASCUNHO fill:#e9ecef,stroke:#868e96
+    style C_ATIVO fill:#d4edda,stroke:#28a745
+    style C_SUSPENSO fill:#fff3cd,stroke:#ffc107
+    style C_ENCERRADO fill:#e9ecef,stroke:#868e96
+  </div>
+</div>
+
+<!-- ===== 3. CICLO DE PROJETOS ===== -->
+<div class="section" id="ciclo-projetos">
+  <div class="section-title">
+    <div class="section-num">3</div>
+    <h2>Ciclo de Projetos e Tarefas</h2>
+  </div>
+  <p class="desc">
+    Um contrato ativo origina um ou mais projetos. Cada projeto é desmembrado em tarefas e entregáveis.
+    Há uma visão "Minhas Tarefas" para cada usuário ver o que está atribuído a ele.
+    Entregáveis passam por um fluxo de aprovação antes de serem concluídos.
+  </p>
+  <div class="mermaid">
+flowchart TD
+    CONTRATO["Contrato Ativo"] -->|Cria| PROJETO
+
+    subgraph PROJETO["Projeto"]
+        PJ_PLAN["PLANEJADO"]
+        PJ_AND["EM ANDAMENTO"]
+        PJ_AGUARDA["AGUARDANDO\nCLIENTE"]
+        PJ_CONC["CONCLUÍDO"]
+        PJ_CANCEL["CANCELADO"]
+
+        PJ_PLAN --> PJ_AND
+        PJ_AND --> PJ_AGUARDA
+        PJ_AGUARDA --> PJ_AND
+        PJ_AND --> PJ_CONC
+        PJ_AND --> PJ_CANCEL
+        PJ_PLAN --> PJ_CANCEL
+    end
+
+    subgraph TAREFAS["Tarefa (dentro do projeto)"]
+        T_NAO["NÃO INICIADA"]
+        T_INI["INICIADA"]
+        T_APROV["AGUARDANDO\nAPROVAÇÃO"]
+        T_CONC["CONCLUÍDA"]
+        T_CANCEL["CANCELADA"]
+
+        T_NAO --> T_INI
+        T_INI --> T_APROV
+        T_APROV -->|Aprovada| T_CONC
+        T_APROV -->|Reprovada| T_INI
+        T_INI --> T_CANCEL
+        T_NAO --> T_CANCEL
+    end
+
+    subgraph ENTREGAVEIS["Entregável"]
+        E_PLAN["PLANEJADO"]
+        E_PROD["EM PRODUÇÃO"]
+        E_REV["EM REVISÃO"]
+        E_APROV_E["AGUARDANDO\nAPROVAÇÃO"]
+        E_CONC_E["CONCLUÍDO"]
+        E_CANCEL_E["CANCELADO"]
+
+        E_PLAN --> E_PROD
+        E_PROD --> E_REV
+        E_REV --> E_APROV_E
+        E_APROV_E -->|Aprovado| E_CONC_E
+        E_APROV_E -->|Reprovado| E_PROD
+        E_PROD --> E_CANCEL_E
+    end
+
+    subgraph SUPORTE["Suporte / Deslocamentos"]
+        DESL["Deslocamento\n(km percorridos + reembolso)"]
+        REPO["Repositório\n(arquivos do projeto)"]
+    end
+
+    PJ_AND --> TAREFAS
+    PJ_AND --> ENTREGAVEIS
+    PJ_AND --> DESL
+    PJ_AND --> REPO
+
+    style PJ_PLAN fill:#e9ecef,stroke:#868e96
+    style PJ_AND fill:#cce5ff,stroke:#004085
+    style PJ_AGUARDA fill:#fff3cd,stroke:#ffc107
+    style PJ_CONC fill:#d4edda,stroke:#28a745
+    style PJ_CANCEL fill:#f8d7da,stroke:#dc3545
+    style T_NAO fill:#e9ecef,stroke:#868e96
+    style T_INI fill:#cce5ff,stroke:#004085
+    style T_APROV fill:#fff3cd,stroke:#ffc107
+    style T_CONC fill:#d4edda,stroke:#28a745
+    style T_CANCEL fill:#f8d7da,stroke:#dc3545
+    style E_PLAN fill:#e9ecef,stroke:#868e96
+    style E_PROD fill:#cce5ff,stroke:#004085
+    style E_REV fill:#fff3cd,stroke:#ffc107
+    style E_APROV_E fill:#fde8d4,stroke:#e07b1a
+    style E_CONC_E fill:#d4edda,stroke:#28a745
+    style E_CANCEL_E fill:#f8d7da,stroke:#dc3545
+  </div>
+</div>
+
+<!-- ===== 4. CICLO FINANCEIRO ===== -->
+<div class="section" id="ciclo-financeiro">
+  <div class="section-title">
+    <div class="section-num">4</div>
+    <h2>Ciclo Financeiro</h2>
+  </div>
+  <p class="desc">
+    O financeiro opera em dois eixos: recebíveis (gerados por contratos) e contas a pagar (despesas operacionais).
+    Ambos alimentam o fluxo de caixa (Tesouraria). O módulo de Faturamento controla a emissão de notas fiscais.
+    O Plano de Contas categoriza todas as movimentações.
+  </p>
+  <div class="mermaid">
+flowchart LR
+    subgraph ORIGEM["Origens"]
+        CONTRATO_FIN["Contrato Ativo\n(parcelamento)"]
+        DESPESA["Lançamento Manual\nde Despesa"]
+        DESL_FIN["Deslocamentos\n(reembolso km)"]
+    end
+
+    subgraph RECEBER["Contas a Receber"]
+        R_ABERTO["ABERTO"]
+        R_RECEBIDO["RECEBIDO"]
+        R_VENCIDO["VENCIDO"]
+        R_CANCEL_R["CANCELADO"]
+
+        R_ABERTO -->|Data venceu| R_VENCIDO
+        R_ABERTO -->|Baixa manual| R_RECEBIDO
+        R_VENCIDO -->|Baixa manual| R_RECEBIDO
+        R_ABERTO --> R_CANCEL_R
+    end
+
+    subgraph PAGAR["Contas a Pagar"]
+        P_ABERTO_P["ABERTO"]
+        P_PAGO["PAGO"]
+        P_VENCIDO_P["VENCIDO"]
+
+        P_ABERTO_P -->|Data venceu| P_VENCIDO_P
+        P_ABERTO_P -->|Baixa| P_PAGO
+        P_VENCIDO_P -->|Baixa| P_PAGO
+    end
+
+    subgraph FATURAMENTO["Faturamento / NF"]
+        NF_PEND["Pendente NF"]
+        NF_EMITIDA["NF Emitida"]
+        NF_CANCEL_NF["NF Cancelada"]
+
+        NF_PEND -->|Emitir nota| NF_EMITIDA
+        NF_EMITIDA --> NF_CANCEL_NF
+    end
+
+    subgraph TESOURARIA["Tesouraria / Fluxo de Caixa"]
+        FLUXO["Fluxo Diário\n(entradas - saídas)"]
+        SALDO["Saldo Acumulado"]
+        SIMUL["Simulações"]
+    end
+
+    CONTRATO_FIN -->|Gera parcelas| R_ABERTO
+    DESPESA --> P_ABERTO_P
+    DESL_FIN --> P_ABERTO_P
+
+    R_RECEBIDO -->|Alimenta| FLUXO
+    P_PAGO -->|Alimenta| FLUXO
+    R_RECEBIDO -->|Gatilho| NF_PEND
+
+    FLUXO --> SALDO
+    SIMUL -.->|Projeta| SALDO
+
+    PLANO["Plano de Contas\n(categorias DRE/FC)"] -.->|Classifica| FLUXO
+    PLANO -.->|Classifica| P_ABERTO_P
+
+    FLUXO --> BI_FIN["BI & Relatórios"]
+    SALDO --> BI_FIN
+
+    style R_ABERTO fill:#fff3cd,stroke:#ffc107
+    style R_RECEBIDO fill:#d4edda,stroke:#28a745
+    style R_VENCIDO fill:#f8d7da,stroke:#dc3545
+    style R_CANCEL_R fill:#e9ecef,stroke:#868e96
+    style P_ABERTO_P fill:#fff3cd,stroke:#ffc107
+    style P_PAGO fill:#d4edda,stroke:#28a745
+    style P_VENCIDO_P fill:#f8d7da,stroke:#dc3545
+    style NF_PEND fill:#fff3cd,stroke:#ffc107
+    style NF_EMITIDA fill:#d4edda,stroke:#28a745
+    style NF_CANCEL_NF fill:#f8d7da,stroke:#dc3545
+  </div>
+</div>
+
+<!-- ===== 5. FLUXOS DE STATUS ===== -->
+<div class="section" id="status-flows">
+  <div class="section-title">
+    <div class="section-num">5</div>
+    <h2>Fluxos de Status por Entidade</h2>
+  </div>
+  <p class="desc">
+    Cada entidade principal do sistema possui um conjunto definido de status. Abaixo está o resumo de todos os estados possíveis,
+    organizados por módulo.
+  </p>
+
+  <div class="status-grid">
+    <div class="status-card">
+      <h4>Cliente</h4>
+      <span class="status-pill pill-orange">PROSPECT</span>
+      <span class="status-pill pill-green">ATIVO</span>
+      <span class="status-pill pill-gray">INATIVO</span>
+      <p style="font-size:12px;color:#666;margin-top:8px;">Entra como Prospect (via captação ou manual). Avança para Ativo quando assina contrato.</p>
+    </div>
+
+    <div class="status-card">
+      <h4>Proposta</h4>
+      <span class="status-pill pill-gray">RASCUNHO</span>
+      <span class="status-pill pill-yellow">AGUARDANDO ASSINATURA</span>
+      <span class="status-pill pill-green">ASSINADA</span>
+      <span class="status-pill pill-red">RECUSADA</span>
+      <span class="status-pill pill-red">EXPIRADA</span>
+      <span class="status-pill pill-blue">CONVERTIDA</span>
+    </div>
+
+    <div class="status-card">
+      <h4>Contrato</h4>
+      <span class="status-pill pill-gray">RASCUNHO</span>
+      <span class="status-pill pill-green">ATIVO</span>
+      <span class="status-pill pill-yellow">SUSPENSO</span>
+      <span class="status-pill pill-gray">ENCERRADO</span>
+    </div>
+
+    <div class="status-card">
+      <h4>Projeto</h4>
+      <span class="status-pill pill-gray">PLANEJADO</span>
+      <span class="status-pill pill-blue">EM ANDAMENTO</span>
+      <span class="status-pill pill-yellow">AGUARDANDO CLIENTE</span>
+      <span class="status-pill pill-green">CONCLUÍDO</span>
+      <span class="status-pill pill-red">CANCELADO</span>
+    </div>
+
+    <div class="status-card">
+      <h4>Tarefa</h4>
+      <span class="status-pill pill-gray">NÃO INICIADA</span>
+      <span class="status-pill pill-blue">INICIADA</span>
+      <span class="status-pill pill-yellow">AGUARDANDO APROVAÇÃO</span>
+      <span class="status-pill pill-green">CONCLUÍDA</span>
+      <span class="status-pill pill-red">CANCELADA</span>
+    </div>
+
+    <div class="status-card">
+      <h4>Entregável</h4>
+      <span class="status-pill pill-gray">PLANEJADO</span>
+      <span class="status-pill pill-blue">EM PRODUÇÃO</span>
+      <span class="status-pill pill-purple">EM REVISÃO</span>
+      <span class="status-pill pill-yellow">AGUARDANDO APROVAÇÃO</span>
+      <span class="status-pill pill-green">CONCLUÍDO</span>
+      <span class="status-pill pill-red">CANCELADO</span>
+    </div>
+
+    <div class="status-card">
+      <h4>Conta a Receber (Recebível)</h4>
+      <span class="status-pill pill-yellow">ABERTO</span>
+      <span class="status-pill pill-green">RECEBIDO</span>
+      <span class="status-pill pill-red">VENCIDO</span>
+      <span class="status-pill pill-gray">CANCELADO</span>
+    </div>
+
+    <div class="status-card">
+      <h4>Conta a Pagar</h4>
+      <span class="status-pill pill-yellow">ABERTO</span>
+      <span class="status-pill pill-green">PAGO</span>
+      <span class="status-pill pill-red">VENCIDO</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 6. ENTIDADES ===== -->
+<div class="section" id="entidades">
+  <div class="section-title">
+    <div class="section-num">6</div>
+    <h2>Mapa de Entidades e Relacionamentos</h2>
+  </div>
+  <p class="desc">
+    Diagrama entidade-relacionamento simplificado, mostrando as principais tabelas do banco de dados
+    e como elas se conectam entre si.
+  </p>
+  <div class="mermaid">
+erDiagram
+    EMPRESA ||--o{ CLIENTE : "possui"
+    EMPRESA ||--o{ USUARIO : "possui"
+    EMPRESA ||--o{ PRODUTO : "possui"
+    EMPRESA ||--o{ FORNECEDOR : "possui"
+    EMPRESA ||--o{ FUNCIONARIO : "possui"
+    EMPRESA ||--o{ CONTA_BANCARIA : "possui"
+    EMPRESA ||--o{ PLANO_CONTA : "possui"
+
+    CLIENTE ||--o{ PROPOSTA : "recebe"
+    CLIENTE ||--o{ CONTRATO : "assina"
+    CLIENTE ||--o{ PROJETO : "vincula"
+    CLIENTE ||--o{ RECEBIVEL : "gera"
+
+    PROPOSTA ||--o{ PROPOSTA_ITEM : "contém"
+    PRODUTO ||--o{ PROPOSTA_ITEM : "referenciado em"
+
+    CONTRATO ||--o{ RECEBIVEL : "gera parcelas"
+    CONTRATO ||--o{ PROJETO : "origina"
+
+    PROJETO ||--o{ TAREFA : "desmembra"
+    PROJETO ||--o{ ENTREGAVEL : "produz"
+    PROJETO ||--o{ DESLOCAMENTO : "registra"
+
+    USUARIO ||--o{ TAREFA : "atribuído"
+    USUARIO ||--o{ ENTREGAVEL : "responsável"
+
+    RECEBIVEL ||--o{ FATURAMENTO : "gera NF"
+
+    CONTA_BANCARIA ||--o{ LANCAMENTO : "movimenta"
+    PLANO_CONTA ||--o{ LANCAMENTO : "classifica"
+  </div>
+</div>
+
+<!-- ===== 7. ACESSO ===== -->
+<div class="section" id="usuarios">
+  <div class="section-title">
+    <div class="section-num">7</div>
+    <h2>Controle de Acesso e Estrutura Multi-Empresa</h2>
+  </div>
+  <p class="desc">
+    O sistema é multi-empresa: cada registro pertence a uma empresa específica. Usuários são vinculados a uma empresa
+    e recebem um perfil de acesso que controla o que podem visualizar e editar.
+    Um usuário "master" pode acessar múltiplas empresas.
+  </p>
+  <div class="mermaid">
+flowchart TD
+    LOGIN_U["Usuário faz login\n(e-mail + senha)"]
+    JWT["JWT emitido\n(empresaId + userId + perfil)"]
+    LOGIN_U --> JWT
+
+    JWT --> GUARD["Guards NestJS\n(@EmpresaAtiva / @Perfil)"]
+
+    GUARD -->|empresaId isolado| DADOS["Dados da empresa\n(todos os módulos)"]
+
+    subgraph PERFIS["Perfis de Acesso"]
+        MASTER["MASTER\n(acessa todas as empresas)"]
+        ADMIN["ADMIN\n(gestão total da empresa)"]
+        GESTOR["GESTOR\n(projetos + financeiro)"]
+        OPERADOR["OPERADOR\n(projetos / tarefas)"]
+        CLIENTE_P["CLIENTE\n(portal do cliente)"]
+    end
+
+    JWT --> PERFIS
+
+    MASTER -->|Switch empresa| DADOS
+    ADMIN --> DADOS
+    GESTOR -->|Acesso restrito| DADOS
+    OPERADOR -->|Acesso restrito| DADOS
+    CLIENTE_P -->|Visualiza próprio| DADOS
+
+    subgraph ISOLAMENTO["Isolamento de Dados"]
+        EMP_A["Empresa A\nClientes / Projetos / Financeiro"]
+        EMP_B["Empresa B\nClientes / Projetos / Financeiro"]
+    end
+
+    DADOS --> ISOLAMENTO
+
+    style MASTER fill:#f8d7da,stroke:#dc3545
+    style ADMIN fill:#fde8d4,stroke:#e07b1a
+    style GESTOR fill:#fff3cd,stroke:#ffc107
+    style OPERADOR fill:#cce5ff,stroke:#004085
+    style CLIENTE_P fill:#d4edda,stroke:#28a745
+  </div>
+
+  <div class="legend" style="margin-top:16px;">
+    <div class="legend-item"><div class="legend-dot" style="background:#f8d7da;border:1px solid #dc3545"></div> Master — acesso total multi-empresa</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fde8d4;border:1px solid #e07b1a"></div> Admin — gestão completa da empresa</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fff3cd;border:1px solid #ffc107"></div> Gestor — projetos + financeiro</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#cce5ff;border:1px solid #004085"></div> Operador — tarefas e entregas</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#d4edda;border:1px solid #28a745"></div> Cliente — portal com visão restrita</div>
+  </div>
+</div>
+
+<div style="text-align:center; color:#8a9ab0; font-size:12px; margin-top:32px; padding-bottom:20px;">
+  Raccolto — Mapeamento de Processos v1.0 — Gerado em Abril 2026
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#0a3d55',
+      primaryTextColor: '#fff',
+      primaryBorderColor: '#0a3d55',
+      lineColor: '#4a6580',
+      secondaryColor: '#f0f4f8',
+      tertiaryColor: '#e9a84c',
+      fontSize: '13px'
+    },
+    flowchart: {
+      curve: 'basis',
+      padding: 20
+    },
+    er: {
+      diagramPadding: 20,
+      layoutDirection: 'TB',
+      minEntityWidth: 100,
+      minEntityHeight: 75
+    }
+  });
+</script>
+</body>
+</html>

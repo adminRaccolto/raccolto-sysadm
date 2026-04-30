@@ -13,6 +13,7 @@ import {
   FileText,
   FolderKanban,
   FolderOpen,
+  GitBranch,
   GraduationCap,
   KanbanSquare,
   LayoutDashboard,
@@ -63,16 +64,18 @@ const navEntries: NavEntry[] = [
   {
     type: 'group', label: 'Operacional', Icon: Briefcase, chave: 'projetos',
     items: [
-      { to: '/deslocamentos',  label: 'Deslocamentos',  Icon: Car,       chave: 'projetos' },
+      { to: '/deslocamentos',  label: 'Deslocamentos',  Icon: Car,        chave: 'projetos' },
       { to: '/modelos',        label: 'Modelos',        Icon: FolderOpen },
-      { to: '/repositorio',    label: 'Repositório',    Icon: Archive,   chave: 'documentos' },
+      { to: '/repositorio',    label: 'Repositório',    Icon: Archive,    chave: 'documentos' },
+      { to: '/diagramas',      label: 'Diagramas',      Icon: GitBranch },
     ],
   },
   {
     type: 'group', label: 'Financeiro', Icon: Wallet, chave: 'financeiro',
     items: [
-      { to: '/faturamento', label: 'Faturamento', Icon: Receipt, chave: 'financeiro' },
-      { to: '/financeiro',  label: 'Financeiro',  Icon: Wallet,  chave: 'financeiro' },
+      { to: '/faturamento',                    label: 'Faturamento',        Icon: Receipt,      chave: 'financeiro' },
+      { to: '/financeiro',                     label: 'Financeiro',         Icon: Wallet,       chave: 'financeiro' },
+      { to: '/financeiro/assinaturas-arato',   label: 'Assinaturas Arato',  Icon: Briefcase,    chave: 'financeiro' },
     ],
   },
   { type: 'link', to: '/bi', label: 'BI', Icon: BarChart3, chave: 'financeiro' },
@@ -108,7 +111,7 @@ export default function ProtectedLayout() {
 
   const canView = useCallback((chave?: string) => {
     if (!chave) return true;
-    if (!user?.permissoes?.length) return true; // sem permissões configuradas = acesso total
+    if (user?.permissoes == null) return true; // null = sem perfil configurado → acesso total
     const p = user.permissoes.find((p) => p.chave === chave);
     return p ? p.visualizar : false;
   }, [user?.permissoes]);

@@ -31,10 +31,13 @@ import ModelosPage from '../pages/ModelosPage';
 import DeslocamentosPage from '../pages/DeslocamentosPage';
 import RepositorioPage from '../pages/RepositorioPage';
 import DiagnosticoPublicoPage from '../pages/DiagnosticoPublicoPage';
+import DiagnosticoLeadPublicoPage from '../pages/DiagnosticoLeadPublicoPage';
 import BancosPage from '../pages/sistema/BancosPage';
 import ContasBancariasPage from '../pages/sistema/ContasBancariasPage';
 import FuncionariosPage from '../pages/sistema/FuncionariosPage';
 import FornecedoresPage from '../pages/sistema/FornecedoresPage';
+import AssinaturasAratoPage from '../pages/financeiro/AssinaturasAratoPage';
+import DiagramasPage from '../pages/DiagramasPage';
 
 export default function App() {
   return (
@@ -42,6 +45,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/captacao/:slug" element={<CaptacaoPublicPage />} />
       <Route path="/diagnostico/:token" element={<DiagnosticoPublicoPage />} />
+      <Route path="/lead/:empresaId" element={<DiagnosticoLeadPublicoPage />} />
       <Route path="propostas/:id/preview" element={<ProtectedRoute><PropostaPreviewPage /></ProtectedRoute>} />
       <Route path="/" element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
@@ -61,10 +65,12 @@ export default function App() {
         <Route path="modelos" element={<ModelosPage />} />
         <Route path="deslocamentos" element={<DeslocamentosPage />} />
         <Route path="repositorio" element={<RepositorioPage />} />
+        <Route path="diagramas" element={<DiagramasPage />} />
         <Route path="financeiro/receber" element={<ContasReceberPage />} />
         <Route path="financeiro/pagar" element={<ContasPagarPage />} />
         <Route path="financeiro/tesouraria" element={<TesourariaPage />} />
         <Route path="financeiro/plano-contas" element={<PlanoContasPage />} />
+        <Route path="financeiro/assinaturas-arato" element={<AssinaturasAratoPage />} />
         <Route path="empresas" element={<EmpresasPage />} />
         <Route path="usuarios" element={<UsuariosPage />} />
         <Route path="perfis-acesso" element={<PerfisAcessoPage />} />

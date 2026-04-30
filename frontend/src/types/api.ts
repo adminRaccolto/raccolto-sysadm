@@ -642,6 +642,26 @@ export interface Recebivel {
   produtoServico?: ProdutoServico | null;
   contaGerencial?: ContaGerencial | null;
   contaGerencialId?: string | null;
+  assinaturaAratoId?: string | null;
+}
+
+export type StatusAssinaturaArato = 'ATIVA' | 'SUSPENSA' | 'CANCELADA';
+
+export interface AssinaturaArato {
+  id: string;
+  clienteId: string;
+  produtoServicoId: string;
+  contaGerencialId?: string | null;
+  valorMensal: number;
+  diaVencimento: number;
+  dataInicio: string;
+  avisoEnviado: boolean;
+  status: StatusAssinaturaArato;
+  parcelasVencidas?: number;
+  createdAt: string;
+  cliente: Cliente;
+  produtoServico: ProdutoServico;
+  recebiveis?: Recebivel[];
 }
 
 export interface DashboardResumo {
@@ -799,3 +819,55 @@ export interface PublicFormulario {
   origemLead: string;
   empresa: { nomeFantasia?: string | null; nome: string; logoUrl?: string | null };
 }
+
+export interface DiagramaListItem {
+  id: string;
+  titulo: string;
+  projetoId: string | null;
+  projeto?: { id: string; nome: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DiagramaFull extends DiagramaListItem {
+  conteudo: Record<string, unknown>;
+}
+
+export type StatusDiagnosticoLead = 'PENDENTE' | 'QUALIFICADO' | 'NAO_QUALIFICADO';
+
+export interface DiagnosticoLeadResumo {
+  id: string;
+  nome: string;
+  email: string;
+  telefone: string;
+  cidade: string | null;
+  estado: string | null;
+  status: StatusDiagnosticoLead;
+  createdAt: string;
+}
+
+export interface DiagnosticoLeadFull extends DiagnosticoLeadResumo {
+  idade: number | null;
+  profissao: string | null;
+  nomeFazenda: string | null;
+  culturas: string[];
+  percentualArrendado: number | null;
+  operacoesTerceirizadas: string[];
+  temSiloArmazem: boolean | null;
+  produtividadeMedia: { cultura: string; media: number }[] | null;
+  custosInsumosDiretos: string | null;
+  hectaresPorTrabalhador: number | null;
+  travaAntecipada: boolean | null;
+  boaLeituraComercializacao: boolean | null;
+  frustracaoSafra: Record<string, number | null> | null;
+  percentualCusteio: string | null;
+  captouMaisQuePageu: boolean | null;
+  usaSoftwareGestao: string | null;
+  sabeCustoPorSaca: boolean | null;
+  clarezaCustos: boolean | null;
+  baseDecisoes: string | null;
+  reuniaoFechamento: boolean | null;
+  respondidoAt: string | null;
+  updatedAt: string;
+}
+

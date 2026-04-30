@@ -131,6 +131,12 @@ enum StatusRecebivel {
   CANCELADO
 }
 
+enum StatusAssinaturaArato {
+  ATIVA
+  SUSPENSA
+  CANCELADA
+}
+
 enum StatusFaturamento {
   PENDENTE
   EMITINDO
@@ -267,6 +273,9 @@ model Empresa {
   faturamentos Faturamento[]
   checklistsDiagnostico ChecklistDiagnostico[]
   contratosModelos      ContratoModelo[]
+  assinaturasArato      AssinaturaArato[]
+  diagramas             Diagrama[]
+  diagnosticosLead      DiagnosticoLead[]
 }
 
 
@@ -288,6 +297,7 @@ model ProdutoServico {
   recebiveis            Recebivel[]
   oportunidadesCrm      OportunidadeCrm[]
   formulariosCaptacao   FormularioCaptacao[]
+  assinaturasArato      AssinaturaArato[]
 
   @@unique([empresaId, nome])
   @@index([empresaId])
@@ -329,6 +339,7 @@ model Cliente {
   faturamentos       Faturamento[]
   deslocamentos          Deslocamento[]
   checklistsDiagnostico  ChecklistDiagnostico[]
+  assinaturasArato       AssinaturaArato[]
 
   @@index([empresaId])
 }
@@ -559,6 +570,7 @@ model Projeto {
   etapas                    ProjetoEtapa[]
   membros                   ProjetoMembro[]
   checklistDiagnostico      ChecklistDiagnostico?
+  diagramas                 Diagrama[]
 
   @@index([empresaId])
   @@index([clienteId])
@@ -717,16 +729,18 @@ model Recebivel {
   dataNovoVencimento DateTime?
   previsao         Boolean         @default(false)
   status           StatusRecebivel @default(ABERTO)
-  origemAutomatica Boolean         @default(false)
-  faturamentoId    String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  empresa          Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  cliente          Cliente         @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  contrato         Contrato?       @relation(fields: [contratoId], references: [id], onDelete: SetNull)
-  produtoServico   ProdutoServico? @relation(fields: [produtoServicoId], references: [id], onDelete: SetNull)
-  contaGerencial   ContaGerencial? @relation(fields: [contaGerencialId], references: [id], onDelete: SetNull)
-  faturamento      Faturamento?    @relation(fields: [faturamentoId], references: [id], onDelete: SetNull)
+  origemAutomatica  Boolean          @default(false)
+  faturamentoId     String?
+  assinaturaAratoId String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  empresa           Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente           Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  contrato          Contrato?        @relation(fields: [contratoId], references: [id], onDelete: SetNull)
+  produtoServico    ProdutoServico?  @relation(fields: [produtoServicoId], references: [id], onDelete: SetNull)
+  contaGerencial    ContaGerencial?  @relation(fields: [contaGerencialId], references: [id], onDelete: SetNull)
+  faturamento       Faturamento?     @relation(fields: [faturamentoId], references: [id], onDelete: SetNull)
+  assinaturaArato   AssinaturaArato? @relation(fields: [assinaturaAratoId], references: [id], onDelete: SetNull)
 
   @@index([empresaId])
   @@index([clienteId])
@@ -735,6 +749,7 @@ model Recebivel {
   @@index([contaGerencialId])
   @@index([vencimento])
   @@index([grupoParcelamento])
+  @@index([assinaturaAratoId])
 }
 
 
@@ -777,6 +792,30 @@ model Faturamento {
   @@index([clienteId])
   @@index([contratoId])
   @@index([competencia])
+}
+
+
+model AssinaturaArato {
+  id               String                @id @default(cuid())
+  empresaId        String
+  clienteId        String
+  produtoServicoId String
+  contaGerencialId String?
+  valorMensal      Float
+  diaVencimento    Int
+  dataInicio       DateTime
+  avisoEnviado     Boolean               @default(false)
+  status           StatusAssinaturaArato @default(ATIVA)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  empresa          Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente          Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  produtoServico   ProdutoServico        @relation(fields: [produtoServicoId], references: [id], onDelete: Cascade)
+  contaGerencial   ContaGerencial?       @relation(fields: [contaGerencialId], references: [id], onDelete: SetNull)
+  recebiveis       Recebivel[]
+
+  @@index([empresaId])
+  @@index([clienteId])
 }
 
 
@@ -949,6 +988,7 @@ model ContaGerencial {
   recebiveis       Recebivel[]
   contasPagar      ContaPagar[]
   lancamentos      LancamentoTesouraria[]
+  assinaturasArato AssinaturaArato[]
 
   @@unique([empresaId, codigo])
   @@index([empresaId])
@@ -1337,4 +1377,68 @@ model FazendaDiagnostico {
   checklist ChecklistDiagnostico @relation(fields: [checklistId], references: [id], onDelete: Cascade)
 
   @@index([checklistId])
+}
+
+model Diagrama {
+  id          String   @id @default(cuid())
+  empresaId   String
+  projetoId   String?
+  titulo      String
+  conteudo    Json     @default("{}")
+  criadoPorId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  projeto   Projeto? @relation(fields: [projetoId], references: [id], onDelete: SetNull)
+
+  @@index([empresaId])
+  @@index([projetoId])
+}
+
+model DiagnosticoLead {
+  id           String    @id @default(cuid())
+  empresaId    String
+  status       String    @default("PENDENTE")
+  respondidoAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Pré-cadastro
+  nome      String
+  email     String
+  telefone  String
+  idade     Int?
+  cidade    String?
+  profissao String?
+
+  // Bloco 1 — Operação
+  nomeFazenda            String?
+  culturas               Json    @default("[]")
+  percentualArrendado    Int?
+  operacoesTerceirizadas Json    @default("[]")
+  temSiloArmazem         Boolean?
+
+  // Bloco 2 — Receitas e Custos
+  produtividadeMedia        Json?
+  custosInsumosDiretos      String?
+  hectaresPorTrabalhador    Int?
+  travaAntecipada           Boolean?
+  boaLeituraComercializacao Boolean?
+
+  // Bloco 3 — Financeiro
+  frustracaoSafra   Json?
+  percentualCusteio String?
+  captouMaisQuePageu Boolean?
+
+  // Bloco 4 — Gestão
+  usaSoftwareGestao String?
+  sabeCustoPorSaca  Boolean?
+  clarezaCustos     Boolean?
+  baseDecisoes      String?
+  reuniaoFechamento Boolean?
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
 }
