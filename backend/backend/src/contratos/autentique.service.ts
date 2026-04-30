@@ -140,7 +140,19 @@ export class AutentiqueService {
   // ─── Consulta de documento ───────────────────────────────────────────────
 
   async consultarDocumento(docId: string): Promise<AutentiqueDocument | null> {
-    const query = `query { document(id: "${docId}") { id name files { original signed } signatures { public_id name email link { short_link } } } }`;
+    const query = `
+      query {
+        document(id: "${docId}") {
+          id name
+          files { original signed }
+          signatures {
+            public_id name email
+            link { short_link }
+            signed { created_at }
+          }
+        }
+      }
+    `;
     const response = await fetch(this.endpoint, {
       method: 'POST',
       headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' },
