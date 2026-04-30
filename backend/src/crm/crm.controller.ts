@@ -7,6 +7,7 @@ import { CrmService } from './crm.service';
 import { ConvertOportunidadeDto } from './dto/convert-oportunidade.dto';
 import { CreateOportunidadeDto } from './dto/create-oportunidade.dto';
 import { AddOportunidadeComentarioDto } from './dto/add-oportunidade-comentario.dto';
+import { CreateEtapaDto, UpdateEtapaDto } from './dto/create-etapa.dto';
 
 @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA)
 @Controller('crm')
@@ -24,8 +25,23 @@ export class CrmController {
   }
 
   @Get('etapas')
-  async etapas() {
-    return this.crmService.listEtapas();
+  async etapas(@CurrentUser() user: AuthenticatedUser) {
+    return this.crmService.listEtapas(user.empresaId);
+  }
+
+  @Post('etapas')
+  async createEtapa(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateEtapaDto) {
+    return this.crmService.createEtapa(user.empresaId, body);
+  }
+
+  @Put('etapas/:id')
+  async updateEtapa(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateEtapaDto) {
+    return this.crmService.updateEtapa(user.empresaId, id, body);
+  }
+
+  @Delete('etapas/:id')
+  async removeEtapa(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.crmService.removeEtapa(user.empresaId, id);
   }
 
 
