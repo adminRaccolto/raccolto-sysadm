@@ -108,7 +108,7 @@ export class AutentiqueService {
     const form = new FormData();
     form.append('operations', operations);
     form.append('map', JSON.stringify({ '0': ['variables.file'] }));
-    form.append('0', new Blob([pdfBuffer.buffer as ArrayBuffer], { type: 'application/pdf' }), `${nome}.pdf`);
+    form.append('0', new Blob([new Uint8Array(pdfBuffer)], { type: 'application/pdf' }), `${nome}.pdf`);
 
     const response = await fetch(this.endpoint, {
       method: 'POST',
