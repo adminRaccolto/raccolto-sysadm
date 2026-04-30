@@ -1,5 +1,4 @@
-import { EtapaCrm } from '@prisma/client';
-import { IsDateString, IsEmail, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsArray, IsDateString, IsEmail, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 
 export class CreateOportunidadeDto {
   @IsString()
@@ -45,8 +44,8 @@ export class CreateOportunidadeDto {
   valorEstimado?: number;
 
   @IsOptional()
-  @IsEnum(EtapaCrm)
-  etapa?: EtapaCrm;
+  @IsString()
+  etapa?: string;
 
   @IsOptional()
   @IsInt()
@@ -73,4 +72,9 @@ export class CreateOportunidadeDto {
   @IsOptional()
   @IsString()
   observacoes?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }

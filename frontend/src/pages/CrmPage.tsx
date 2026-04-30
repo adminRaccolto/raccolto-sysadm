@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { Settings, X } from 'lucide-react';
 import { http } from '../api/http';
 import EmptyState from '../components/EmptyState';
 import Feedback from '../components/Feedback';
@@ -8,24 +9,13 @@ import Modal from '../components/Modal';
 import PageHeader from '../components/PageHeader';
 import type {
   Cliente,
-  EtapaCrm,
+  CrmEtapa,
   HistoricoComentario,
   OportunidadeCrm,
   ProdutoServico,
   UsuarioResumo,
 } from '../types/api';
 import { formatCurrency, formatDate, toDateInputValue } from '../utils/format';
-
-const etapaOptions: EtapaCrm[] = [
-  'LEAD_RECEBIDO',
-  'CONTATO_INICIADO',
-  'DIAGNOSTICO',
-  'PROPOSTA_ENVIADA',
-  'NEGOCIACAO',
-  'FECHADO_GANHO',
-  'FECHADO_PERDIDO',
-  'POS_VENDA',
-];
 
 const initialForm = {
   titulo: '',
@@ -39,31 +29,22 @@ const initialForm = {
   responsavelId: '',
   clienteId: '',
   valorEstimado: '',
-  etapa: 'LEAD_RECEBIDO' as EtapaCrm,
+  etapa: 'LEAD_RECEBIDO',
   probabilidade: '10',
   previsaoFechamento: '',
   proximaAcao: '',
   dataProximaAcao: '',
   motivoPerda: '',
   observacoes: '',
+  tagsInput: '',
 };
 
 type OportunidadeForm = typeof initialForm;
 type ViewMode = 'KANBAN' | 'LISTA';
 
-const labels: Record<EtapaCrm, string> = {
-  LEAD_RECEBIDO: 'Lead recebido',
-  CONTATO_INICIADO: 'Contato iniciado',
-  DIAGNOSTICO: 'Diagnóstico',
-  PROPOSTA_ENVIADA: 'Proposta enviada',
-  NEGOCIACAO: 'Negociação',
-  FECHADO_GANHO: 'Fechado ganho',
-  FECHADO_PERDIDO: 'Fechado perdido',
-  POS_VENDA: 'Pós-venda',
-};
-
 export default function CrmPage() {
   const [oportunidades, setOportunidades] = useState<OportunidadeCrm[]>([]);
+  const [etapas, setEtapas] = useState<CrmEtapa[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [produtos, setProdutos] = useState<ProdutoServico[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResumo[]>([]);
@@ -71,6 +52,7 @@ export default function CrmPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
+  const [isEtapasModalOpen, setIsEtapasModalOpen] = useState(false);
   const [form, setForm] = useState<OportunidadeForm>(initialForm);
   const [novoComentario, setNovoComentario] = useState('');
   const [filtroEtapa, setFiltroEtapa] = useState('');
@@ -86,8 +68,29 @@ export default function CrmPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [convertOptions, setConvertOptions] = useState({ criarContrato: true, criarProjeto: true });
 
+  // Stage manager state
+  const [etapaForm, setEtapaForm] = useState({ nome: '', cor: '#6366f1' });
+  const [editingEtapaId, setEditingEtapaId] = useState<string | null>(null);
+  const [savingEtapa, setSavingEtapa] = useState(false);
+
   const selected = useMemo(() => oportunidades.find((item) => item.id === selectedId) || null, [oportunidades, selectedId]);
   const comentarios = selected?.comentarios ?? [];
+
+  const etapaMap = useMemo(() => {
+    const m: Record<string, CrmEtapa> = {};
+    etapas.forEach((e) => { m[e.chave] = e; });
+    return m;
+  }, [etapas]);
+
+  function etapaNome(chave: string) { return etapaMap[chave]?.nome ?? chave; }
+  function etapaCor(chave: string) { return etapaMap[chave]?.cor ?? '#6b7280'; }
+
+  async function loadEtapas() {
+    try {
+      const res = await http.get<CrmEtapa[]>('/crm/etapas');
+      setEtapas(res.data);
+    } catch { /* noop */ }
+  }
 
   async function loadData() {
     setLoading(true);
@@ -109,9 +112,7 @@ export default function CrmPage() {
       try {
         const usuariosResponse = await http.get<UsuarioResumo[]>('/usuarios');
         usuariosData = usuariosResponse.data;
-      } catch {
-        usuariosData = [];
-      }
+      } catch { usuariosData = []; }
 
       setOportunidades(opResponse.data);
       setClientes(clientesResponse.data);
@@ -129,9 +130,8 @@ export default function CrmPage() {
     }
   }
 
-  useEffect(() => {
-    void loadData();
-  }, [filtroEtapa, filtroResponsavel, filtroProduto]);
+  useEffect(() => { void loadEtapas(); }, []);
+  useEffect(() => { void loadData(); }, [filtroEtapa, filtroResponsavel, filtroProduto]);
 
   function resetForm() {
     setEditingId(null);
@@ -175,6 +175,7 @@ export default function CrmPage() {
       dataProximaAcao: toDateInputValue(item.dataProximaAcao),
       motivoPerda: item.motivoPerda || '',
       observacoes: item.observacoes || '',
+      tagsInput: (item.tags ?? []).join(', '),
     });
     setNovoComentario('');
     setError(null);
@@ -188,6 +189,11 @@ export default function CrmPage() {
     setError(null);
     setSuccess(null);
     try {
+      const tags = form.tagsInput
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
+
       const payload = {
         titulo: form.titulo.trim(),
         empresaNome: form.empresaNome.trim(),
@@ -207,6 +213,7 @@ export default function CrmPage() {
         ...(form.dataProximaAcao ? { dataProximaAcao: form.dataProximaAcao } : {}),
         ...(form.motivoPerda ? { motivoPerda: form.motivoPerda.trim() } : {}),
         ...(form.observacoes ? { observacoes: form.observacoes.trim() } : {}),
+        tags,
       };
 
       if (editingId) {
@@ -225,14 +232,15 @@ export default function CrmPage() {
     }
   }
 
-  async function handleDelete() {
-    if (!selected) return;
-    const confirmed = window.confirm(`Excluir a oportunidade "${selected.titulo}"?`);
+  async function handleDelete(item?: OportunidadeCrm) {
+    const target = item ?? selected;
+    if (!target) return;
+    const confirmed = window.confirm(`Excluir a oportunidade "${target.titulo}"?`);
     if (!confirmed) return;
     try {
-      await http.delete(`/crm/oportunidades/${selected.id}`);
+      await http.delete(`/crm/oportunidades/${target.id}`);
       setSuccess('Oportunidade excluída com sucesso.');
-      if (editingId === selected.id) closeModal();
+      if (editingId === target.id) closeModal();
       await loadData();
     } catch (err) {
       handleApiError(err, 'Falha ao excluir oportunidade.');
@@ -279,7 +287,7 @@ export default function CrmPage() {
     }
   }
 
-  async function handleMove(item: OportunidadeCrm, etapa: EtapaCrm) {
+  async function handleMove(item: OportunidadeCrm, etapa: string) {
     if (item.etapa === etapa) return;
     try {
       await http.put(`/crm/oportunidades/${item.id}`, { etapa });
@@ -287,6 +295,37 @@ export default function CrmPage() {
       await loadData();
     } catch (err) {
       handleApiError(err, 'Falha ao mover a oportunidade.');
+    }
+  }
+
+  // Stage manager handlers
+  async function handleSaveEtapa(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSavingEtapa(true);
+    try {
+      if (editingEtapaId) {
+        await http.put(`/crm/etapas/${editingEtapaId}`, { nome: etapaForm.nome, cor: etapaForm.cor });
+      } else {
+        const chave = etapaForm.nome.trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+        await http.post('/crm/etapas', { chave, nome: etapaForm.nome, cor: etapaForm.cor });
+      }
+      setEtapaForm({ nome: '', cor: '#6366f1' });
+      setEditingEtapaId(null);
+      await loadEtapas();
+    } catch (err) {
+      handleApiError(err, 'Falha ao salvar etapa.');
+    } finally {
+      setSavingEtapa(false);
+    }
+  }
+
+  async function handleDeleteEtapa(etapa: CrmEtapa) {
+    if (!window.confirm(`Excluir a etapa "${etapa.nome}"? As oportunidades nesta etapa não serão excluídas.`)) return;
+    try {
+      await http.delete(`/crm/etapas/${etapa.id}`);
+      await loadEtapas();
+    } catch (err) {
+      handleApiError(err, 'Falha ao excluir etapa.');
     }
   }
 
@@ -300,8 +339,8 @@ export default function CrmPage() {
   }
 
   const kanbanGroups = useMemo(
-    () => etapaOptions.map((etapa) => ({ etapa, itens: oportunidades.filter((item) => item.etapa === etapa) })),
-    [oportunidades],
+    () => etapas.map((etapa) => ({ etapa, itens: oportunidades.filter((item) => item.etapa === etapa.chave) })),
+    [oportunidades, etapas],
   );
 
   return (
@@ -315,6 +354,9 @@ export default function CrmPage() {
             <button className="button button--ghost button--small" type="button" onClick={() => selected && startEdit(selected)} disabled={!selected}>Editar</button>
             <button className="button button--ghost button--small" type="button" onClick={() => setIsConvertModalOpen(true)} disabled={!selected}>Converter</button>
             <button className="button button--danger button--small" type="button" onClick={() => void handleDelete()} disabled={!selected}>Excluir</button>
+            <button className="button button--ghost button--small crm-settings-btn" type="button" onClick={() => setIsEtapasModalOpen(true)} title="Configurar etapas do funil">
+              <Settings size={14} strokeWidth={2} />
+            </button>
           </div>
         }
       />
@@ -332,7 +374,7 @@ export default function CrmPage() {
             <div className="header-tools">
               <select className="compact-select" value={filtroEtapa} onChange={(e) => setFiltroEtapa(e.target.value)}>
                 <option value="">Todas as etapas</option>
-                {etapaOptions.map((etapa) => <option key={etapa} value={etapa}>{labels[etapa]}</option>)}
+                {etapas.map((etapa) => <option key={etapa.chave} value={etapa.chave}>{etapa.nome}</option>)}
               </select>
               <select className="compact-select" value={filtroResponsavel} onChange={(e) => setFiltroResponsavel(e.target.value)}>
                 <option value="">Todos os responsáveis</option>
@@ -366,41 +408,64 @@ export default function CrmPage() {
               {kanbanGroups.map((group) => (
                 <div
                   className="kanban-column"
-                  key={group.etapa}
+                  key={group.etapa.chave}
+                  style={{ '--col-color': group.etapa.cor } as React.CSSProperties}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={async () => {
                     const moving = oportunidades.find((item) => item.id === draggingId);
-                    if (moving) await handleMove(moving, group.etapa);
+                    if (moving) await handleMove(moving, group.etapa.chave);
                     setDraggingId(null);
                   }}
                 >
-                  <div className="kanban-column__header">
-                    <h4>{labels[group.etapa]}</h4>
-                    <span>{group.itens.length}</span>
+                  <div className="kanban-column__header crm-column__header">
+                    <div className="crm-column__dot" style={{ background: group.etapa.cor }} />
+                    <h4>{group.etapa.nome}</h4>
+                    <span className="crm-column__count">{group.itens.length}</span>
                   </div>
                   <div className="kanban-column__body">
                     {group.itens.length === 0 ? <div className="kanban-empty">Sem oportunidades nesta etapa.</div> : null}
                     {group.itens.map((item) => (
-                      <button
+                      <div
                         key={item.id}
-                        type="button"
                         draggable
                         onDragStart={() => setDraggingId(item.id)}
-                        onDoubleClick={() => startEdit(item)}
                         className={`kanban-card crm-card${selectedId === item.id ? ' crm-card--selected' : ''}`}
+                        style={{ '--card-color': etapaCor(item.etapa) } as React.CSSProperties}
                         onClick={() => setSelectedId(item.id)}
+                        onDoubleClick={() => startEdit(item)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter') startEdit(item); }}
                       >
-                        <div className="kanban-card__top">
-                          <strong>{item.titulo}</strong>
-                          <p>{item.empresaNome}</p>
+                        <div className="crm-card__stripe" style={{ background: etapaCor(item.etapa) }} />
+                        <div className="crm-card__body">
+                          <div className="kanban-card__top">
+                            <strong>{item.titulo}</strong>
+                            <button
+                              type="button"
+                              className="crm-card__delete"
+                              title="Excluir"
+                              onClick={(e) => { e.stopPropagation(); void handleDelete(item); }}
+                            >
+                              <X size={12} strokeWidth={2.5} />
+                            </button>
+                          </div>
+                          <p className="crm-card__company">{item.empresaNome}</p>
+                          <div className="kanban-card__meta">
+                            <span>{item.responsavel?.nome || 'Sem responsável'}</span>
+                            <span>{item.probabilidade}%</span>
+                            {item.valorEstimado ? <span>{formatCurrency(item.valorEstimado)}</span> : null}
+                            {item.previsaoFechamento ? <span>{formatDate(item.previsaoFechamento)}</span> : null}
+                          </div>
+                          {item.tags && item.tags.length > 0 ? (
+                            <div className="crm-card__tags">
+                              {item.tags.map((tag) => (
+                                <span key={tag} className="crm-tag">{tag}</span>
+                              ))}
+                            </div>
+                          ) : null}
                         </div>
-                        <div className="kanban-card__meta">
-                          <span>Responsável: {item.responsavel?.nome || 'Não definido'}</span>
-                          <span>Probabilidade: {item.probabilidade}%</span>
-                          <span>Valor: {formatCurrency(item.valorEstimado)}</span>
-                          <span>Previsão: {formatDate(item.previsaoFechamento)}</span>
-                        </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -415,9 +480,11 @@ export default function CrmPage() {
                   <tr>
                     <th>Oportunidade</th>
                     <th>Etapa</th>
+                    <th>Tags</th>
                     <th>Responsável</th>
                     <th>Valor</th>
                     <th>Previsão</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -432,10 +499,24 @@ export default function CrmPage() {
                         <strong>{item.titulo}</strong>
                         <div className="table-subline">{item.empresaNome} · {item.contatoNome || item.email || 'Sem contato principal'}</div>
                       </td>
-                      <td>{labels[item.etapa]}</td>
+                      <td>
+                        <span className="crm-etapa-badge" style={{ background: etapaCor(item.etapa) + '22', color: etapaCor(item.etapa), borderColor: etapaCor(item.etapa) + '44' }}>
+                          {etapaNome(item.etapa)}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="crm-card__tags crm-card__tags--inline">
+                          {(item.tags ?? []).map((tag) => <span key={tag} className="crm-tag">{tag}</span>)}
+                        </div>
+                      </td>
                       <td>{item.responsavel?.nome || 'Não definido'}</td>
                       <td>{formatCurrency(item.valorEstimado)}</td>
                       <td>{formatDate(item.previsaoFechamento)}</td>
+                      <td>
+                        <button type="button" className="crm-card__delete crm-card__delete--table" onClick={(e) => { e.stopPropagation(); void handleDelete(item); }} title="Excluir">
+                          <X size={13} strokeWidth={2.5} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -445,6 +526,7 @@ export default function CrmPage() {
         </div>
       </section>
 
+      {/* Oportunidade form modal */}
       <Modal
         open={isModalOpen}
         title={editingId ? 'Editar oportunidade' : 'Nova oportunidade'}
@@ -479,8 +561,8 @@ export default function CrmPage() {
               </select>
             </div>
             <div className="field"><label>Etapa</label>
-              <select value={form.etapa} onChange={(e) => setForm((c) => ({ ...c, etapa: e.target.value as EtapaCrm }))}>
-                {etapaOptions.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
+              <select value={form.etapa} onChange={(e) => setForm((c) => ({ ...c, etapa: e.target.value }))}>
+                {etapas.map((item) => <option key={item.chave} value={item.chave}>{item.nome}</option>)}
               </select>
             </div>
             <div className="field"><label>Valor estimado (R$)</label><input type="number" step="0.01" value={form.valorEstimado} onChange={(e) => setForm((c) => ({ ...c, valorEstimado: e.target.value }))} /></div>
@@ -489,6 +571,10 @@ export default function CrmPage() {
             <div className="field field--span-2"><label>Próxima ação</label><input value={form.proximaAcao} onChange={(e) => setForm((c) => ({ ...c, proximaAcao: e.target.value }))} /></div>
             <div className="field"><label>Data da próxima ação</label><input type="date" value={form.dataProximaAcao} onChange={(e) => setForm((c) => ({ ...c, dataProximaAcao: e.target.value }))} /></div>
             <div className="field"><label>Motivo de perda</label><input value={form.motivoPerda} onChange={(e) => setForm((c) => ({ ...c, motivoPerda: e.target.value }))} /></div>
+            <div className="field field--span-2">
+              <label>Tags / segmentos <small>(separados por vírgula)</small></label>
+              <input value={form.tagsInput} onChange={(e) => setForm((c) => ({ ...c, tagsInput: e.target.value }))} placeholder="Ex: pecuária, irrigação, soja" />
+            </div>
             <div className="field field--span-2"><label>Observações</label><textarea rows={4} value={form.observacoes} onChange={(e) => setForm((c) => ({ ...c, observacoes: e.target.value }))} /></div>
             <div className="field field--span-2"><button className="button button--small" type="submit" disabled={saving}>{saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar oportunidade'}</button></div>
           </form>
@@ -523,6 +609,7 @@ export default function CrmPage() {
         </div>
       </Modal>
 
+      {/* Convert modal */}
       <Modal
         open={isConvertModalOpen}
         title="Converter oportunidade"
@@ -543,6 +630,56 @@ export default function CrmPage() {
               {convertendo ? 'Convertendo...' : 'Converter oportunidade'}
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Stage manager modal */}
+      <Modal
+        open={isEtapasModalOpen}
+        title="Configurar etapas do funil"
+        subtitle="Personalize os rótulos, cores e ordem das etapas do seu CRM."
+        onClose={() => { setIsEtapasModalOpen(false); setEditingEtapaId(null); setEtapaForm({ nome: '', cor: '#6366f1' }); }}
+      >
+        <div className="crm-etapas-manager">
+          <div className="crm-etapas-list">
+            {etapas.map((etapa) => (
+              <div key={etapa.id} className="crm-etapa-row">
+                <div className="crm-etapa-row__swatch" style={{ background: etapa.cor }} />
+                <span className="crm-etapa-row__nome">{etapa.nome}</span>
+                <span className="crm-etapa-row__chave">{etapa.chave}</span>
+                <div className="crm-etapa-row__actions">
+                  <button type="button" className="button button--ghost button--tiny" onClick={() => { setEditingEtapaId(etapa.id); setEtapaForm({ nome: etapa.nome, cor: etapa.cor }); }}>Editar</button>
+                  <button type="button" className="button button--danger button--tiny" onClick={() => void handleDeleteEtapa(etapa)}>
+                    <X size={12} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <form className="crm-etapa-form compact-form" onSubmit={(e) => void handleSaveEtapa(e)}>
+            <h4>{editingEtapaId ? 'Editar etapa' : 'Nova etapa'}</h4>
+            <div className="crm-etapa-form__row">
+              <div className="field" style={{ flex: 1 }}>
+                <label>Nome</label>
+                <input value={etapaForm.nome} onChange={(e) => setEtapaForm((c) => ({ ...c, nome: e.target.value }))} required />
+              </div>
+              <div className="field crm-etapa-form__color">
+                <label>Cor</label>
+                <input type="color" value={etapaForm.cor} onChange={(e) => setEtapaForm((c) => ({ ...c, cor: e.target.value }))} />
+              </div>
+            </div>
+            <div className="crm-etapa-form__btns">
+              <button className="button button--small" type="submit" disabled={savingEtapa || !etapaForm.nome.trim()}>
+                {savingEtapa ? 'Salvando...' : editingEtapaId ? 'Salvar' : 'Adicionar etapa'}
+              </button>
+              {editingEtapaId ? (
+                <button type="button" className="button button--ghost button--small" onClick={() => { setEditingEtapaId(null); setEtapaForm({ nome: '', cor: '#6366f1' }); }}>
+                  Cancelar
+                </button>
+              ) : null}
+            </div>
+          </form>
         </div>
       </Modal>
     </div>

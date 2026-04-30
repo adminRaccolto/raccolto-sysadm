@@ -276,6 +276,7 @@ model Empresa {
   assinaturasArato      AssinaturaArato[]
   diagramas             Diagrama[]
   diagnosticosLead      DiagnosticoLead[]
+  etapasCrm             CrmEtapa[]
 }
 
 
@@ -833,13 +834,14 @@ model OportunidadeCrm {
   whatsapp          String?
   origemLead        String?
   valorEstimado     Float?
-  etapa             EtapaCrm  @default(LEAD_RECEBIDO)
+  etapa             String    @default("LEAD_RECEBIDO")
   probabilidade     Int       @default(10)
   previsaoFechamento DateTime?
   proximaAcao       String?
   dataProximaAcao   DateTime?
   motivoPerda       String?
   observacoes       String?
+  tags              String[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   empresa           Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -969,6 +971,20 @@ model OportunidadeCrmComentario {
   @@index([empresaId])
   @@index([oportunidadeId])
   @@index([autorUsuarioId])
+}
+
+model CrmEtapa {
+  id        String   @id @default(cuid())
+  empresaId String
+  chave     String
+  nome      String
+  cor       String   @default("#6366f1")
+  ordem     Int      @default(0)
+  createdAt DateTime @default(now())
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, chave])
+  @@index([empresaId])
 }
 
 model ContaGerencial {

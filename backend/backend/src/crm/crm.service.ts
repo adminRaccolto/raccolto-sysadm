@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { EtapaCrm, PerfilUsuario, Prisma, StatusContrato, StatusProjeto } from '@prisma/client';
+import { PerfilUsuario, Prisma, StatusContrato, StatusProjeto } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { CreateOportunidadeDto } from './dto/create-oportunidade.dto';
 import { ConvertOportunidadeDto } from './dto/convert-oportunidade.dto';
+import { CreateEtapaDto, UpdateEtapaDto } from './dto/create-etapa.dto';
 
 @Injectable()
 export class CrmService {
@@ -31,11 +32,69 @@ export class CrmService {
     };
   }
 
+  private readonly defaultEtapas = [
+    { chave: 'LEAD_RECEBIDO',    nome: 'Lead Recebido',    cor: '#6b7280', ordem: 0 },
+    { chave: 'CONTATO_INICIADO', nome: 'Contato Iniciado', cor: '#3b82f6', ordem: 1 },
+    { chave: 'DIAGNOSTICO',      nome: 'Diagnóstico',      cor: '#8b5cf6', ordem: 2 },
+    { chave: 'PROPOSTA_ENVIADA', nome: 'Proposta Enviada', cor: '#f59e0b', ordem: 3 },
+    { chave: 'NEGOCIACAO',       nome: 'Negociação',       cor: '#f97316', ordem: 4 },
+    { chave: 'FECHADO_GANHO',    nome: 'Fechado Ganho',    cor: '#10b981', ordem: 5 },
+    { chave: 'FECHADO_PERDIDO',  nome: 'Fechado Perdido',  cor: '#ef4444', ordem: 6 },
+    { chave: 'POS_VENDA',        nome: 'Pós-venda',        cor: '#14b8a6', ordem: 7 },
+  ];
+
+  async listEtapas(empresaId: string) {
+    let etapas = await this.prisma.crmEtapa.findMany({
+      where: { empresaId },
+      orderBy: { ordem: 'asc' },
+    });
+    if (etapas.length === 0) {
+      await this.prisma.crmEtapa.createMany({
+        data: this.defaultEtapas.map((e) => ({ ...e, empresaId })),
+      });
+      etapas = await this.prisma.crmEtapa.findMany({
+        where: { empresaId },
+        orderBy: { ordem: 'asc' },
+      });
+    }
+    return etapas;
+  }
+
+  async createEtapa(empresaId: string, dto: CreateEtapaDto) {
+    const chave = dto.chave.trim().toUpperCase().replace(/\s+/g, '_');
+    const existing = await this.prisma.crmEtapa.findUnique({ where: { empresaId_chave: { empresaId, chave } } });
+    if (existing) throw new BadRequestException('Já existe uma etapa com essa chave.');
+    const maxOrdem = await this.prisma.crmEtapa.aggregate({ where: { empresaId }, _max: { ordem: true } });
+    return this.prisma.crmEtapa.create({
+      data: { empresaId, chave, nome: dto.nome.trim(), cor: dto.cor ?? '#6366f1', ordem: dto.ordem ?? (maxOrdem._max.ordem ?? -1) + 1 },
+    });
+  }
+
+  async updateEtapa(empresaId: string, id: string, dto: UpdateEtapaDto) {
+    const etapa = await this.prisma.crmEtapa.findFirst({ where: { id, empresaId } });
+    if (!etapa) throw new BadRequestException('Etapa não encontrada.');
+    return this.prisma.crmEtapa.update({
+      where: { id },
+      data: {
+        ...(dto.nome ? { nome: dto.nome.trim() } : {}),
+        ...(dto.cor !== undefined ? { cor: dto.cor } : {}),
+        ...(dto.ordem !== undefined ? { ordem: dto.ordem } : {}),
+      },
+    });
+  }
+
+  async removeEtapa(empresaId: string, id: string) {
+    const etapa = await this.prisma.crmEtapa.findFirst({ where: { id, empresaId } });
+    if (!etapa) throw new BadRequestException('Etapa não encontrada.');
+    await this.prisma.crmEtapa.delete({ where: { id } });
+    return { message: 'Etapa excluída.' };
+  }
+
   async findAll(empresaId: string, filtros?: { etapa?: string; responsavelId?: string; produtoServicoId?: string }) {
     return this.prisma.oportunidadeCrm.findMany({
       where: {
         empresaId,
-        ...(filtros?.etapa ? { etapa: filtros.etapa as EtapaCrm } : {}),
+        ...(filtros?.etapa ? { etapa: filtros.etapa } : {}),
         ...(filtros?.responsavelId ? { responsavelId: filtros.responsavelId } : {}),
         ...(filtros?.produtoServicoId ? { produtoServicoId: filtros.produtoServicoId } : {}),
       },
@@ -72,13 +131,14 @@ export class CrmService {
         whatsapp: data.whatsapp?.trim() || null,
         origemLead: data.origemLead?.trim() || null,
         valorEstimado: data.valorEstimado ?? null,
-        etapa: data.etapa ?? EtapaCrm.LEAD_RECEBIDO,
-        probabilidade: data.probabilidade ?? this.defaultProbability(data.etapa ?? EtapaCrm.LEAD_RECEBIDO),
+        etapa: data.etapa ?? 'LEAD_RECEBIDO',
+        probabilidade: data.probabilidade ?? this.defaultProbability(data.etapa ?? 'LEAD_RECEBIDO'),
         previsaoFechamento: data.previsaoFechamento ? new Date(data.previsaoFechamento) : null,
         proximaAcao: data.proximaAcao?.trim() || null,
         dataProximaAcao: data.dataProximaAcao ? new Date(data.dataProximaAcao) : null,
         motivoPerda: data.motivoPerda?.trim() || null,
         observacoes: data.observacoes?.trim() || null,
+        tags: data.tags ?? [],
       },
       include: this.include(),
     });
@@ -111,6 +171,7 @@ export class CrmService {
         dataProximaAcao: data.dataProximaAcao !== undefined ? (data.dataProximaAcao ? new Date(data.dataProximaAcao) : null) : undefined,
         motivoPerda: data.motivoPerda !== undefined ? data.motivoPerda?.trim() || null : undefined,
         observacoes: data.observacoes !== undefined ? data.observacoes?.trim() || null : undefined,
+        tags: data.tags !== undefined ? data.tags : undefined,
       },
       include: this.include(),
     });
@@ -226,7 +287,7 @@ export class CrmService {
         where: { id: oportunidade.id },
         data: {
           clienteId,
-          etapa: EtapaCrm.FECHADO_GANHO,
+          etapa: 'FECHADO_GANHO',
           probabilidade: 100,
         },
         include: this.include(),
@@ -242,22 +303,13 @@ export class CrmService {
     });
   }
 
-  async listEtapas() {
-    return Object.values(EtapaCrm);
-  }
-
-  private defaultProbability(etapa: EtapaCrm) {
-    switch (etapa) {
-      case EtapaCrm.LEAD_RECEBIDO: return 10;
-      case EtapaCrm.CONTATO_INICIADO: return 20;
-      case EtapaCrm.DIAGNOSTICO: return 40;
-      case EtapaCrm.PROPOSTA_ENVIADA: return 60;
-      case EtapaCrm.NEGOCIACAO: return 80;
-      case EtapaCrm.FECHADO_GANHO: return 100;
-      case EtapaCrm.FECHADO_PERDIDO: return 0;
-      case EtapaCrm.POS_VENDA: return 100;
-      default: return 10;
-    }
+  private defaultProbability(etapa: string) {
+    const map: Record<string, number> = {
+      LEAD_RECEBIDO: 10, CONTATO_INICIADO: 20, DIAGNOSTICO: 40,
+      PROPOSTA_ENVIADA: 60, NEGOCIACAO: 80, FECHADO_GANHO: 100,
+      FECHADO_PERDIDO: 0, POS_VENDA: 100,
+    };
+    return map[etapa] ?? 10;
   }
 
   private async validateRelations(empresaId: string, data: Partial<CreateOportunidadeDto>) {

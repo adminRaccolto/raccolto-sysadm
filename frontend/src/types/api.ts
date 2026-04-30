@@ -753,6 +753,15 @@ export interface UsuarioAdmin extends UsuarioResumo {
 }
 
 
+export interface CrmEtapa {
+  id: string;
+  chave: string;
+  nome: string;
+  cor: string;
+  ordem: number;
+  createdAt: string;
+}
+
 export interface OportunidadeCrm {
   id: string;
   clienteId?: string | null;
@@ -766,13 +775,14 @@ export interface OportunidadeCrm {
   whatsapp?: string | null;
   origemLead?: string | null;
   valorEstimado?: number | null;
-  etapa: EtapaCrm;
+  etapa: string;
   probabilidade: number;
   previsaoFechamento?: string | null;
   proximaAcao?: string | null;
   dataProximaAcao?: string | null;
   motivoPerda?: string | null;
   observacoes?: string | null;
+  tags: string[];
   cliente?: Cliente | null;
   produtoServico?: ProdutoServico | null;
   responsavel?: UsuarioResumo | null;
