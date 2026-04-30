@@ -117,7 +117,11 @@ export class AutentiqueService {
     });
 
     const rawText = await response.text();
-    this.logger.debug(`Autentique createDocument status=${response.status}`);
+    this.logger.debug(`Autentique createDocument status=${response.status} body=${rawText.slice(0, 300)}`);
+
+    if (!this.token) {
+      throw new BadRequestException('AUTENTIQUE_TOKEN não está configurado no servidor. Configure a variável de ambiente no Railway.');
+    }
 
     let json: { data?: { createDocument: AutentiqueDocument }; errors?: { message: string }[] };
     try { json = JSON.parse(rawText); } catch {
@@ -125,8 +129,8 @@ export class AutentiqueService {
     }
 
     if (json.errors?.length) {
-      this.logger.error('Autentique error:', json.errors);
-      throw new BadRequestException(`Autentique: ${json.errors[0].message}`);
+      this.logger.error('Autentique errors:', JSON.stringify(json.errors));
+      throw new BadRequestException(`Autentique: ${json.errors.map(e => e.message).join('; ')}`);
     }
 
     const doc = json.data?.createDocument;
