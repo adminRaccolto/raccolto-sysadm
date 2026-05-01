@@ -29,6 +29,7 @@ import BiPage from '../pages/BiPage';
 import LearningPage from '../pages/LearningPage';
 import ModelosPage from '../pages/ModelosPage';
 import DeslocamentosPage from '../pages/DeslocamentosPage';
+import RelatorioReembolsoPage from '../pages/RelatorioReembolsoPage';
 import RepositorioPage from '../pages/RepositorioPage';
 import DiagnosticoPublicoPage from '../pages/DiagnosticoPublicoPage';
 import DiagnosticoLeadPublicoPage from '../pages/DiagnosticoLeadPublicoPage';
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="captacao" element={<FormulariosCaptacaoPage />} />
         <Route path="modelos" element={<ModelosPage />} />
         <Route path="deslocamentos" element={<DeslocamentosPage />} />
+        <Route path="relatorios-reembolso" element={<RelatorioReembolsoPage />} />
         <Route path="repositorio" element={<RepositorioPage />} />
         <Route path="diagramas" element={<DiagramasPage />} />
         <Route path="financeiro/receber" element={<ContasReceberPage />} />

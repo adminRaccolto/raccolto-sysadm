@@ -7,6 +7,7 @@ import {
   Briefcase,
   Building2,
   Car,
+  FileCheck,
   CheckSquare,
   ChevronDown,
   FileSignature,
@@ -64,7 +65,8 @@ const navEntries: NavEntry[] = [
   {
     type: 'group', label: 'Operacional', Icon: Briefcase, chave: 'projetos',
     items: [
-      { to: '/deslocamentos',  label: 'Deslocamentos',  Icon: Car,        chave: 'projetos' },
+      { to: '/deslocamentos',        label: 'Deslocamentos',  Icon: Car,       chave: 'projetos' },
+      { to: '/relatorios-reembolso', label: 'Rel. Reembolso',  Icon: FileCheck, chave: 'projetos' },
       { to: '/modelos',        label: 'Modelos',        Icon: FolderOpen },
       { to: '/repositorio',    label: 'Repositório',    Icon: Archive,    chave: 'documentos' },
       { to: '/diagramas',      label: 'Diagramas',      Icon: GitBranch },

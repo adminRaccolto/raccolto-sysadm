@@ -25,6 +25,7 @@ import { SuporteModule } from './suporte/suporte.module';
 import { CaptacaoModule } from './captacao/captacao.module';
 import { ModelosDocumentoModule } from './modelos-documento/modelos-documento.module';
 import { DeslocamentosModule } from './deslocamentos/deslocamentos.module';
+import { RelatorioReembolsoModule } from './relatorio-reembolso/relatorio-reembolso.module';
 import { BancosModule } from './bancos/bancos.module';
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { FornecedoresModule } from './fornecedores/fornecedores.module';
@@ -58,6 +59,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     CaptacaoModule,
     ModelosDocumentoModule,
     DeslocamentosModule,
+    RelatorioReembolsoModule,
     BancosModule,
     FuncionariosModule,
     FornecedoresModule,

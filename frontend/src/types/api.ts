@@ -187,6 +187,62 @@ export interface RelatorioDeslocamento {
   anotacoes?: string;
 }
 
+export type TipoItemReembolso = 'KM' | 'PEDAGIO' | 'ALIMENTACAO' | 'HOSPEDAGEM' | 'OUTRO';
+export type StatusRelatorioReembolso =
+  | 'RASCUNHO'
+  | 'AGUARDANDO_APROVACAO'
+  | 'APROVADO'
+  | 'REPROVADO'
+  | 'FINANCEIRO_GERADO';
+
+export interface ItemReembolso {
+  id: string;
+  tipo: TipoItemReembolso;
+  data?: string | null;
+  descricao: string;
+  km?: number | null;
+  precoKm?: number | null;
+  valor: number;
+  createdAt: string;
+}
+
+export interface ReembolsoCliente {
+  id: string;
+  clienteId: string;
+  percentual: number;
+  valor: number;
+  recebivelId?: string | null;
+  cliente: {
+    id: string;
+    razaoSocial: string;
+    nomeFantasia?: string | null;
+    nomeFazenda?: string | null;
+    distanciaKm?: number | null;
+    precoKmReembolso?: number | null;
+  };
+}
+
+export interface RelatorioReembolso {
+  id: string;
+  empresaId: string;
+  projetoId?: string | null;
+  responsavelId?: string | null;
+  titulo: string;
+  dataInicio: string;
+  dataFim: string;
+  observacoes?: string | null;
+  status: StatusRelatorioReembolso;
+  valorTotal: number;
+  documentoUrl?: string | null;
+  autentiqueDocId?: string | null;
+  projeto?: { id: string; nome: string } | null;
+  responsavel?: { id: string; nome: string } | null;
+  itens: ItemReembolso[];
+  clientes: ReembolsoCliente[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ContratoCobranca {
   id?: string;
   ordem: number;

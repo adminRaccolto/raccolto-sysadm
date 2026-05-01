@@ -28,6 +28,35 @@ export interface DeslocamentoRelatorioItem {
   refeicao?: number | null;
 }
 
+export interface ReembolsoItemPdf {
+  tipo: string;
+  data: Date | null;
+  descricao: string;
+  km?: number | null;
+  precoKm?: number | null;
+  valor: number;
+}
+
+export interface ReembolsoClientePdf {
+  nome: string;
+  percentual: number;
+  valor: number;
+}
+
+export interface ReembolsoParams {
+  empresaNome: string;
+  empresaCnpj?: string | null;
+  empresaInfoBancarias?: string | null;
+  responsavelNome: string;
+  titulo: string;
+  periodoInicio: Date;
+  periodoFim: Date;
+  observacoes: string;
+  itens: ReembolsoItemPdf[];
+  clientes: ReembolsoClientePdf[];
+  valorTotal: number;
+}
+
 export interface RelatorioDeslocamentoParams {
   empresaNome: string;
   empresaCnpj?: string | null;
@@ -384,6 +413,168 @@ export class AutentiqueService {
       }
 
       // Rodapé
+      doc.fontSize(8).font('Helvetica').fillColor('#888888')
+        .text('Assinado digitalmente via Autentique — www.autentique.com.br', L, doc.page.height - 35, { align: 'center', width: W });
+
+      doc.end();
+    });
+  }
+
+  gerarPdfReembolso(params: ReembolsoParams): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const L = 40;
+      const W = 515;
+      const R = L + W;
+      const ORANGE = '#C0392B';
+      const DARK = '#1a1a1a';
+      const HEADER_BG = '#2c3e50';
+      const ROW_BG = '#f9f9f9';
+      const BORDER = '#cccccc';
+
+      const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      const fmtDate = (d: Date | null) => d ? new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—';
+
+      const tipoLabel: Record<string, string> = {
+        KM: 'Quilometragem',
+        PEDAGIO: 'Pedágio',
+        ALIMENTACAO: 'Alimentação',
+        HOSPEDAGEM: 'Hospedagem',
+        OUTRO: 'Outro',
+      };
+
+      // ── TÍTULO ──────────────────────────────────────────────────────────
+      doc.fontSize(18).font('Helvetica-Bold').fillColor(DARK)
+        .text('RELATÓRIO DE REEMBOLSO', L, 40, { width: 320 });
+      doc.fontSize(11).font('Helvetica').fillColor(ORANGE)
+        .text(params.titulo.toUpperCase(), L + 320, 46, { width: 195, align: 'right' });
+      doc.moveTo(L, 68).lineTo(R, 68).strokeColor(ORANGE).lineWidth(2).stroke();
+
+      // ── CABEÇALHO ───────────────────────────────────────────────────────
+      let y = 78;
+      doc.rect(L, y, W, 20).fillColor('#eeeeee').fill();
+      doc.fontSize(8).font('Helvetica-Bold').fillColor(DARK)
+        .text('RESPONSÁVEL:', L + 4, y + 6);
+      doc.font('Helvetica').text(params.responsavelNome, L + 72, y + 6, { width: 160 });
+      doc.font('Helvetica-Bold').text('EMPRESA:', L + 250, y + 6);
+      doc.font('Helvetica').text(params.empresaNome, L + 295, y + 6, { width: 140 });
+      doc.font('Helvetica-Bold').text('CNPJ:', L + 445, y + 6);
+      doc.font('Helvetica').text(params.empresaCnpj ?? '', L + 468, y + 6, { width: 80 });
+      y += 24;
+
+      doc.rect(L, y, W, 20).fillColor('#f5f5f5').fill();
+      doc.fontSize(8).font('Helvetica-Bold').fillColor(DARK).text('PERÍODO:', L + 4, y + 6);
+      doc.font('Helvetica').text(`${fmtDate(params.periodoInicio)} a ${fmtDate(params.periodoFim)}`, L + 50, y + 6, { width: 200 });
+      doc.font('Helvetica-Bold').text('INF. BANCÁRIAS:', L + 270, y + 6);
+      doc.font('Helvetica').text(params.empresaInfoBancarias ?? '', L + 350, y + 6, { width: 155 });
+      y += 28;
+
+      // ── TABELA DE ITENS ──────────────────────────────────────────────────
+      doc.fontSize(10).font('Helvetica-Bold').fillColor(ORANGE).text('ITENS DE CUSTO', L, y);
+      doc.moveTo(L, y + 14).lineTo(R, y + 14).strokeColor(BORDER).lineWidth(0.5).stroke();
+      y += 20;
+
+      const cols = [
+        { label: 'Tipo',        w: 90,  align: 'left'  },
+        { label: 'Data',        w: 65,  align: 'left'  },
+        { label: 'Descrição',   w: 170, align: 'left'  },
+        { label: 'KM',          w: 45,  align: 'right' },
+        { label: 'R$/km',       w: 50,  align: 'right' },
+        { label: 'Valor',       w: 95,  align: 'right' },
+      ] as const;
+
+      doc.rect(L, y, W, 18).fillColor(HEADER_BG).fill();
+      let cx = L;
+      for (const col of cols) {
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#ffffff')
+          .text(col.label, cx + 3, y + 5, { width: col.w - 6, align: col.align as 'left' | 'right' });
+        cx += col.w;
+      }
+      y += 18;
+
+      params.itens.forEach((item, i) => {
+        const rowH = 16;
+        doc.rect(L, y, W, rowH).fillColor(i % 2 === 0 ? '#ffffff' : ROW_BG).fill();
+        doc.rect(L, y, W, rowH).strokeColor(BORDER).lineWidth(0.3).stroke();
+
+        const values = [
+          tipoLabel[item.tipo] ?? item.tipo,
+          fmtDate(item.data),
+          item.descricao,
+          item.km != null ? item.km.toFixed(1) : '',
+          item.precoKm != null ? fmt(item.precoKm) : '',
+          fmt(item.valor),
+        ];
+        cx = L;
+        values.forEach((val, vi) => {
+          const col = cols[vi];
+          doc.fontSize(8).font('Helvetica').fillColor(DARK)
+            .text(val, cx + 3, y + 4, { width: col.w - 6, align: col.align as 'left' | 'right' });
+          cx += col.w;
+        });
+        y += rowH;
+      });
+
+      // Total row
+      doc.rect(L, y, W, 18).fillColor('#e8e8e8').fill();
+      doc.rect(L, y, W, 18).strokeColor(BORDER).lineWidth(0.5).stroke();
+      doc.fontSize(9).font('Helvetica-Bold').fillColor(DARK).text('TOTAL GERAL', L + 3, y + 5);
+      doc.text(fmt(params.valorTotal), L + cols[0].w + cols[1].w + cols[2].w + cols[3].w + cols[4].w + 3, y + 5, { width: cols[5].w - 6, align: 'right' });
+      y += 26;
+
+      // ── RATEIO DE CLIENTES ──────────────────────────────────────────────
+      if (params.clientes.length > 0) {
+        doc.fontSize(10).font('Helvetica-Bold').fillColor(ORANGE).text('RATEIO POR CLIENTE', L, y);
+        doc.moveTo(L, y + 14).lineTo(R, y + 14).strokeColor(BORDER).lineWidth(0.5).stroke();
+        y += 20;
+
+        const rateioCols = [
+          { label: 'Cliente',    w: 300, align: 'left'  },
+          { label: 'Percentual', w: 107, align: 'right' },
+          { label: 'Valor',      w: 108, align: 'right' },
+        ] as const;
+
+        doc.rect(L, y, W, 18).fillColor(HEADER_BG).fill();
+        cx = L;
+        for (const col of rateioCols) {
+          doc.fontSize(8).font('Helvetica-Bold').fillColor('#ffffff')
+            .text(col.label, cx + 3, y + 5, { width: col.w - 6, align: col.align as 'left' | 'right' });
+          cx += col.w;
+        }
+        y += 18;
+
+        params.clientes.forEach((c, i) => {
+          const rowH = 16;
+          doc.rect(L, y, W, rowH).fillColor(i % 2 === 0 ? '#ffffff' : ROW_BG).fill();
+          doc.rect(L, y, W, rowH).strokeColor(BORDER).lineWidth(0.3).stroke();
+          cx = L;
+          [c.nome, `${c.percentual.toFixed(1)}%`, fmt(c.valor)].forEach((val, vi) => {
+            const col = rateioCols[vi];
+            doc.fontSize(8).font('Helvetica').fillColor(DARK)
+              .text(val, cx + 3, y + 4, { width: col.w - 6, align: col.align as 'left' | 'right' });
+            cx += col.w;
+          });
+          y += rowH;
+        });
+        y += 16;
+      }
+
+      // ── ASSINATURA ──────────────────────────────────────────────────────
+      y += 14;
+      if (params.observacoes) {
+        doc.fontSize(9).font('Helvetica-Bold').fillColor(DARK).text('OBSERVAÇÕES:', L, y);
+        doc.font('Helvetica').text(params.observacoes, L, y + 12, { width: 300 });
+        y += 30;
+      }
+
+      doc.moveTo(L, y + 28).lineTo(L + 180, y + 28).strokeColor(DARK).lineWidth(0.5).stroke();
+      doc.fontSize(9).font('Helvetica-Bold').fillColor(DARK).text('ASSINATURA DO CLIENTE:', L, y + 32);
+
       doc.fontSize(8).font('Helvetica').fillColor('#888888')
         .text('Assinado digitalmente via Autentique — www.autentique.com.br', L, doc.page.height - 35, { align: 'center', width: W });
 
