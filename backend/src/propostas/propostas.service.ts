@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrioridadeNotificacao, StatusAssinatura, StatusProposta } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
@@ -506,6 +507,185 @@ export class PropostasService {
 
       return contrato;
     });
+  }
+
+  // ─── NOVO FLUXO: LINK DE ACEITE ──────────────────────────────────────────
+
+  async enviarParaCliente(empresaId: string, propostaId: string) {
+    const proposta = await this.prisma.proposta.findFirst({
+      where: { id: propostaId, empresaId },
+      include: { cliente: true },
+    });
+    if (!proposta) throw new BadRequestException('Proposta não encontrada.');
+    if (proposta.status === StatusProposta.CONVERTIDA) throw new BadRequestException('Esta proposta já foi convertida em contrato.');
+
+    const signatarioEmail = proposta.contatoClienteEmail || proposta.cliente.email;
+    if (!signatarioEmail) throw new BadRequestException('O cliente não possui e-mail cadastrado.');
+
+    const token = randomBytes(32).toString('hex');
+    const frontendUrl = process.env.FRONTEND_URL || 'https://raccolto.com.br';
+    const linkProposta = `${frontendUrl}/proposta/${token}`;
+
+    await this.prisma.proposta.update({
+      where: { id: propostaId },
+      data: {
+        tokenAceite: token,
+        status: StatusProposta.AGUARDANDO_ASSINATURA,
+        autentiqueDocId: null,
+        autentiqueSignUrl: null,
+      },
+    });
+
+    const empresa = await this.prisma.empresa.findUnique({ where: { id: empresaId } });
+    const empresaNome = empresa?.nomeFantasia || empresa?.nome || 'Raccolto';
+    const signatarioNome = proposta.contatoClienteNome || proposta.cliente.contatoPrincipal || proposta.clienteRazaoSocial || 'Cliente';
+
+    void this.mailService.enviarLinkAceite({
+      to: signatarioEmail,
+      toNome: signatarioNome,
+      titulo: proposta.titulo,
+      linkProposta,
+      empresaNome,
+      validadeAte: proposta.validadeAte,
+    });
+
+    await this.notificacoesService.notificarAdmins({
+      empresaId,
+      titulo: 'Proposta enviada ao cliente',
+      mensagem: `Proposta "${proposta.titulo}" enviada para ${signatarioEmail}.`,
+      link: '/propostas',
+      prioridade: PrioridadeNotificacao.ALTA,
+    });
+
+    this.logger.log(`Proposta ${propostaId} enviada ao cliente ${signatarioEmail} (token: ${token.slice(0, 8)}...)`);
+    return { linkProposta };
+  }
+
+  async reenviarLinkCliente(empresaId: string, propostaId: string) {
+    const proposta = await this.prisma.proposta.findFirst({
+      where: { id: propostaId, empresaId },
+      include: { cliente: true },
+    });
+    if (!proposta) throw new BadRequestException('Proposta não encontrada.');
+    if (!proposta.tokenAceite) throw new BadRequestException('Esta proposta ainda não foi enviada ao cliente. Use "Enviar para cliente" primeiro.');
+
+    const signatarioEmail = proposta.contatoClienteEmail || proposta.cliente.email;
+    if (!signatarioEmail) throw new BadRequestException('O cliente não possui e-mail cadastrado.');
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://raccolto.com.br';
+    const linkProposta = `${frontendUrl}/proposta/${proposta.tokenAceite}`;
+    const empresa = await this.prisma.empresa.findUnique({ where: { id: empresaId } });
+    const empresaNome = empresa?.nomeFantasia || empresa?.nome || 'Raccolto';
+    const signatarioNome = proposta.contatoClienteNome || proposta.cliente.contatoPrincipal || proposta.clienteRazaoSocial || 'Cliente';
+
+    await this.mailService.enviarLinkAceite({
+      to: signatarioEmail,
+      toNome: signatarioNome,
+      titulo: proposta.titulo,
+      linkProposta,
+      empresaNome,
+      validadeAte: proposta.validadeAte,
+    });
+
+    return { message: `Link reenviado para ${signatarioEmail}.`, linkProposta };
+  }
+
+  async buscarPropostaPorToken(token: string) {
+    const proposta = await this.prisma.proposta.findUnique({
+      where: { tokenAceite: token },
+      include: {
+        cobrancas: { orderBy: { ordem: 'asc' } },
+        empresa: { select: { nome: true, nomeFantasia: true, cnpj: true, logradouro: true, cidade: true, estado: true } },
+      },
+    });
+    if (!proposta) throw new NotFoundException('Proposta não encontrada.');
+
+    return {
+      id: proposta.id,
+      titulo: proposta.titulo,
+      objeto: proposta.objeto,
+      clienteRazaoSocial: proposta.clienteRazaoSocial,
+      contatoClienteNome: proposta.contatoClienteNome,
+      valor: proposta.valor,
+      moeda: proposta.moeda,
+      formaPagamento: proposta.formaPagamento,
+      periodicidadeCobranca: proposta.periodicidadeCobranca,
+      quantidadeParcelas: proposta.quantidadeParcelas,
+      valorParcela: proposta.valorParcela,
+      dataInicio: proposta.dataInicio,
+      dataFim: proposta.dataFim,
+      validadeAte: proposta.validadeAte,
+      textoPropostaBase: proposta.textoPropostaBase,
+      observacoes: proposta.observacoes,
+      status: proposta.status,
+      dataAceite: proposta.dataAceite,
+      cobrancas: proposta.cobrancas,
+      empresa: {
+        nome: proposta.empresa.nomeFantasia || proposta.empresa.nome,
+        cnpj: proposta.empresa.cnpj,
+        cidade: proposta.empresa.cidade,
+        estado: proposta.empresa.estado,
+      },
+    };
+  }
+
+  async aceitarProposta(token: string) {
+    const proposta = await this.prisma.proposta.findUnique({
+      where: { tokenAceite: token },
+      include: { cobrancas: { orderBy: { ordem: 'asc' } } },
+    });
+    if (!proposta) throw new NotFoundException('Proposta não encontrada.');
+    if (proposta.status === StatusProposta.CONVERTIDA) {
+      return { message: 'Proposta já aceita anteriormente.', contratoId: proposta.contratoGeradoId };
+    }
+    if (proposta.status === StatusProposta.RECUSADA) {
+      throw new BadRequestException('Esta proposta foi recusada e não pode ser aceita.');
+    }
+
+    const contrato = await this.gerarContratoFromProposta(proposta);
+
+    await this.prisma.proposta.update({
+      where: { id: proposta.id },
+      data: {
+        status: StatusProposta.CONVERTIDA,
+        dataAceite: new Date(),
+        contratoGeradoId: contrato.id,
+      },
+    });
+
+    await this.notificacoesService.notificarAdmins({
+      empresaId: proposta.empresaId,
+      titulo: 'Proposta aceita — contrato gerado',
+      mensagem: `"${proposta.titulo}" foi aceita pelo cliente. Contrato gerado aguardando conferência.`,
+      link: '/contratos',
+      prioridade: PrioridadeNotificacao.ALTA,
+    });
+
+    this.logger.log(`Proposta ${proposta.id} aceita pelo cliente → contrato ${contrato.id}`);
+    return { message: 'Proposta aceita com sucesso! O contrato foi gerado.', contratoId: contrato.id };
+  }
+
+  async recusarProposta(token: string) {
+    const proposta = await this.prisma.proposta.findUnique({ where: { tokenAceite: token } });
+    if (!proposta) throw new NotFoundException('Proposta não encontrada.');
+    if (proposta.status === StatusProposta.CONVERTIDA) {
+      throw new BadRequestException('Esta proposta já foi aceita.');
+    }
+
+    await this.prisma.proposta.update({
+      where: { id: proposta.id },
+      data: { status: StatusProposta.RECUSADA },
+    });
+
+    await this.notificacoesService.notificarAdmins({
+      empresaId: proposta.empresaId,
+      titulo: 'Proposta recusada pelo cliente',
+      mensagem: `"${proposta.titulo}" foi recusada pelo cliente.`,
+      link: '/propostas',
+      prioridade: PrioridadeNotificacao.ALTA,
+    });
+
+    return { message: 'Proposta recusada.' };
   }
 
   private buildCobrancas(data: Partial<CreatePropostaDto>): { ordem: number; vencimento: string; valor: number; descricao?: string }[] {

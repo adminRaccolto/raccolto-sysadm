@@ -140,6 +140,7 @@ type PropostaForm = {
   autentiqueDocId: string | null;
   autentiqueSignUrl: string | null;
   pdfAssinadoUrl: string | null;
+  tokenAceite: string | null;
   contratoGeradoId: string | null;
   cobrancas: PropostaCobranca[];
 };
@@ -149,6 +150,7 @@ type PropostaApi = PropostaForm & {
   createdAt: string;
   updatedAt: string;
   dataAssinatura: string | null;
+  dataAceite: string | null;
   cliente?: { id: string; razaoSocial: string; nomeFantasia: string; email: string; cpfCnpj: string; contatoPrincipal: string } | null;
   produtoServico?: { id: string; nome: string } | null;
   contratoGerado?: { id: string; titulo: string; status: string; statusAssinatura: string } | null;
@@ -184,6 +186,7 @@ const initialForm: PropostaForm = {
   autentiqueDocId: null,
   autentiqueSignUrl: null,
   pdfAssinadoUrl: null,
+  tokenAceite: null,
   contratoGeradoId: null,
   cobrancas: [],
 };
@@ -223,7 +226,7 @@ function formatClienteEndereco(cliente?: Cliente | null) {
 function labelStatus(status: StatusProposta): string {
   const map: Record<StatusProposta, string> = {
     RASCUNHO: 'Rascunho',
-    AGUARDANDO_ASSINATURA: 'Ag. assinatura',
+    AGUARDANDO_ASSINATURA: 'Ag. aceite',
     ASSINADA: 'Assinada',
     RECUSADA: 'Recusada',
     EXPIRADA: 'Expirada',
@@ -376,6 +379,7 @@ export default function PropostasPage() {
       autentiqueDocId: p.autentiqueDocId ?? null,
       autentiqueSignUrl: p.autentiqueSignUrl ?? null,
       pdfAssinadoUrl: p.pdfAssinadoUrl ?? null,
+      tokenAceite: p.tokenAceite ?? null,
       contratoGeradoId: p.contratoGeradoId ?? null,
       cobrancas: (p.cobrancas || []).map((c) => ({
         ordem: c.ordem,
@@ -480,25 +484,25 @@ export default function PropostasPage() {
     }
   }
 
-  async function handleEnviarAssinatura(p: PropostaApi) {
+  async function handleEnviarParaCliente(p: PropostaApi) {
     setEnviando(true);
     setError(null);
     try {
-      await http.post(`/propostas/${p.id}/enviar-assinatura`);
-      setSuccess('Proposta enviada para assinatura.');
+      await http.post(`/propostas/${p.id}/enviar-cliente`);
+      setSuccess('Link de aceite enviado ao cliente por e-mail.');
       await loadData();
     } catch (err) {
-      setError(getApiError(err, 'Erro ao enviar para assinatura.'));
+      setError(getApiError(err, 'Erro ao enviar proposta ao cliente.'));
     } finally {
       setEnviando(false);
     }
   }
 
-  async function handleReenviarLink(p: PropostaApi) {
+  async function handleReenviarLinkCliente(p: PropostaApi) {
     setEnviando(true);
     setError(null);
     try {
-      const res = await http.post<{ message: string }>(`/propostas/${p.id}/reenviar-link`);
+      const res = await http.post<{ message: string }>(`/propostas/${p.id}/reenviar-link-cliente`);
       setSuccess(res.data.message || 'Link reenviado com sucesso.');
     } catch (err) {
       setError(getApiError(err, 'Erro ao reenviar link.'));
@@ -558,13 +562,13 @@ export default function PropostasPage() {
     <div className="page-stack">
       <PageHeader
         title="Propostas"
-        subtitle="Crie propostas comerciais, envie para assinatura e gere o contrato automaticamente após a aprovação."
+        subtitle="Crie propostas comerciais, envie o link de aceite ao cliente e gere o contrato automaticamente após a aprovação."
         chips={loading ? [] : (() => {
           const abertas = propostas.filter((p) => p.status === 'RASCUNHO' || p.status === 'AGUARDANDO_ASSINATURA').length;
-          const assinadas = propostas.filter((p) => p.status === 'ASSINADA').length;
+          const convertidas = propostas.filter((p) => p.status === 'CONVERTIDA').length;
           return [
             ...(abertas > 0 ? [{ label: `${abertas} em aberto` }] : []),
-            ...(assinadas > 0 ? [{ label: `${assinadas} assinada${assinadas !== 1 ? 's' : ''}` }] : []),
+            ...(convertidas > 0 ? [{ label: `${convertidas} convertida${convertidas !== 1 ? 's' : ''}` }] : []),
           ];
         })()}
       />
@@ -607,37 +611,20 @@ export default function PropostasPage() {
               <button
                 className="button button--small"
                 type="button"
-                disabled={!selectedProposta || !podeEnviar(selectedProposta!) || enviando || !!selectedProposta?.autentiqueDocId}
-                onClick={() => selectedProposta && void handleEnviarAssinatura(selectedProposta)}
+                disabled={!selectedProposta || !podeEnviar(selectedProposta!) || enviando || !!selectedProposta?.tokenAceite}
+                onClick={() => selectedProposta && void handleEnviarParaCliente(selectedProposta)}
               >
-                {enviando ? 'Enviando…' : selectedProposta?.autentiqueDocId ? 'Enviado' : 'Enviar para assinar'}
+                {enviando ? 'Enviando…' : selectedProposta?.tokenAceite ? 'Enviado' : 'Enviar para cliente'}
               </button>
-              {selectedProposta?.autentiqueDocId && (selectedProposta.status === 'AGUARDANDO_ASSINATURA' || selectedProposta.status === 'RASCUNHO') ? (
+              {selectedProposta?.tokenAceite && selectedProposta.status === 'AGUARDANDO_ASSINATURA' ? (
                 <button
                   className="button button--ghost button--small"
                   type="button"
                   disabled={enviando}
-                  onClick={() => {
-                    setEnviando(true);
-                    setError(null);
-                    http.post(`/propostas/${selectedProposta.id}/sincronizar`)
-                      .then(() => { setSuccess('Status sincronizado com Autentique.'); return loadData(); })
-                      .catch((err) => setError(getApiError(err, 'Erro ao sincronizar.')))
-                      .finally(() => setEnviando(false));
-                  }}
+                  onClick={() => void handleReenviarLinkCliente(selectedProposta)}
                 >
-                  {enviando ? 'Sincronizando…' : 'Sincronizar assinatura'}
+                  {enviando ? 'Enviando…' : 'Reenviar link'}
                 </button>
-              ) : null}
-              {selectedProposta?.autentiqueSignUrl && selectedProposta.statusAssinatura !== 'ASSINADO' ? (
-                <a className="button button--ghost button--small" href={selectedProposta.autentiqueSignUrl} target="_blank" rel="noreferrer">
-                  Ver link
-                </a>
-              ) : null}
-              {selectedProposta?.pdfAssinadoUrl ? (
-                <a className="button button--ghost button--small" href={selectedProposta.pdfAssinadoUrl} target="_blank" rel="noreferrer">
-                  PDF assinado
-                </a>
               ) : null}
               {selectedProposta?.contratoGerado ? (
                 <span className="button button--ghost button--small" style={{ pointerEvents: 'none', opacity: 0.8 }}>
@@ -675,17 +662,17 @@ export default function PropostasPage() {
           </div>
         ) : null}
 
-        {selectedProposta?.autentiqueSignUrl && selectedProposta.statusAssinatura !== 'ASSINADO' ? (
+        {selectedProposta?.tokenAceite && selectedProposta.status === 'AGUARDANDO_ASSINATURA' ? (
           <div className="panel" style={{ background: 'var(--warning-bg, #fffbeb)', border: '1px solid #f59e0b', padding: '12px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 200 }}>
-                <strong style={{ fontSize: 13 }}>Link de assinatura</strong>
+                <strong style={{ fontSize: 13 }}>Link de aceite para o cliente</strong>
                 <p style={{ fontSize: 12, color: 'var(--muted)', margin: '2px 0 8px' }}>
-                  Envie este link ao cliente se o email não chegou. O Autentique também envia automaticamente.
+                  Compartilhe este link com o cliente para que ele possa visualizar e aceitar a proposta.
                 </p>
                 <input
                   readOnly
-                  value={selectedProposta.autentiqueSignUrl}
+                  value={`${window.location.origin}/proposta/${selectedProposta.tokenAceite}`}
                   style={{ width: '100%', fontSize: 12, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'text' }}
                   onClick={(e) => (e.target as HTMLInputElement).select()}
                 />
@@ -695,7 +682,7 @@ export default function PropostasPage() {
                   className="button button--small"
                   type="button"
                   onClick={() => {
-                    void navigator.clipboard.writeText(selectedProposta.autentiqueSignUrl!);
+                    void navigator.clipboard.writeText(`${window.location.origin}/proposta/${selectedProposta.tokenAceite}`);
                     setSuccess('Link copiado para a área de transferência.');
                   }}
                 >
@@ -705,11 +692,16 @@ export default function PropostasPage() {
                   className="button button--ghost button--small"
                   type="button"
                   disabled={enviando}
-                  onClick={() => void handleReenviarLink(selectedProposta)}
+                  onClick={() => void handleReenviarLinkCliente(selectedProposta)}
                 >
                   {enviando ? 'Enviando…' : 'Reenviar por e-mail'}
                 </button>
-                <a className="button button--ghost button--small" href={selectedProposta.autentiqueSignUrl} target="_blank" rel="noreferrer">
+                <a
+                  className="button button--ghost button--small"
+                  href={`${window.location.origin}/proposta/${selectedProposta.tokenAceite}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Abrir
                 </a>
               </div>
@@ -732,7 +724,7 @@ export default function PropostasPage() {
                   <th>Valor</th>
                   <th>Validade</th>
                   <th>Status</th>
-                  <th>Link assinatura</th>
+                  <th>Link aceite</th>
                 </tr>
               </thead>
               <tbody>
@@ -756,13 +748,13 @@ export default function PropostasPage() {
                       </span>
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      {p.autentiqueSignUrl ? (
+                      {p.tokenAceite ? (
                         <button
                           className="button button--ghost button--small"
                           type="button"
-                          title={p.autentiqueSignUrl}
+                          title={`${window.location.origin}/proposta/${p.tokenAceite}`}
                           onClick={() => {
-                            void navigator.clipboard.writeText(p.autentiqueSignUrl!);
+                            void navigator.clipboard.writeText(`${window.location.origin}/proposta/${p.tokenAceite}`);
                             setSuccess('Link copiado.');
                           }}
                         >
@@ -782,7 +774,7 @@ export default function PropostasPage() {
       <Modal
         open={isModalOpen}
         title={editingId ? 'Editar proposta' : 'Nova proposta'}
-        subtitle="Preencha os dados da proposta. Após assinatura digital, o contrato será gerado automaticamente."
+        subtitle="Preencha os dados da proposta. Após o aceite do cliente, o contrato será gerado automaticamente."
         onClose={closeModal}
       >
         <form className="form-grid" onSubmit={(e) => void handleSubmit(e)}>

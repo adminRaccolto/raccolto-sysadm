@@ -60,6 +60,39 @@ export class PropostasController {
     return this.propostasService.reenviarLink(user.empresaId, id);
   }
 
+  @Post(':id/enviar-cliente')
+  enviarParaCliente(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.propostasService.enviarParaCliente(user.empresaId, id);
+  }
+
+  @Post(':id/reenviar-link-cliente')
+  reenviarLinkCliente(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.propostasService.reenviarLinkCliente(user.empresaId, id);
+  }
+
+  @Public()
+  @Roles()
+  @Get('public/:token')
+  buscarPorToken(@Param('token') token: string) {
+    return this.propostasService.buscarPropostaPorToken(token);
+  }
+
+  @Public()
+  @Roles()
+  @Post('public/:token/aceitar')
+  @HttpCode(200)
+  aceitar(@Param('token') token: string) {
+    return this.propostasService.aceitarProposta(token);
+  }
+
+  @Public()
+  @Roles()
+  @Post('public/:token/recusar')
+  @HttpCode(200)
+  recusar(@Param('token') token: string) {
+    return this.propostasService.recusarProposta(token);
+  }
+
   @Public()
   @Roles()
   @Post('webhook/autentique')

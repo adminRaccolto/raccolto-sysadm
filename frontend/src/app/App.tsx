@@ -39,6 +39,7 @@ import FuncionariosPage from '../pages/sistema/FuncionariosPage';
 import FornecedoresPage from '../pages/sistema/FornecedoresPage';
 import AssinaturasAratoPage from '../pages/financeiro/AssinaturasAratoPage';
 import DiagramasPage from '../pages/DiagramasPage';
+import PropostaClientePage from '../pages/PropostaClientePage';
 
 export default function App() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
       <Route path="/captacao/:slug" element={<CaptacaoPublicPage />} />
       <Route path="/diagnostico/:token" element={<DiagnosticoPublicoPage />} />
       <Route path="/lead/:empresaId" element={<DiagnosticoLeadPublicoPage />} />
+      <Route path="/proposta/:token" element={<PropostaClientePage />} />
       <Route path="propostas/:id/preview" element={<ProtectedRoute><PropostaPreviewPage /></ProtectedRoute>} />
       <Route path="/" element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />

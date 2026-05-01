@@ -494,6 +494,8 @@ model Proposta {
   autentiqueSignUrl         String?
   pdfAssinadoUrl            String?
   dataAssinatura            DateTime?
+  tokenAceite               String?        @unique
+  dataAceite                DateTime?
   contratoGeradoId          String?
   createdAt                 DateTime       @default(now())
   updatedAt                 DateTime       @updatedAt
