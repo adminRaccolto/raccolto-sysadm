@@ -198,7 +198,10 @@ export class ContratosService {
             data.contatoClienteEmail !== undefined
               ? data.contatoClienteEmail?.trim().toLowerCase() || cliente.email || null
               : cliente.email || null,
-          contatoClienteTelefone: cliente.telefone || null,
+          contatoClienteTelefone:
+            data.contatoClienteTelefone !== undefined
+              ? data.contatoClienteTelefone?.trim() || cliente.telefone || null
+              : cliente.telefone || null,
           contatoClienteWhatsapp: cliente.whatsapp || null,
           clienteRazaoSocial: cliente.razaoSocial,
           clienteNomeFantasia: cliente.nomeFantasia || null,
@@ -741,7 +744,7 @@ export class ContratosService {
       responsavelInterno: data.responsavelInterno?.trim() || null,
       contatoClienteNome: data.contatoClienteNome?.trim() || cliente.contatoPrincipal || null,
       contatoClienteEmail: data.contatoClienteEmail?.trim().toLowerCase() || cliente.email || null,
-      contatoClienteTelefone: cliente.telefone || null,
+      contatoClienteTelefone: data.contatoClienteTelefone?.trim() || cliente.telefone || null,
       contatoClienteWhatsapp: cliente.whatsapp || null,
       clienteRazaoSocial: cliente.razaoSocial,
       clienteNomeFantasia: cliente.nomeFantasia || null,

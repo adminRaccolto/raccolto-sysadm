@@ -71,6 +71,10 @@ export class CreateContratoDto {
   contatoClienteEmail?: string;
 
   @IsOptional()
+  @IsString()
+  contatoClienteTelefone?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   valor?: number;
