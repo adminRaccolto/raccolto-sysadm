@@ -8,7 +8,6 @@ import Modal from '../components/Modal';
 import PageHeader from '../components/PageHeader';
 import type {
   Cliente,
-  ItemReembolso,
   Projeto,
   RelatorioReembolso,
   TipoItemReembolso,
@@ -531,7 +530,7 @@ export default function RelatorioReembolsoPage() {
                             Verificar Assinatura
                           </button>
                         ) : null}
-                        {(r.status === 'APROVADO' || r.status === 'RASCUNHO') && r.clientes.length > 0 && r.status !== 'FINANCEIRO_GERADO' ? (
+                        {(r.status === 'APROVADO' || r.status === 'RASCUNHO') && r.clientes.length > 0 ? (
                           <button
                             className="button button--ghost button--small"
                             type="button"
