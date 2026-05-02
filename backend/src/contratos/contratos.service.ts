@@ -1,11 +1,14 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { PrioridadeNotificacao, Prisma, StatusAssinatura } from '@prisma/client';
+import { PrioridadeNotificacao, Prisma, StatusAssinatura, StatusContrato } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AutentiqueService } from './autentique.service';
 import { MailService } from '../mail/mail.service';
+import { StorageService } from '../storage/storage.service';
 import { ContratoCobrancaDto, CreateContratoDto } from './dto/create-contrato.dto';
 import { ensureContratoModelosPadrao } from './contrato-modelos.seed';
+
+const PDFDocument = require('pdfkit') as typeof import('pdfkit');
 
 @Injectable()
 export class ContratosService {
@@ -16,6 +19,7 @@ export class ContratosService {
     private readonly notificacoesService: NotificacoesService,
     private readonly autentiqueService: AutentiqueService,
     private readonly mailService: MailService,
+    private readonly storageService: StorageService,
   ) {}
 
 
@@ -853,5 +857,111 @@ export class ContratosService {
         orderBy: { ordem: 'asc' as const },
       },
     } satisfies Prisma.ContratoInclude;
+  }
+
+  async gerarPdfBuffer(empresaId: string, contratoId: string): Promise<{ buffer: Buffer; titulo: string }> {
+    const contrato = await this.prisma.contrato.findFirst({
+      where: { id: contratoId, empresaId },
+      include: { cobrancas: { orderBy: { ordem: 'asc' } } },
+    });
+    if (!contrato) throw new BadRequestException('Contrato não encontrado.');
+
+    const texto = await this.resolverTextoContrato(contrato as any);
+    const titulo = contrato.titulo;
+    const buffer = await this.gerarPdfDoTexto(titulo, texto ?? titulo);
+    return { buffer, titulo };
+  }
+
+  async assinarEmpresa(empresaId: string, contratoId: string): Promise<{ message: string; pdfUrl: string | null }> {
+    const contrato = await this.prisma.contrato.findFirst({
+      where: { id: contratoId, empresaId },
+      include: { cobrancas: { orderBy: { ordem: 'asc' } } },
+    });
+    if (!contrato) throw new BadRequestException('Contrato não encontrado.');
+    if (contrato.statusAssinatura === StatusAssinatura.ASSINADO) {
+      throw new BadRequestException('Contrato já está assinado por ambas as partes.');
+    }
+
+    const { buffer, titulo } = await this.gerarPdfBuffer(empresaId, contratoId);
+
+    let pdfUrl: string | null = null;
+    try {
+      pdfUrl = await this.storageService.uploadFile(
+        buffer,
+        `${titulo}-assinado.pdf`,
+        'application/pdf',
+        'contratos',
+      );
+    } catch (err) {
+      this.logger.error('Falha ao fazer upload do PDF assinado:', err);
+    }
+
+    await this.prisma.contrato.update({
+      where: { id: contratoId },
+      data: {
+        statusAssinatura: StatusAssinatura.ASSINADO,
+        status: StatusContrato.ATIVO,
+        dataAssinatura: new Date(),
+        ...(pdfUrl ? { pdfAssinadoUrl: pdfUrl } : {}),
+      },
+    });
+
+    const email = contrato.contatoClienteEmail;
+    if (email) {
+      try {
+        await this.mailService.enviarContratoAssinado({
+          to: email,
+          toNome: contrato.contatoClienteNome || contrato.clienteRazaoSocial || 'Cliente',
+          titulo,
+          pdfBuffer: buffer,
+          pdfNome: `${titulo}-assinado.pdf`,
+        });
+      } catch (err) {
+        this.logger.error('Falha ao enviar e-mail com contrato assinado:', err);
+      }
+    }
+
+    await this.sincronizarRecebiveisAutomaticos(empresaId, contratoId);
+    await this.notificacoesService.notificarAdmins({
+      empresaId,
+      titulo: 'Contrato assinado pela empresa',
+      mensagem: `Contrato "${titulo}" foi assinado pela empresa e ${email ? 'enviado ao cliente' : 'finalizado'}.`,
+      link: '/contratos',
+      prioridade: PrioridadeNotificacao.ALTA,
+    });
+
+    return { message: 'Contrato assinado pela empresa com sucesso.', pdfUrl };
+  }
+
+  private gerarPdfDoTexto(titulo: string, texto: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 60, size: 'A4' });
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      doc.fontSize(18).font('Helvetica-Bold').text(titulo, { align: 'center' });
+      doc.moveDown(1.5);
+      doc.fontSize(11).font('Helvetica');
+
+      for (const linha of texto.split('\n')) {
+        const trimmed = linha.trim();
+        if (!trimmed) { doc.moveDown(0.5); continue; }
+        if (/^[\d]+\.|^CLÁUSULA|^[A-ZÁÉÍÓÚ\s]{8,}$/.test(trimmed)) {
+          doc.font('Helvetica-Bold').text(trimmed).font('Helvetica');
+        } else {
+          doc.text(trimmed, { align: 'justify' });
+        }
+        doc.moveDown(0.3);
+      }
+
+      doc.moveDown(4);
+      doc.fontSize(10).font('Helvetica').fillColor('#333333');
+      const assinado = `Assinado eletronicamente em ${new Date().toLocaleDateString('pt-BR')}`;
+      doc.text(assinado, { align: 'center' });
+
+      doc.end();
+    });
   }
 }

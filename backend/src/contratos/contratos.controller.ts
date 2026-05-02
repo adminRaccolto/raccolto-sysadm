@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { PerfilUsuario } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -67,6 +68,24 @@ export class ContratosController {
   @Post(':id/reenviar-link')
   reenviarLink(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.contratosService.reenviarLink(user.empresaId, id);
+  }
+
+  @Get(':id/pdf')
+  async gerarPdf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const { buffer, titulo } = await this.contratosService.gerarPdfBuffer(user.empresaId, id);
+    const safe = titulo.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9-_]/g, '-');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safe}.pdf"`);
+    res.send(buffer);
+  }
+
+  @Post(':id/assinar-empresa')
+  assinarEmpresa(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.contratosService.assinarEmpresa(user.empresaId, id);
   }
 
   @Put(':id')

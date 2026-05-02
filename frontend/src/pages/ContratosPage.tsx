@@ -664,6 +664,37 @@ export default function ContratosPage() {
     }
   }
 
+  function handleBaixarPdf(contrato: Contrato) {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+    const token = localStorage.getItem('raccolto_token');
+    const url = `${apiUrl}/contratos/${contrato.id}/pdf`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${contrato.titulo}.pdf`;
+    // Usa fetch para incluir autenticação
+    void fetch(url, { headers: { Authorization: `Bearer ${token ?? ''}` } })
+      .then((r) => r.blob())
+      .then((blob) => {
+        a.href = URL.createObjectURL(blob);
+        a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch(() => setError('Falha ao gerar PDF.'));
+  }
+
+  async function handleAssinarEmpresa(contrato: Contrato) {
+    if (!confirm(`Confirmar assinatura da empresa no contrato "${contrato.titulo}"? O PDF será gerado e enviado ao cliente por e-mail.`)) return;
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await http.post<{ message: string }>(`/contratos/${contrato.id}/assinar-empresa`);
+      setSuccess(res.data.message || 'Contrato assinado e enviado ao cliente.');
+      await loadData();
+    } catch (err) {
+      handleApiError(err, 'Falha ao assinar contrato.');
+    }
+  }
+
   async function handleDelete(contrato: Contrato) {
     const confirmed = window.confirm(
       `Excluir o contrato "${contrato.titulo}"? A exclusão só funciona se ele ainda não tiver vínculos operacionais.`,
@@ -761,6 +792,26 @@ export default function ContratosPage() {
                     Reenviar por e-mail
                   </button>
                 </>
+              ) : null}
+              {selectedContrato ? (
+                <button
+                  className="button button--ghost button--small"
+                  type="button"
+                  onClick={() => handleBaixarPdf(selectedContrato)}
+                  title="Baixar PDF do contrato com variáveis preenchidas"
+                >
+                  Baixar PDF
+                </button>
+              ) : null}
+              {selectedContrato && selectedContrato.statusAssinatura !== 'ASSINADO' ? (
+                <button
+                  className="button button--small"
+                  type="button"
+                  onClick={() => void handleAssinarEmpresa(selectedContrato)}
+                  title="Registrar assinatura da empresa e enviar contrato ao cliente"
+                >
+                  Assinar pela empresa
+                </button>
               ) : null}
               {selectedContrato?.pdfAssinadoUrl ? (
                 <a className="button button--ghost button--small" href={selectedContrato.pdfAssinadoUrl} target="_blank" rel="noreferrer">PDF assinado</a>

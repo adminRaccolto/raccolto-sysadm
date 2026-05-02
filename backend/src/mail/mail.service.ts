@@ -135,6 +135,41 @@ export class MailService {
     }
   }
 
+  async enviarContratoAssinado(params: {
+    to: string;
+    toNome: string;
+    titulo: string;
+    pdfBuffer: Buffer;
+    pdfNome: string;
+  }): Promise<void> {
+    const transporter = this.getTransporter();
+    if (!transporter) {
+      this.logger.warn('SMTP não configurado — e-mail de contrato assinado não enviado.');
+      return;
+    }
+    const from = process.env.SMTP_FROM || '"Raccolto" <noreply@raccolto.com.br>';
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
+        <h2 style="color:#1a2b4a;">Contrato assinado — ${params.titulo}</h2>
+        <p>Olá, <strong>${params.toNome}</strong>.</p>
+        <p>Segue em anexo o contrato <strong>${params.titulo}</strong> assinado por ambas as partes.</p>
+        <p>Guarde este documento para seus registros.</p>
+        <p style="color:#888;font-size:12px;margin-top:24px;">Este e-mail foi enviado pela plataforma Raccolto.</p>
+      </div>`;
+    try {
+      await transporter.sendMail({
+        from,
+        to: params.to,
+        subject: `Contrato assinado — ${params.titulo}`,
+        html,
+        attachments: [{ filename: params.pdfNome, content: params.pdfBuffer, contentType: 'application/pdf' }],
+      });
+      this.logger.log(`Contrato assinado enviado para ${params.to}`);
+    } catch (err) {
+      this.logger.error('Falha ao enviar contrato assinado:', err);
+    }
+  }
+
   async enviarAvisoAtrasoArato(params: {
     to: string;
     toNome: string;
