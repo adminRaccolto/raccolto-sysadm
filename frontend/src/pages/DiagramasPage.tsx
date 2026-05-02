@@ -13,7 +13,7 @@ import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
   addEdge, useNodesState, useEdgesState, useReactFlow,
   Handle, Position, BackgroundVariant, MarkerType, ConnectionMode, NodeResizer,
-  type Node, type Edge, type Connection, type NodeProps, type NodeMouseHandler,
+  type Node, type Edge, type Connection, type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
