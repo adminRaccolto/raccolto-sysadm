@@ -13,7 +13,7 @@ import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
   addEdge, useNodesState, useEdgesState, useReactFlow,
   Handle, Position, BackgroundVariant, MarkerType, ConnectionMode, NodeResizer,
-  type Node, type Edge, type Connection, type NodeProps,
+  type Node, type Edge, type Connection, type NodeProps, type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -287,8 +287,8 @@ function DiagramNode({ data, id, selected }: NodeProps) {
       <NodeResizer
         minWidth={40} minHeight={30}
         isVisible={!!selected}
-        onResize={(_, { width, height }) => { setW(Math.round(width)); setH(Math.round(height)); }}
-        onResizeEnd={(_, { width, height }) => {
+        onResize={(_: unknown, { width, height }: { width: number; height: number }) => { setW(Math.round(width)); setH(Math.round(height)); }}
+        onResizeEnd={(_: unknown, { width, height }: { width: number; height: number }) => {
           const nw = Math.round(width), nh = Math.round(height);
           setW(nw); setH(nh);
           updateNodeData(id, { w: nw, h: nh });
@@ -393,7 +393,7 @@ function FluxoEditorInner({ data, onSave }: { data: Record<string, unknown>; onS
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({ Fluxograma: true, BPMN: false, Swimlane: false, Geral: false });
 
-  const selectedNode = nodes.find(n => n.id === selectedId) ?? null;
+  const selectedNode = nodes.find((n: Node) => n.id === selectedId) ?? null;
 
   useEffect(() => {
     if (!hasMounted.current) { hasMounted.current = true; return; }
@@ -403,7 +403,7 @@ function FluxoEditorInner({ data, onSave }: { data: Record<string, unknown>; onS
   }, [nodes, edges]);
 
   const onConnect = useCallback((c: Connection) => {
-    setEdges(eds => addEdge({ ...c, ...DEFAULT_EDGE_OPTIONS }, eds));
+    setEdges((eds: Edge[]) => addEdge({ ...c, ...DEFAULT_EDGE_OPTIONS }, eds));
   }, [setEdges]);
 
   function onDragOver(e: React.DragEvent) {
@@ -424,12 +424,12 @@ function FluxoEditorInner({ data, onSave }: { data: Record<string, unknown>; onS
       style: { width: shape.w, height: shape.h },
       data: { shapeType: shape.shapeType, label: shape.label, fill: shape.defaultFill, stroke: shape.defaultStroke, w: shape.w, h: shape.h },
     };
-    setNodes(nds => [...nds, newNode]);
+    setNodes((nds: Node[]) => [...nds, newNode]);
   }
 
   function patchSelected(patch: Record<string, unknown>) {
     if (!selectedId) return;
-    setNodes(nds => nds.map(n => n.id === selectedId ? { ...n, data: { ...n.data, ...patch } } : n));
+    setNodes((nds: Node[]) => nds.map((n: Node) => n.id === selectedId ? { ...n, data: { ...n.data, ...patch } } : n));
   }
 
   function deleteSelected() {
@@ -508,7 +508,7 @@ function FluxoEditorInner({ data, onSave }: { data: Record<string, unknown>; onS
           onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onDrop={onDrop} onDragOver={onDragOver}
-          onNodeClick={(_, n) => setSelectedId(n.id)}
+          onNodeClick={(_: React.MouseEvent, n: Node) => setSelectedId(n.id)}
           onPaneClick={() => setSelectedId(null)}
           nodeTypes={NODE_TYPES}
           defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
@@ -520,7 +520,7 @@ function FluxoEditorInner({ data, onSave }: { data: Record<string, unknown>; onS
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d1d5db" />
           <Controls style={{ bottom: 80 }} />
-          <MiniMap nodeColor={n => (n.data.fill as string) || '#dbeafe'} style={{ background: '#f1f5f9' }} />
+          <MiniMap nodeColor={(n: Node) => (n.data.fill as string) || '#dbeafe'} style={{ background: '#f1f5f9' }} />
         </ReactFlow>
       </div>
     </div>
