@@ -54,7 +54,6 @@ function EtapasTab() {
   const [showNew, setShowNew] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // drag state
   const dragIdx = useRef<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
 
@@ -63,8 +62,8 @@ function EtapasTab() {
   async function load() {
     try {
       setLoading(true);
-      const data = await http.get('/crm/etapas');
-      setEtapas(data);
+      const res = await http.get<CrmEtapa[]>('/crm/etapas');
+      setEtapas(res.data);
     } catch {
       setError('Falha ao carregar etapas.');
     } finally {
@@ -81,8 +80,8 @@ function EtapasTab() {
   async function saveEdit(e: CrmEtapa) {
     try {
       setSaving(true);
-      const updated = await http.put(`/crm/etapas/${e.id}`, { nome: editNome, cor: editCor });
-      setEtapas((prev) => prev.map((x) => (x.id === e.id ? { ...x, ...updated } : x)));
+      const res = await http.put<CrmEtapa>(`/crm/etapas/${e.id}`, { nome: editNome, cor: editCor });
+      setEtapas((prev) => prev.map((x) => (x.id === e.id ? { ...x, ...res.data } : x)));
       setEditingId(null);
       setSuccess('Etapa atualizada.');
     } catch (err: any) {
@@ -121,8 +120,8 @@ function EtapasTab() {
     try {
       setSaving(true);
       const chave = newNome.trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
-      const created = await http.post('/crm/etapas', { chave, nome: newNome.trim(), cor: newCor });
-      setEtapas((prev) => [...prev, created]);
+      const res = await http.post<CrmEtapa>('/crm/etapas', { chave, nome: newNome.trim(), cor: newCor });
+      setEtapas((prev) => [...prev, res.data]);
       setNewNome('');
       setNewCor('#6366f1');
       setShowNew(false);
@@ -149,8 +148,8 @@ function EtapasTab() {
 
   return (
     <div className="space-y-4">
-      <Feedback type="error" message={error} onClose={() => setError('')} />
-      <Feedback type="success" message={success} onClose={() => setSuccess('')} />
+      {error && <Feedback type="error" message={error} />}
+      {success && <Feedback type="success" message={success} />}
 
       <p className="text-sm text-gray-500">Arraste para reordenar. A ordem define as colunas do Kanban.</p>
 
@@ -259,8 +258,8 @@ function TagsTab() {
   async function load() {
     try {
       setLoading(true);
-      const data = await http.get('/crm/tags');
-      setTags(data);
+      const res = await http.get<CrmTag[]>('/crm/tags');
+      setTags(res.data);
     } catch {
       setError('Falha ao carregar tags.');
     } finally {
@@ -272,8 +271,8 @@ function TagsTab() {
     if (!newNome.trim()) return;
     try {
       setSaving(true);
-      const created = await http.post('/crm/tags', { nome: newNome.trim(), cor: newCor });
-      setTags((prev) => [...prev, created].sort((a, b) => a.nome.localeCompare(b.nome)));
+      const res = await http.post<CrmTag>('/crm/tags', { nome: newNome.trim(), cor: newCor });
+      setTags((prev) => [...prev, res.data].sort((a, b) => a.nome.localeCompare(b.nome)));
       setNewNome('');
       setNewCor('#6366f1');
       setShowNew(false);
@@ -288,8 +287,10 @@ function TagsTab() {
   async function saveEdit(t: CrmTag) {
     try {
       setSaving(true);
-      const updated = await http.put(`/crm/tags/${t.id}`, { nome: editNome, cor: editCor });
-      setTags((prev) => prev.map((x) => (x.id === t.id ? { ...x, ...updated } : x)).sort((a, b) => a.nome.localeCompare(b.nome)));
+      const res = await http.put<CrmTag>(`/crm/tags/${t.id}`, { nome: editNome, cor: editCor });
+      setTags((prev) =>
+        prev.map((x) => (x.id === t.id ? { ...x, ...res.data } : x)).sort((a, b) => a.nome.localeCompare(b.nome))
+      );
       setEditingId(null);
       setSuccess('Tag atualizada.');
     } catch (err: any) {
@@ -314,8 +315,8 @@ function TagsTab() {
 
   return (
     <div className="space-y-4">
-      <Feedback type="error" message={error} onClose={() => setError('')} />
-      <Feedback type="success" message={success} onClose={() => setSuccess('')} />
+      {error && <Feedback type="error" message={error} />}
+      {success && <Feedback type="success" message={success} />}
 
       <p className="text-sm text-gray-500">Tags são rótulos livres que você aplica às oportunidades do CRM.</p>
 
@@ -416,7 +417,7 @@ function LayoutTab() {
     try {
       const raw = localStorage.getItem(LS_LAYOUT_KEY);
       if (raw) {
-        const prefs = JSON.parse(raw);
+        const prefs = JSON.parse(raw) as { colunasPorLinha?: number; visualizacaoPadrao?: 'KANBAN' | 'LISTA' };
         if (prefs.colunasPorLinha) setColunasPorLinha(prefs.colunasPorLinha);
         if (prefs.visualizacaoPadrao) setVisualizacaoPadrao(prefs.visualizacaoPadrao);
       }
@@ -576,7 +577,6 @@ export default function CrmConfiguracaoPage() {
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        {/* Tabs */}
         <div className="border-b border-gray-200 px-6">
           <nav className="flex gap-0 -mb-px">
             {tabs.map((t) => (
@@ -595,7 +595,6 @@ export default function CrmConfiguracaoPage() {
           </nav>
         </div>
 
-        {/* Tab content */}
         <div className="p-6">
           {activeTab === 'etapas' && <EtapasTab />}
           {activeTab === 'tags' && <TagsTab />}
