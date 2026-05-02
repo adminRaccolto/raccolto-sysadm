@@ -31,6 +31,7 @@ import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { FornecedoresModule } from './fornecedores/fornecedores.module';
 import { TarefasModule } from './tarefas/tarefas.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { AssinaturasAratoModule } from './assinaturas-arato/assinaturas-arato.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     BancosModule,
     FuncionariosModule,
     FornecedoresModule,
+    AssinaturasAratoModule,
   ],
   providers: [
     {

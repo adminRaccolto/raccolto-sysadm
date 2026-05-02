@@ -12,6 +12,12 @@ export class TarefasController {
   constructor(private readonly tarefasService: TarefasService) {}
 
   @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA, PerfilUsuario.CLIENTE)
+  @Get('minhas')
+  async minhas(@CurrentUser() user: AuthenticatedUser) {
+    return this.tarefasService.findAll(user, { atribuidoA: user.id });
+  }
+
+  @Roles(PerfilUsuario.ADMIN, PerfilUsuario.ANALISTA, PerfilUsuario.CLIENTE)
   @Get()
   async findAll(
     @CurrentUser() user: AuthenticatedUser,

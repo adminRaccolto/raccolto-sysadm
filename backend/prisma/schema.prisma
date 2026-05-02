@@ -269,6 +269,7 @@ model Empresa {
   contratosModelos      ContratoModelo[]
   etapasCrm             CrmEtapa[]
   relatoriosReembolso   RelatorioReembolso[]
+  assinaturasArato      AssinaturaArato[]
 }
 
 
@@ -290,6 +291,7 @@ model ProdutoServico {
   recebiveis            Recebivel[]
   oportunidadesCrm      OportunidadeCrm[]
   formulariosCaptacao   FormularioCaptacao[]
+  assinaturasArato      AssinaturaArato[]
 
   @@unique([empresaId, nome])
   @@index([empresaId])
@@ -332,6 +334,7 @@ model Cliente {
   deslocamentos          Deslocamento[]
   checklistsDiagnostico  ChecklistDiagnostico[]
   reembolsosCliente      ReembolsoCliente[]
+  assinaturasArato       AssinaturaArato[]
 
   @@index([empresaId])
 }
@@ -733,6 +736,8 @@ model Recebivel {
   produtoServico   ProdutoServico? @relation(fields: [produtoServicoId], references: [id], onDelete: SetNull)
   contaGerencial   ContaGerencial? @relation(fields: [contaGerencialId], references: [id], onDelete: SetNull)
   faturamento      Faturamento?    @relation(fields: [faturamentoId], references: [id], onDelete: SetNull)
+  assinaturaAratoId String?
+  assinaturaArato  AssinaturaArato? @relation(fields: [assinaturaAratoId], references: [id], onDelete: SetNull)
 
   @@index([empresaId])
   @@index([clienteId])
@@ -741,6 +746,7 @@ model Recebivel {
   @@index([contaGerencialId])
   @@index([vencimento])
   @@index([grupoParcelamento])
+  @@index([assinaturaAratoId])
 }
 
 
@@ -970,6 +976,7 @@ model ContaGerencial {
   recebiveis       Recebivel[]
   contasPagar      ContaPagar[]
   lancamentos      LancamentoTesouraria[]
+  assinaturasArato AssinaturaArato[]
 
   @@unique([empresaId, codigo])
   @@index([empresaId])
@@ -1428,4 +1435,33 @@ model ReembolsoCliente {
 
   @@unique([relatorioId, clienteId])
   @@index([relatorioId])
+}
+
+enum StatusAssinaturaArato {
+  ATIVA
+  SUSPENSA
+  CANCELADA
+}
+
+model AssinaturaArato {
+  id               String                @id @default(cuid())
+  empresaId        String
+  clienteId        String
+  produtoServicoId String
+  contaGerencialId String?
+  valorMensal      Float
+  diaVencimento    Int
+  dataInicio       DateTime
+  status           StatusAssinaturaArato @default(ATIVA)
+  avisoEnviado     Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  empresa          Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente          Cliente               @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  produtoServico   ProdutoServico        @relation(fields: [produtoServicoId], references: [id], onDelete: Cascade)
+  contaGerencial   ContaGerencial?       @relation(fields: [contaGerencialId], references: [id], onDelete: SetNull)
+  recebiveis       Recebivel[]
+
+  @@index([empresaId])
+  @@index([clienteId])
 }

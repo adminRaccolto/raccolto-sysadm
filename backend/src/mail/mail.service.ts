@@ -134,4 +134,29 @@ export class MailService {
       this.logger.error('Falha ao enviar e-mail de aceite:', err);
     }
   }
+
+  async enviarAvisoAtrasoArato(params: {
+    to: string;
+    toNome: string;
+    parcelasVencidas: number;
+  }): Promise<void> {
+    const transporter = this.getTransporter();
+    if (!transporter) {
+      this.logger.warn('SMTP não configurado — aviso de atraso Arato não enviado.');
+      return;
+    }
+    const from = process.env.SMTP_FROM || '"Raccolto" <noreply@raccolto.com.br>';
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
+        <h2 style="color:#1a2b4a;">Aviso de atraso — Assinatura Arato</h2>
+        <p>Olá, <strong>${params.toNome}</strong>.</p>
+        <p>Identificamos <strong>${params.parcelasVencidas} parcela(s) vencida(s)</strong> em sua assinatura Arato.</p>
+        <p>Por favor, entre em contato para regularizar sua situação e evitar a suspensão do acesso.</p>
+      </div>`;
+    try {
+      await transporter.sendMail({ from, to: params.to, subject: 'Aviso de atraso — Assinatura Arato', html });
+    } catch (err) {
+      this.logger.error('Falha ao enviar aviso Arato:', err);
+    }
+  }
 }

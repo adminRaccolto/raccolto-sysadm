@@ -392,18 +392,22 @@ export default function ContratosPage() {
     setForm((prev) => ({
       ...prev,
       clienteId,
-      contatoClienteNome: prev.contatoClienteNome || cliente?.contatoPrincipal || '',
-      contatoClienteEmail: prev.contatoClienteEmail || cliente?.email || '',
-      contatoClienteTelefone: prev.contatoClienteTelefone || cliente?.whatsapp || cliente?.telefone || '',
+      contatoClienteNome: cliente?.contatoPrincipal || prev.contatoClienteNome || '',
+      contatoClienteEmail: cliente?.email || prev.contatoClienteEmail || '',
+      contatoClienteTelefone: cliente?.whatsapp || cliente?.telefone || prev.contatoClienteTelefone || '',
     }));
   }
 
   function resetForm() {
     const modeloPadrao = modelos.find((item) => item.padrao) || modelos[0] || null;
+    const primeiroCliente = clientes[0] || null;
     setEditingId(null);
     setForm({
       ...initialForm,
-      clienteId: clientes[0]?.id || '',
+      clienteId: primeiroCliente?.id || '',
+      contatoClienteNome: primeiroCliente?.contatoPrincipal || '',
+      contatoClienteEmail: primeiroCliente?.email || '',
+      contatoClienteTelefone: primeiroCliente?.whatsapp || primeiroCliente?.telefone || '',
       produtoServicoId: produtos[0]?.id || '',
       modeloContratoId: modeloPadrao?.id || '',
       modeloContratoNome: modeloPadrao?.nome || 'Contrato padrão',

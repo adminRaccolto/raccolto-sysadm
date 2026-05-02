@@ -163,6 +163,11 @@ export class FinanceiroController {
     return this.financeiroService.listContasGerenciais(user.empresaId);
   }
 
+  @Get('contas-gerenciais')
+  listContasGerenciais(@CurrentUser() user: AuthenticatedUser) {
+    return this.financeiroService.listContasGerenciais(user.empresaId);
+  }
+
   @Post('plano-contas')
   createPlano(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateContaGerencialDto) {
     return this.financeiroService.createContaGerencial(user.empresaId, body);
