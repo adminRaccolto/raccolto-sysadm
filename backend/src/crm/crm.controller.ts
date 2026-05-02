@@ -44,6 +44,29 @@ export class CrmController {
     return this.crmService.removeEtapa(user.empresaId, id);
   }
 
+  @Get('tags')
+  listTags(@CurrentUser() user: AuthenticatedUser) {
+    return this.crmService.listTags(user.empresaId);
+  }
+
+  @Post('tags')
+  createTag(@CurrentUser() user: AuthenticatedUser, @Body() body: { nome: string; cor?: string }) {
+    return this.crmService.createTag(user.empresaId, body.nome, body.cor);
+  }
+
+  @Put('tags/:id')
+  updateTag(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: { nome?: string; cor?: string },
+  ) {
+    return this.crmService.updateTag(user.empresaId, id, body);
+  }
+
+  @Delete('tags/:id')
+  removeTag(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.crmService.removeTag(user.empresaId, id);
+  }
 
   @Get('oportunidades/:id')
   async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {

@@ -13,6 +13,7 @@ import SistemaPage from '../pages/SistemaPage';
 import ProdutosPage from '../pages/ProdutosPage';
 import FinanceiroPage from '../pages/FinanceiroPage';
 import CrmPage from '../pages/CrmPage';
+import CrmConfiguracaoPage from '../pages/CrmConfiguracaoPage';
 import FormulariosCaptacaoPage from '../pages/FormulariosCaptacaoPage';
 import CaptacaoPublicPage from '../pages/CaptacaoPublicPage';
 import ContasReceberPage from '../pages/financeiro/ContasReceberPage';
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="projetos/:id/tarefas/:tarefaId" element={<TaskDetailPage />} />
         <Route path="financeiro" element={<FinanceiroPage />} />
         <Route path="crm" element={<CrmPage />} />
+        <Route path="crm/configuracoes" element={<CrmConfiguracaoPage />} />
         <Route path="captacao" element={<FormulariosCaptacaoPage />} />
         <Route path="modelos" element={<ModelosPage />} />
         <Route path="deslocamentos" element={<DeslocamentosPage />} />

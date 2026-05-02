@@ -818,6 +818,13 @@ export interface CrmEtapa {
   createdAt: string;
 }
 
+export interface CrmTag {
+  id: string;
+  nome: string;
+  cor: string;
+  createdAt: string;
+}
+
 export interface OportunidadeCrm {
   id: string;
   clienteId?: string | null;

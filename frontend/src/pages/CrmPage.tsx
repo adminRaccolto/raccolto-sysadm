@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { Settings, X } from 'lucide-react';
 import { http } from '../api/http';
 import EmptyState from '../components/EmptyState';
@@ -43,6 +44,7 @@ type OportunidadeForm = typeof initialForm;
 type ViewMode = 'KANBAN' | 'LISTA';
 
 export default function CrmPage() {
+  const navigate = useNavigate();
   const [oportunidades, setOportunidades] = useState<OportunidadeCrm[]>([]);
   const [etapas, setEtapas] = useState<CrmEtapa[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -382,9 +384,9 @@ export default function CrmPage() {
             <button className="button button--ghost button--small" type="button" onClick={() => selected && startEdit(selected)} disabled={!selected}>Editar</button>
             <button className="button button--ghost button--small" type="button" onClick={() => setIsConvertModalOpen(true)} disabled={!selected}>Converter</button>
             <button className="button button--danger button--small" type="button" onClick={() => void handleDelete()} disabled={!selected}>Excluir</button>
-            <button className="button button--ghost button--small crm-settings-btn" type="button" onClick={() => setIsEtapasModalOpen(true)} title="Configurar etapas do funil">
+            <button className="button button--ghost button--small crm-settings-btn" type="button" onClick={() => navigate('/crm/configuracoes')} title="Configurações do CRM">
               <Settings size={14} strokeWidth={2} />
-              <span>Etapas</span>
+              <span>Configurações</span>
             </button>
           </div>
         }

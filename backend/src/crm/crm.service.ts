@@ -312,6 +312,41 @@ export class CrmService {
     return map[etapa] ?? 10;
   }
 
+  async listTags(empresaId: string) {
+    return this.prisma.crmTag.findMany({
+      where: { empresaId },
+      orderBy: { nome: 'asc' },
+    });
+  }
+
+  async createTag(empresaId: string, nome: string, cor?: string) {
+    const nomeTrimmed = nome.trim();
+    const existing = await this.prisma.crmTag.findUnique({ where: { empresaId_nome: { empresaId, nome: nomeTrimmed } } });
+    if (existing) throw new BadRequestException('Já existe uma tag com esse nome.');
+    return this.prisma.crmTag.create({
+      data: { empresaId, nome: nomeTrimmed, cor: cor ?? '#6366f1' },
+    });
+  }
+
+  async updateTag(empresaId: string, id: string, body: { nome?: string; cor?: string }) {
+    const tag = await this.prisma.crmTag.findFirst({ where: { id, empresaId } });
+    if (!tag) throw new BadRequestException('Tag não encontrada.');
+    return this.prisma.crmTag.update({
+      where: { id },
+      data: {
+        ...(body.nome ? { nome: body.nome.trim() } : {}),
+        ...(body.cor !== undefined ? { cor: body.cor } : {}),
+      },
+    });
+  }
+
+  async removeTag(empresaId: string, id: string) {
+    const tag = await this.prisma.crmTag.findFirst({ where: { id, empresaId } });
+    if (!tag) throw new BadRequestException('Tag não encontrada.');
+    await this.prisma.crmTag.delete({ where: { id } });
+    return { message: 'Tag excluída.' };
+  }
+
   private async validateRelations(empresaId: string, data: Partial<CreateOportunidadeDto>) {
     if (data.clienteId) {
       const cliente = await this.prisma.cliente.findFirst({ where: { id: data.clienteId, empresaId } });
