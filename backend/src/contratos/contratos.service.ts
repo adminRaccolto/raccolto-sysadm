@@ -291,18 +291,36 @@ export class ContratosService {
   async remove(empresaId: string, id: string) {
     const contrato = await this.prisma.contrato.findFirst({
       where: { id, empresaId },
-      include: { _count: { select: { projetos: true, recebiveis: true } } },
+      include: {
+        _count: { select: { projetos: true } },
+        recebiveis: { select: { id: true, origemAutomatica: true, status: true } },
+      },
     });
 
     if (!contrato) {
       throw new BadRequestException('Contrato não encontrado.');
     }
 
-    if (contrato._count.projetos > 0 || contrato._count.recebiveis > 0) {
+    if (contrato._count.projetos > 0) {
       throw new BadRequestException(
-        'Este contrato já possui projetos ou financeiro vinculado. Altere o status em vez de excluir.',
+        `Este contrato possui ${contrato._count.projetos} projeto(s) vinculado(s). Altere o status em vez de excluir.`,
       );
     }
+
+    // Recebiveis manuais ou já pagos bloqueiam a exclusão
+    const recebiveisBloqueantes = contrato.recebiveis.filter(
+      r => !r.origemAutomatica || r.status === 'RECEBIDO',
+    );
+    if (recebiveisBloqueantes.length > 0) {
+      throw new BadRequestException(
+        `Este contrato possui ${recebiveisBloqueantes.length} lançamento(s) financeiro(s) que não podem ser removidos automaticamente (manuais ou já recebidos). Exclua-os primeiro.`,
+      );
+    }
+
+    // Remove recebiveis automáticos pendentes antes de excluir o contrato
+    await this.prisma.recebivel.deleteMany({
+      where: { contratoId: id, origemAutomatica: true, status: { not: 'RECEBIDO' } },
+    });
 
     await this.prisma.contrato.delete({ where: { id } });
     return { message: 'Contrato excluído com sucesso.' };

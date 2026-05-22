@@ -6,8 +6,10 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PerfilUsuario } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { BootstrapAdminDto } from './dto/bootstrap-admin.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -24,6 +26,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   async bootstrapAdmin(dto: BootstrapAdminDto) {
@@ -148,6 +151,46 @@ export class AuthService {
       data: { passwordHash: hash },
     });
     return { ok: true, updated: result.count };
+  }
+
+  async solicitarResetSenha(email: string) {
+    const normalizedEmail = this.normalizeEmail(email);
+    const usuario = await this.prisma.usuario.findUnique({ where: { email: normalizedEmail } });
+
+    if (usuario && usuario.ativo) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const expira = new Date(Date.now() + 60 * 60 * 1000);
+
+      await this.prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { resetSenhaToken: token, resetSenhaExpira: expira },
+      });
+
+      const appUrl = process.env.APP_URL ?? 'https://app.raccolto.com.br';
+      void this.mailService.enviarResetSenha({
+        to: usuario.email,
+        toNome: usuario.nome,
+        link: `${appUrl}/redefinir-senha?token=${token}`,
+      });
+    }
+
+    return { message: 'Se o e-mail estiver cadastrado, você receberá as instruções em breve.' };
+  }
+
+  async redefinirSenha(token: string, novaSenha: string) {
+    const usuario = await this.prisma.usuario.findUnique({ where: { resetSenhaToken: token } });
+
+    if (!usuario || !usuario.resetSenhaExpira || usuario.resetSenhaExpira < new Date()) {
+      throw new BadRequestException('Link de redefinição inválido ou expirado.');
+    }
+
+    const passwordHash = await bcrypt.hash(novaSenha, 10);
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { passwordHash, resetSenhaToken: null, resetSenhaExpira: null },
+    });
+
+    return { message: 'Senha redefinida com sucesso.' };
   }
 
   private normalizeEmail(email: string) {

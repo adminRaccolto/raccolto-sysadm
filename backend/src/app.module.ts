@@ -32,6 +32,10 @@ import { FornecedoresModule } from './fornecedores/fornecedores.module';
 import { TarefasModule } from './tarefas/tarefas.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { AssinaturasAratoModule } from './assinaturas-arato/assinaturas-arato.module';
+import { CentrosCustoModule } from './centro-custos/centro-custos.module';
+import { TiposGastoReembolsoModule } from './tipos-gasto-reembolso/tipos-gasto-reembolso.module';
+import { DiagramasModule } from './diagramas/diagramas.module';
+import { DiagnosticoLeadModule } from './diagnostico-lead/diagnostico-lead.module';
 
 @Module({
   imports: [
@@ -65,6 +69,10 @@ import { AssinaturasAratoModule } from './assinaturas-arato/assinaturas-arato.mo
     FuncionariosModule,
     FornecedoresModule,
     AssinaturasAratoModule,
+    CentrosCustoModule,
+    TiposGastoReembolsoModule,
+    DiagramasModule,
+    DiagnosticoLeadModule,
   ],
   providers: [
     {

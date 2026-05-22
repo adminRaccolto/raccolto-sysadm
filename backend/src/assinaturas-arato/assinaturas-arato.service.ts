@@ -30,6 +30,8 @@ export class AssinaturasAratoService {
         valorMensal: dto.valorMensal,
         diaVencimento: dto.diaVencimento,
         dataInicio: new Date(dto.dataInicio),
+        modalidade: dto.modalidade ?? 'ARATO_DIRETO',
+        probono: dto.probono ?? false,
         status: StatusAssinaturaArato.ATIVA,
       },
       include: { cliente: true, produtoServico: true },

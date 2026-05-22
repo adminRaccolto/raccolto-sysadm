@@ -5,6 +5,8 @@ import { AuthenticatedUser } from '../common/interfaces/authenticated-user.inter
 import { AuthService } from './auth.service';
 import { BootstrapAdminDto } from './dto/bootstrap-admin.dto';
 import { LoginDto } from './dto/login.dto';
+import { SolicitarResetSenhaDto } from './dto/solicitar-reset-senha.dto';
+import { RedefinirSenhaDto } from './dto/redefinir-senha.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -20,6 +22,18 @@ export class AuthController {
   @Post('login')
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Public()
+  @Post('solicitar-reset-senha')
+  async solicitarResetSenha(@Body() dto: SolicitarResetSenhaDto) {
+    return this.authService.solicitarResetSenha(dto.email);
+  }
+
+  @Public()
+  @Post('redefinir-senha')
+  async redefinirSenha(@Body() dto: RedefinirSenhaDto) {
+    return this.authService.redefinirSenha(dto.token, dto.novaSenha);
   }
 
   @Get('me')

@@ -194,4 +194,105 @@ export class MailService {
       this.logger.error('Falha ao enviar aviso Arato:', err);
     }
   }
+
+  async enviarCodigoValidacao(params: {
+    to: string;
+    toNome: string;
+    codigo: string;
+  }): Promise<void> {
+    const transporter = this.getTransporter();
+    if (!transporter) {
+      this.logger.warn(`SMTP não configurado — código ${params.codigo} NÃO enviado para ${params.to}`);
+      return;
+    }
+    const from = process.env.SMTP_FROM || '"Raccolto" <noreply@raccolto.com.br>';
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#f9f9f9;">
+        <div style="background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+          <h2 style="margin:0 0 20px;font-size:22px;color:#1a2b4a;">Seu código de verificação</h2>
+          <p style="color:#444;line-height:1.6;">Olá, <strong>${params.toNome}</strong>.</p>
+          <p style="color:#444;line-height:1.6;">Use o código abaixo para continuar o diagnóstico:</p>
+          <div style="text-align:center;margin:28px 0;">
+            <span style="font-size:36px;font-weight:800;letter-spacing:8px;color:#1a2b4a;">${params.codigo}</span>
+          </div>
+          <p style="color:#888;font-size:12px;">O código expira em 15 minutos.</p>
+        </div>
+      </div>`;
+    try {
+      await transporter.sendMail({ from, to: params.to, subject: 'Seu código de verificação — Raccolto', html });
+      this.logger.log(`Código de validação enviado para ${params.to}`);
+    } catch (err) {
+      this.logger.error('Falha ao enviar código de validação:', err);
+    }
+  }
+
+  async enviarDiagnosticoLead(params: {
+    to: string;
+    toNome: string;
+    score: { geral: { percentual: number; nivel: string; diagnostico: string } };
+    linkResultado: string;
+  }): Promise<void> {
+    const transporter = this.getTransporter();
+    if (!transporter) {
+      this.logger.warn(`SMTP não configurado — link do diagnóstico NÃO enviado para ${params.to}`);
+      return;
+    }
+    const from = process.env.SMTP_FROM || '"Raccolto" <noreply@raccolto.com.br>';
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#f9f9f9;">
+        <div style="background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+          <h2 style="margin:0 0 20px;font-size:22px;color:#1a2b4a;">Seu diagnóstico está pronto!</h2>
+          <p style="color:#444;line-height:1.6;">Olá, <strong>${params.toNome}</strong>.</p>
+          <p style="color:#444;line-height:1.6;">
+            Seu diagnóstico de gestão foi concluído. Resultado geral: <strong>${params.score.geral.percentual}%</strong>.
+          </p>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${params.linkResultado}"
+               style="background:#1a2b4a;color:#fff;padding:13px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;display:inline-block;">
+              Ver resultado completo
+            </a>
+          </div>
+        </div>
+      </div>`;
+    try {
+      await transporter.sendMail({ from, to: params.to, subject: 'Seu diagnóstico de gestão — Raccolto', html });
+      this.logger.log(`Diagnóstico enviado para ${params.to}`);
+    } catch (err) {
+      this.logger.error('Falha ao enviar diagnóstico:', err);
+    }
+  }
+
+  async enviarResetSenha(params: {
+    to: string;
+    toNome: string;
+    link: string;
+  }): Promise<void> {
+    const transporter = this.getTransporter();
+    if (!transporter) {
+      this.logger.warn(`SMTP não configurado — e-mail de reset NÃO enviado para ${params.to}`);
+      return;
+    }
+    const from = process.env.SMTP_FROM || '"Raccolto" <noreply@raccolto.com.br>';
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#f9f9f9;">
+        <div style="background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+          <h2 style="margin:0 0 20px;font-size:22px;color:#1a2b4a;">Redefinir senha</h2>
+          <p style="color:#444;line-height:1.6;">Olá, <strong>${params.toNome}</strong>.</p>
+          <p style="color:#444;line-height:1.6;">Clique no botão abaixo para criar uma nova senha. O link é válido por 1 hora.</p>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${params.link}"
+               style="background:#1a2b4a;color:#fff;padding:13px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;display:inline-block;">
+              Redefinir minha senha
+            </a>
+          </div>
+          <p style="color:#888;font-size:12px;">Se você não solicitou a redefinição, ignore este e-mail.</p>
+        </div>
+      </div>`;
+    try {
+      await transporter.sendMail({ from, to: params.to, subject: 'Redefinição de senha — Raccolto', html });
+      this.logger.log(`E-mail de reset enviado para ${params.to}`);
+    } catch (err) {
+      this.logger.error('Falha ao enviar e-mail de reset:', err);
+    }
+  }
 }

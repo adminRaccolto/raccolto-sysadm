@@ -1,4 +1,5 @@
-import { IsDateString, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { ModalidadeAssinaturaArato } from '@prisma/client';
 
 export class CreateAssinaturaAratoDto {
   @IsString() @IsNotEmpty()
@@ -18,4 +19,10 @@ export class CreateAssinaturaAratoDto {
 
   @IsDateString()
   dataInicio!: string;
+
+  @IsEnum(ModalidadeAssinaturaArato) @IsOptional()
+  modalidade?: ModalidadeAssinaturaArato;
+
+  @IsBoolean() @IsOptional()
+  probono?: boolean;
 }

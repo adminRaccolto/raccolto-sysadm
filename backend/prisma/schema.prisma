@@ -270,6 +270,11 @@ model Empresa {
   etapasCrm             CrmEtapa[]
   relatoriosReembolso   RelatorioReembolso[]
   assinaturasArato      AssinaturaArato[]
+  crmTags               CrmTag[]
+  centrosCusto          CentroCusto[]
+  tiposGastoReembolso   TipoGastoReembolso[]
+  diagramas             Diagrama[]
+  diagnosticosLead      DiagnosticoLead[]
 }
 
 
@@ -568,6 +573,7 @@ model Projeto {
   etapas                    ProjetoEtapa[]
   membros                   ProjetoMembro[]
   checklistDiagnostico      ChecklistDiagnostico?
+  diagramas                 Diagrama[]
 
   @@index([empresaId])
   @@index([clienteId])
@@ -738,6 +744,8 @@ model Recebivel {
   faturamento      Faturamento?    @relation(fields: [faturamentoId], references: [id], onDelete: SetNull)
   assinaturaAratoId String?
   assinaturaArato  AssinaturaArato? @relation(fields: [assinaturaAratoId], references: [id], onDelete: SetNull)
+  centroCustoId    String?
+  centroCusto      CentroCusto?     @relation(fields: [centroCustoId], references: [id], onDelete: SetNull)
 
   @@index([empresaId])
   @@index([clienteId])
@@ -1106,8 +1114,10 @@ model ContaPagar {
   observacoes       String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+  centroCustoId     String?
   empresa           Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   contaGerencial    ContaGerencial   @relation(fields: [contaGerencialId], references: [id], onDelete: Restrict)
+  centroCusto       CentroCusto?     @relation(fields: [centroCustoId], references: [id], onDelete: SetNull)
 
   @@index([empresaId])
   @@index([contaGerencialId])
@@ -1128,9 +1138,11 @@ model LancamentoTesouraria {
   observacoes      String?
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
+  centroCustoId    String?
   empresa          Empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   contaBancaria    ContaBancaria            @relation(fields: [contaBancariaId], references: [id], onDelete: Restrict)
   contaGerencial   ContaGerencial           @relation(fields: [contaGerencialId], references: [id], onDelete: Restrict)
+  centroCusto      CentroCusto?             @relation(fields: [centroCustoId], references: [id], onDelete: SetNull)
 
   @@index([empresaId])
   @@index([contaBancariaId])
@@ -1217,6 +1229,8 @@ model Usuario {
   perfil                   PerfilUsuario
   ativo                    Boolean       @default(true)
   ultimoLoginAt            DateTime?
+  resetSenhaToken          String?       @unique
+  resetSenhaExpira         DateTime?
   createdAt                DateTime      @default(now())
   updatedAt                DateTime      @updatedAt
   empresa                  Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -1232,7 +1246,7 @@ model Usuario {
   comentariosTarefa      TarefaComentario[] @relation("ComentarioTarefaAutor")
   comentariosOportunidade OportunidadeCrmComentario[] @relation("ComentarioOportunidadeAutor")
   deslocamentos          Deslocamento[] @relation("DeslocamentoResponsavel")
-  relatoriosReembolso    RelatorioReembolso[] @relation("RelReembolsoResponsavel")
+  relatoriosReembolso    RelatorioReembolso[] @relation("RelatorioResponsavel")
 
   @@index([empresaId])
   @@index([clienteId])
@@ -1399,7 +1413,8 @@ model RelatorioReembolso {
   autentiqueDocId String?
   empresa         Empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   projeto         Projeto?                 @relation(fields: [projetoId], references: [id], onDelete: SetNull)
-  responsavel     Usuario?                 @relation("RelReembolsoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
+  interno         Boolean                  @default(false)
+  responsavel     Usuario?                 @relation("RelatorioResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
   itens           ItemReembolso[]
   clientes        ReembolsoCliente[]
   createdAt       DateTime                 @default(now())
@@ -1411,7 +1426,7 @@ model RelatorioReembolso {
 model ItemReembolso {
   id          String             @id @default(cuid())
   relatorioId String
-  tipo        TipoItemReembolso
+  tipo        String
   data        DateTime?
   descricao   String
   km          Float?
@@ -1437,10 +1452,146 @@ model ReembolsoCliente {
   @@index([relatorioId])
 }
 
+model CentroCusto {
+  id          String   @id @default(cuid())
+  empresaId   String
+  codigo      String
+  descricao   String
+  ativo       Boolean  @default(true)
+  contaPaiId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  empresa    Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  contaPai   CentroCusto?  @relation("HierarquiaCentroCusto", fields: [contaPaiId], references: [id], onDelete: SetNull)
+  subcentros CentroCusto[] @relation("HierarquiaCentroCusto")
+
+  recebiveis            Recebivel[]
+  contasPagar           ContaPagar[]
+  lancamentosTesouraria LancamentoTesouraria[]
+
+  @@unique([empresaId, codigo])
+  @@index([empresaId])
+}
+
+model TipoGastoReembolso {
+  id        String   @id @default(cuid())
+  empresaId String
+  nome      String
+  padrao    Boolean  @default(false)
+  ativo     Boolean  @default(true)
+  ordem     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, nome])
+  @@index([empresaId])
+}
+
+model Diagrama {
+  id           String   @id @default(cuid())
+  empresaId    String
+  titulo       String
+  conteudo     Json     @default("{}")
+  projetoId    String?
+  criadoPorId  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  projeto  Projeto? @relation(fields: [projetoId], references: [id], onDelete: SetNull)
+
+  @@index([empresaId])
+}
+
+model DiagnosticoLead {
+  id           String    @id @default(cuid())
+  empresaId    String
+  status       String    @default("PENDENTE")
+  respondidoAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  nome      String
+  email     String
+  telefone  String
+  idade     Int?
+  cidade    String?
+  estado    String?
+  profissao String?
+
+  nomeFazenda              String?
+  culturas                 Json    @default("[]")
+  percentualArrendado      Int?
+  operacoesTerceirizadas   Json    @default("[]")
+  temSiloArmazem           Boolean?
+  funcionariosOperacionais Int?
+
+  produtividadeMedia        Json?
+  custosInsumosDiretos      String?
+  hectaresPorTrabalhador    Int?
+  travaAntecipada           Boolean?
+  boaLeituraComercializacao Boolean?
+
+  frustracaoSafra   Json?
+  percentualCusteio String?
+  captouMaisQuePageu String?
+
+  usaSoftwareGestao String?
+  sabeCustoPorSaca  Boolean?
+  clarezaCustos     Boolean?
+  baseDecisoes      String?
+  reuniaoFechamento Boolean?
+
+  interesses Json @default("[]")
+
+  tokenResultado String   @unique @default(cuid())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+}
+
+model CodigoValidacaoLead {
+  id           String   @id @default(cuid())
+  empresaId    String
+  nome         String
+  email        String
+  telefone     String
+  cidade       String?
+  estado       String?
+  profissao    String?
+  codigo       String
+  expiresAt    DateTime
+  validado     Boolean  @default(false)
+  sessionToken String?  @unique
+  createdAt    DateTime @default(now())
+
+  @@index([email, empresaId])
+}
+
+model CrmTag {
+  id        String   @id @default(cuid())
+  empresaId String
+  nome      String
+  cor       String   @default("#6366f1")
+  createdAt DateTime @default(now())
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, nome])
+  @@index([empresaId])
+}
+
 enum StatusAssinaturaArato {
   ATIVA
   SUSPENSA
   CANCELADA
+}
+
+enum ModalidadeAssinaturaArato {
+  CONSULTORIA_MENTORIA
+  ARATO_DIRETO
 }
 
 model AssinaturaArato {
@@ -1452,6 +1603,8 @@ model AssinaturaArato {
   valorMensal      Float
   diaVencimento    Int
   dataInicio       DateTime
+  modalidade       ModalidadeAssinaturaArato @default(ARATO_DIRETO)
+  probono          Boolean               @default(false)
   status           StatusAssinaturaArato @default(ATIVA)
   avisoEnviado     Boolean               @default(false)
   createdAt        DateTime              @default(now())
