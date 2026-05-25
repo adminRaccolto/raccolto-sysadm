@@ -11,7 +11,8 @@ export class ModelosDocumentoController {
   constructor(private readonly service: ModelosDocumentoService) {}
 
   @Get()
-  findAll(@CurrentUser() user: AuthenticatedUser, @Query('tipo') tipo?: string) {
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('tipo') tipo?: string) {
+    await this.service.ensureModelosPadrao(user.empresaId);
     return this.service.findAll(user.empresaId, tipo as TipoModeloDocumento | undefined);
   }
 
