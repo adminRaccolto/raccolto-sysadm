@@ -3,6 +3,7 @@ import { Prisma, TipoContaGerencial } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { AutentiqueService } from '../autentique/autentique.service';
+import { MailService } from '../mail/mail.service';
 
 const INCLUDE = Prisma.validator<Prisma.RelatorioReembolsoInclude>()({
   projeto: { select: { id: true, nome: true } },
@@ -65,6 +66,7 @@ export class RelatorioReembolsoService {
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
     private readonly autentiqueService: AutentiqueService,
+    private readonly mailService: MailService,
   ) {}
 
   async findAll(empresaId: string) {
@@ -350,6 +352,42 @@ export class RelatorioReembolsoService {
     if (Math.abs(total - 100) > 0.01) {
       throw new BadRequestException(`O rateio deve somar 100% (atual: ${total.toFixed(1)}%).`);
     }
+  }
+
+  async enviarEmail(empresaId: string, id: string, destinatarios: { nome: string; email: string }[]) {
+    const rel = await this.findOne(empresaId, id);
+    if (!destinatarios.length) throw new BadRequestException('Informe ao menos um destinatário.');
+
+    await this.mailService.enviarRelatorioReembolso({
+      destinatarios,
+      titulo: rel.titulo,
+      documentoUrl: rel.documentoUrl,
+      responsavelNome: rel.responsavel?.nome ?? 'Responsável',
+    });
+
+    if (rel.status === 'RASCUNHO') {
+      await this.prisma.relatorioReembolso.update({
+        where: { id },
+        data: { status: 'AGUARDANDO_APROVACAO' },
+      });
+    }
+
+    return { message: `Relatório enviado para ${destinatarios.length} destinatário(s).` };
+  }
+
+  async enviarFinanceiroInterno(empresaId: string, id: string) {
+    const rel = await this.findOne(empresaId, id);
+    if (rel.status === 'FINANCEIRO_GERADO') throw new BadRequestException('Financeiro já foi gerado para este relatório.');
+
+    if (rel.status === 'RASCUNHO') {
+      await this.prisma.relatorioReembolso.update({
+        where: { id },
+        data: { status: 'AGUARDANDO_APROVACAO' },
+      });
+    }
+
+    this.logger.log(`Relatório ${id} enviado para financeiro interno (empresaId: ${empresaId})`);
+    return { message: 'Relatório enviado para análise do financeiro.' };
   }
 
   private async ensureContaReembolsos(empresaId: string) {

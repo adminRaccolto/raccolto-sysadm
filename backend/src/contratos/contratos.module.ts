@@ -3,14 +3,14 @@ import { NotificacoesModule } from '../notificacoes/notificacoes.module';
 import { MailModule } from '../mail/mail.module';
 import { StorageModule } from '../storage/storage.module';
 import { ProjetosModule } from '../projetos/projetos.module';
-import { AutentiqueService } from './autentique.service';
+import { AutentiqueModule } from '../autentique/autentique.module';
 import { ContratosController } from './contratos.controller';
 import { ContratosService } from './contratos.service';
 
 @Module({
-  imports: [NotificacoesModule, MailModule, StorageModule, ProjetosModule],
+  imports: [NotificacoesModule, MailModule, StorageModule, ProjetosModule, AutentiqueModule],
   controllers: [ContratosController],
-  providers: [ContratosService, AutentiqueService],
+  providers: [ContratosService],
   exports: [ContratosService],
 })
 export class ContratosModule {}

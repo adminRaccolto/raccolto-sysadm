@@ -3,7 +3,7 @@ import { randomBytes } from 'crypto';
 import { PrioridadeNotificacao, StatusAssinatura, StatusProposta } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
-import { AutentiqueService } from '../contratos/autentique.service';
+import { AutentiqueService } from '../autentique/autentique.service';
 import { MailService } from '../mail/mail.service';
 import { CreatePropostaDto } from './dto/create-proposta.dto';
 
@@ -239,6 +239,43 @@ export class PropostasService {
     return { message: 'Status sincronizado. Contrato gerado.', status: 'CONVERTIDA' };
   }
 
+  async marcarAprovada(empresaId: string, id: string) {
+    const proposta = await this.prisma.proposta.findFirst({
+      where: { id, empresaId },
+      include: { cobrancas: { orderBy: { ordem: 'asc' } } },
+    });
+    if (!proposta) throw new BadRequestException('Proposta não encontrada.');
+    if (proposta.status === StatusProposta.CONVERTIDA) {
+      return { message: 'Proposta já convertida em contrato.', status: proposta.status };
+    }
+
+    await this.prisma.proposta.update({
+      where: { id },
+      data: {
+        status: StatusProposta.ASSINADA,
+        statusAssinatura: StatusAssinatura.ASSINADO,
+        dataAssinatura: new Date(),
+      },
+    });
+
+    const contrato = await this.gerarContratoFromProposta(proposta);
+    await this.prisma.proposta.update({
+      where: { id },
+      data: { status: StatusProposta.CONVERTIDA, contratoGeradoId: contrato.id },
+    });
+
+    await this.notificacoesService.notificarAdmins({
+      empresaId,
+      titulo: 'Proposta aprovada — contrato gerado',
+      mensagem: `Proposta "${proposta.titulo}" marcada como aprovada. Contrato gerado.`,
+      link: '/contratos',
+      prioridade: PrioridadeNotificacao.ALTA,
+    });
+
+    this.logger.log(`Proposta ${id} marcada como aprovada manualmente → contrato ${contrato.id}`);
+    return { message: 'Proposta aprovada e contrato gerado com sucesso.', status: 'CONVERTIDA', contratoId: contrato.id };
+  }
+
   async remove(empresaId: string, id: string) {
     const proposta = await this.prisma.proposta.findFirst({ where: { id, empresaId } });
     if (!proposta) throw new BadRequestException('Proposta não encontrada.');
@@ -264,9 +301,10 @@ export class PropostasService {
     const signatarioNome = proposta.contatoClienteNome || proposta.cliente.contatoPrincipal || proposta.clienteRazaoSocial || 'Cliente';
     const textoContrato = proposta.textoPropostaBase?.trim() || await this.resolverTextoProposta(proposta) || proposta.titulo;
 
+    const pdfBuffer = await this.autentiqueService.gerarPdfContrato(`Proposta — ${proposta.titulo}`, textoContrato);
     const { docId, signUrl } = await this.autentiqueService.enviarDocumento({
       nome: `Proposta — ${proposta.titulo}`,
-      textoContrato,
+      pdfBuffer,
       signatarioNome,
       signatarioEmail,
     });
@@ -321,9 +359,10 @@ export class PropostasService {
     const signatarioNome = proposta.contatoClienteNome || proposta.cliente.contatoPrincipal || proposta.clienteRazaoSocial || 'Cliente';
     const textoContrato = proposta.textoPropostaBase?.trim() || await this.resolverTextoProposta(proposta) || proposta.titulo;
 
+    const pdfBuffer = await this.autentiqueService.gerarPdfContrato(`Proposta — ${proposta.titulo}`, textoContrato);
     const { docId, signUrl } = await this.autentiqueService.enviarDocumento({
       nome: `Proposta — ${proposta.titulo}`,
-      textoContrato,
+      pdfBuffer,
       signatarioNome,
       signatarioEmail,
     });

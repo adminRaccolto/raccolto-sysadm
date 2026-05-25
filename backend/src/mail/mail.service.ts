@@ -262,6 +262,44 @@ export class MailService {
     }
   }
 
+  async enviarRelatorioReembolso(params: {
+    destinatarios: { nome: string; email: string }[];
+    titulo: string;
+    documentoUrl: string | null;
+    responsavelNome: string;
+  }): Promise<void> {
+    const transporter = this.getTransporter();
+    if (!transporter) {
+      this.logger.warn('SMTP não configurado — e-mail de relatório de reembolso não enviado.');
+      return;
+    }
+    const from = process.env.SMTP_FROM || '"Raccolto" <noreply@raccolto.com.br>';
+    const docLink = params.documentoUrl ? `<div style="text-align:center;margin:20px 0;"><a href="${params.documentoUrl}" style="background:#1a2b4a;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;display:inline-block;">Ver documento</a></div>` : '';
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#f9f9f9;">
+        <div style="background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+          <h2 style="margin:0 0 20px;font-size:22px;color:#1a2b4a;">Relatório de Reembolso — ${params.titulo}</h2>
+          <p style="color:#444;line-height:1.6;">Um relatório de reembolso foi enviado para sua avaliação.</p>
+          <p style="color:#444;line-height:1.6;"><strong>Responsável:</strong> ${params.responsavelNome}</p>
+          ${docLink}
+          <p style="color:#aaa;font-size:11px;margin-top:24px;">Este e-mail foi enviado pela plataforma Raccolto.</p>
+        </div>
+      </div>`;
+    for (const dest of params.destinatarios) {
+      try {
+        await transporter.sendMail({
+          from,
+          to: dest.nome ? `"${dest.nome}" <${dest.email}>` : dest.email,
+          subject: `Relatório de reembolso para aprovação — ${params.titulo}`,
+          html,
+        });
+        this.logger.log(`Relatório de reembolso enviado para ${dest.email}`);
+      } catch (err) {
+        this.logger.error(`Falha ao enviar relatório de reembolso para ${dest.email}:`, err);
+      }
+    }
+  }
+
   async enviarResetSenha(params: {
     to: string;
     toNome: string;

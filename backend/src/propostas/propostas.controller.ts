@@ -43,6 +43,11 @@ export class PropostasController {
     return this.propostasService.sincronizarStatus(user.empresaId, id);
   }
 
+  @Post(':id/marcar-aprovada')
+  marcarAprovada(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.propostasService.marcarAprovada(user.empresaId, id);
+  }
+
   @Post(':id/enviar-assinatura')
   async enviarAssinatura(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     await this.propostasService.enviarParaAssinatura(user.empresaId, id);

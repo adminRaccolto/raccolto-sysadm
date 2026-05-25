@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -68,5 +68,20 @@ export class RelatorioReembolsoController {
     @Body() dto: GerarFinanceiroDto,
   ) {
     return this.service.gerarFinanceiro(user.empresaId, id, dto);
+  }
+
+  @Post(':id/enviar-email')
+  enviarEmail(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: { destinatarios: { nome: string; email: string }[] },
+  ) {
+    return this.service.enviarEmail(user.empresaId, id, body.destinatarios ?? []);
+  }
+
+  @Post(':id/enviar-financeiro-interno')
+  @HttpCode(200)
+  enviarFinanceiroInterno(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.service.enviarFinanceiroInterno(user.empresaId, id);
   }
 }

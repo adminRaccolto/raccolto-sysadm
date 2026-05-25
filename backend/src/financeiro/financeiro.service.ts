@@ -84,6 +84,36 @@ export class FinanceiroService {
     if (data.produtoServicoId) await this.ensureProduto(empresaId, data.produtoServicoId);
     if (data.contratoId) await this.ensureContrato(empresaId, data.contratoId);
 
+    if (data.parcelas && data.parcelas.length > 0) {
+      const totalParcelas = data.parcelas.length;
+      await this.prisma.recebivel.createMany({
+        data: data.parcelas.map((p) => ({
+          empresaId,
+          clienteId: data.clienteId,
+          contratoId: data.contratoId || null,
+          produtoServicoId: data.produtoServicoId || null,
+          contaGerencialId: data.contaGerencialId,
+          descricao: `${data.descricao.trim()} (${p.parcelaNumero}/${totalParcelas})`,
+          parcelaNumero: p.parcelaNumero,
+          totalParcelas,
+          valor: p.valor,
+          vencimento: new Date(p.vencimento),
+          previsao: data.previsao ?? false,
+          origemAutomatica: false,
+        })),
+      });
+      return this.prisma.recebivel.findMany({
+        where: {
+          empresaId,
+          clienteId: data.clienteId,
+          contaGerencialId: data.contaGerencialId,
+          totalParcelas,
+        },
+        include: { cliente: true, contrato: true, produtoServico: true, contaGerencial: true },
+        orderBy: { vencimento: 'asc' },
+      });
+    }
+
     return this.prisma.recebivel.create({
       data: {
         empresaId,
@@ -96,6 +126,7 @@ export class FinanceiroService {
         totalParcelas: data.totalParcelas ?? null,
         valor: data.valor,
         vencimento: new Date(data.vencimento),
+        previsao: data.previsao ?? false,
         origemAutomatica: false,
       },
       include: { cliente: true, contrato: true, produtoServico: true, contaGerencial: true },

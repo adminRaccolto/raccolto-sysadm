@@ -3,7 +3,7 @@ import { PrioridadeNotificacao, Prisma, StatusAssinatura, StatusContrato } from 
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { ProjetosService } from '../projetos/projetos.service';
-import { AutentiqueService } from './autentique.service';
+import { AutentiqueService } from '../autentique/autentique.service';
 import { MailService } from '../mail/mail.service';
 import { StorageService } from '../storage/storage.service';
 import { ContratoCobrancaDto, CreateContratoDto } from './dto/create-contrato.dto';
@@ -457,9 +457,10 @@ export class ContratosService {
       || contrato.titulo;
     const signatarioNome = contrato.contatoClienteNome || contrato.cliente.contatoPrincipal || contrato.clienteRazaoSocial || 'Cliente';
 
+    const pdfBuffer = await this.gerarPdfDoTexto(contrato.titulo, textoContrato);
     const { docId, signUrl } = await this.autentiqueService.enviarDocumento({
       nome: contrato.titulo,
-      textoContrato,
+      pdfBuffer,
       signatarioNome,
       signatarioEmail,
     });
@@ -514,9 +515,10 @@ export class ContratosService {
       || contrato.titulo;
     const signatarioNome = contrato.contatoClienteNome || contrato.cliente.contatoPrincipal || contrato.clienteRazaoSocial || 'Cliente';
 
+    const pdfBuffer = await this.gerarPdfDoTexto(contrato.titulo, textoContrato);
     const { docId, signUrl } = await this.autentiqueService.enviarDocumento({
       nome: contrato.titulo,
-      textoContrato,
+      pdfBuffer,
       signatarioNome,
       signatarioEmail,
     });
@@ -1077,7 +1079,7 @@ export class ContratosService {
       // ── Cabeçalho ──────────────────────────────────────────────────
       if (logoBuffer) {
         try {
-          doc.image(logoBuffer, MARGIN, MARGIN, { fit: [50, 50], align: 'left' });
+          doc.image(logoBuffer, MARGIN, MARGIN, { fit: [50, 50] });
           doc.moveDown(0.2);
         } catch { /* skip if image format unsupported */ }
       }
