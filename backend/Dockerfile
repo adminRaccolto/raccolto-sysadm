@@ -17,4 +17,4 @@ RUN npm run build
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss 2>&1 || echo '[warn] prisma db push falhou — continuando'; node dist/src/main.js"]
+CMD ["sh", "-c", "npx prisma db push --config prisma.config.ts --accept-data-loss 2>&1 || echo '[warn] prisma db push falhou — continuando'; node dist/src/main.js"]
