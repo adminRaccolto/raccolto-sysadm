@@ -83,6 +83,19 @@ export class ContratosController {
     res.send(buffer);
   }
 
+  @Get(':id/docx')
+  async gerarDocx(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const { buffer, titulo } = await this.contratosService.gerarDocxBuffer(user.empresaId, id);
+    const safe = titulo.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9-_]/g, '-');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${safe}.docx"`);
+    res.send(buffer);
+  }
+
   @Post(':id/assinar-empresa')
   assinarEmpresa(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.contratosService.assinarEmpresa(user.empresaId, id);

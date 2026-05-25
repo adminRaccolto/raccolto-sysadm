@@ -586,22 +586,20 @@ export default function ContratosPage() {
     }
   }
 
-  function handleBaixarPdf(contrato: Contrato) {
+  function handleBaixarArquivo(contrato: Contrato, formato: 'pdf' | 'docx') {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
     const token = localStorage.getItem('raccolto_token');
-    const url = `${apiUrl}/contratos/${contrato.id}/pdf`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${contrato.titulo}.pdf`;
-    // Usa fetch para incluir autenticação
+    const url = `${apiUrl}/contratos/${contrato.id}/${formato}`;
     void fetch(url, { headers: { Authorization: `Bearer ${token ?? ''}` } })
       .then((r) => r.blob())
       .then((blob) => {
+        const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
+        a.download = `${contrato.titulo}.${formato}`;
         a.click();
         URL.revokeObjectURL(a.href);
       })
-      .catch(() => setError('Falha ao gerar PDF.'));
+      .catch(() => setError(`Falha ao gerar ${formato.toUpperCase()}.`));
   }
 
   async function handleAssinarEmpresa(contrato: Contrato) {
@@ -778,10 +776,20 @@ export default function ContratosPage() {
                 <button
                   className="button button--ghost button--small"
                   type="button"
-                  onClick={() => handleBaixarPdf(selectedContrato)}
+                  onClick={() => handleBaixarArquivo(selectedContrato, 'pdf')}
                   title="Baixar PDF do contrato com variáveis preenchidas"
                 >
                   Baixar PDF
+                </button>
+              ) : null}
+              {selectedContrato ? (
+                <button
+                  className="button button--ghost button--small"
+                  type="button"
+                  onClick={() => handleBaixarArquivo(selectedContrato, 'docx')}
+                  title="Baixar DOCX editável para ajustes no Word"
+                >
+                  Baixar DOCX
                 </button>
               ) : null}
               {selectedContrato && selectedContrato.statusAssinatura !== 'ASSINADO' ? (

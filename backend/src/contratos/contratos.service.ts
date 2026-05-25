@@ -884,9 +884,24 @@ export class ContratosService {
     });
     if (!contrato) throw new BadRequestException('Contrato não encontrado.');
 
+    const empresa = await this.prisma.empresa.findFirst({ where: { id: empresaId } });
     const texto = await this.resolverTextoContrato(contrato as any);
     const titulo = contrato.titulo;
-    const buffer = await this.gerarPdfDoTexto(titulo, texto ?? titulo);
+    const buffer = await this.gerarPdfDoTexto(titulo, texto ?? titulo, empresa);
+    return { buffer, titulo };
+  }
+
+  async gerarDocxBuffer(empresaId: string, contratoId: string): Promise<{ buffer: Buffer; titulo: string }> {
+    const contrato = await this.prisma.contrato.findFirst({
+      where: { id: contratoId, empresaId },
+      include: { cobrancas: { orderBy: { ordem: 'asc' } } },
+    });
+    if (!contrato) throw new BadRequestException('Contrato não encontrado.');
+
+    const empresa = await this.prisma.empresa.findFirst({ where: { id: empresaId } });
+    const texto = await this.resolverTextoContrato(contrato as any);
+    const titulo = contrato.titulo;
+    const buffer = await this.gerarDocxDoTexto(titulo, texto ?? titulo, empresa);
     return { buffer, titulo };
   }
 
@@ -951,35 +966,195 @@ export class ContratosService {
     return { message: 'Contrato assinado pela empresa com sucesso.', pdfUrl };
   }
 
-  private gerarPdfDoTexto(titulo: string, texto: string): Promise<Buffer> {
+  private async gerarPdfDoTexto(titulo: string, texto: string, empresa?: any): Promise<Buffer> {
+    const MARGIN = 60;
+    const PAGE_WIDTH = 595.28;
+    const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
+    const FOOTER_Y = 818 - MARGIN;
+
+    let logoBuffer: Buffer | null = null;
+    if (empresa?.logoUrl) {
+      try {
+        const res = await fetch(empresa.logoUrl, { signal: AbortSignal.timeout(3000) });
+        if (res.ok) logoBuffer = Buffer.from(await res.arrayBuffer());
+      } catch { /* skip logo on error */ }
+    }
+
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 60, size: 'A4' });
+      const doc = new PDFDocument({ bufferPages: true, margin: MARGIN, size: 'A4' });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      doc.fontSize(18).font('Helvetica-Bold').text(titulo, { align: 'center' });
-      doc.moveDown(1.5);
-      doc.fontSize(11).font('Helvetica');
+      // ── Cabeçalho ──────────────────────────────────────────────────
+      if (logoBuffer) {
+        try {
+          doc.image(logoBuffer, MARGIN, MARGIN, { fit: [50, 50], align: 'left' });
+          doc.moveDown(0.2);
+        } catch { /* skip if image format unsupported */ }
+      }
+
+      const nomeEmpresa = empresa?.nomeFantasia || empresa?.nome;
+      if (nomeEmpresa) {
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a1a').text(nomeEmpresa, { align: 'center' });
+      }
+      if (empresa?.cnpj) {
+        doc.fontSize(9).font('Helvetica').fillColor('#555555').text(`CNPJ: ${empresa.cnpj}`, { align: 'center' });
+      }
+      if (empresa?.logradouro) {
+        const end = [empresa.logradouro, empresa.numero, empresa.cidade, empresa.estado].filter(Boolean).join(', ');
+        doc.fontSize(8).fillColor('#777777').text(end, { align: 'center' });
+      }
+
+      doc.moveDown(0.6);
+      const lineY = doc.y;
+      doc.moveTo(MARGIN, lineY).lineTo(PAGE_WIDTH - MARGIN, lineY).strokeColor('#cccccc').lineWidth(0.5).stroke();
+      doc.moveDown(0.8);
+
+      // ── Título ─────────────────────────────────────────────────────
+      doc.fontSize(14).font('Helvetica-Bold').fillColor('#000000').text(titulo.toUpperCase(), { align: 'center' });
+      doc.moveDown(1.2);
+
+      // ── Corpo ──────────────────────────────────────────────────────
+      doc.fontSize(10.5).font('Helvetica').fillColor('#000000');
 
       for (const linha of texto.split('\n')) {
         const trimmed = linha.trim();
-        if (!trimmed) { doc.moveDown(0.5); continue; }
-        if (/^[\d]+\.|^CLÁUSULA|^[A-ZÁÉÍÓÚ\s]{8,}$/.test(trimmed)) {
-          doc.font('Helvetica-Bold').text(trimmed).font('Helvetica');
+        if (!trimmed) { doc.moveDown(0.35); continue; }
+
+        if (/^CLÁUSULA|^CLAUSULA/.test(trimmed)) {
+          doc.moveDown(0.4);
+          doc.fontSize(10.5).font('Helvetica-Bold').fillColor('#111111').text(trimmed);
+          doc.font('Helvetica').fillColor('#000000');
+          doc.moveDown(0.2);
+        } else if (/^\d+\.\d+\./.test(trimmed)) {
+          doc.fontSize(10.5).font('Helvetica').text(trimmed, { align: 'justify', indent: 16, width: CONTENT_WIDTH - 16 });
+          doc.moveDown(0.2);
+        } else if (/^_{5,}/.test(trimmed)) {
+          doc.moveDown(0.3);
+          doc.fontSize(10.5).font('Helvetica').text(trimmed, { align: 'center' });
+          doc.moveDown(0.15);
+        } else if (/^[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ][A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s]{6,}:$/.test(trimmed)) {
+          doc.moveDown(0.2);
+          doc.fontSize(10).font('Helvetica-Bold').text(trimmed, { align: 'left' });
+          doc.font('Helvetica');
+          doc.moveDown(0.1);
         } else {
-          doc.text(trimmed, { align: 'justify' });
+          doc.fontSize(10.5).font('Helvetica').text(trimmed, { align: 'justify', width: CONTENT_WIDTH });
+          doc.moveDown(0.2);
         }
-        doc.moveDown(0.3);
       }
 
-      doc.moveDown(4);
-      doc.fontSize(10).font('Helvetica').fillColor('#333333');
-      const assinado = `Assinado eletronicamente em ${new Date().toLocaleDateString('pt-BR')}`;
-      doc.text(assinado, { align: 'center' });
+      // ── Rodapé em todas as páginas ─────────────────────────────────
+      const range = doc.bufferedPageRange();
+      const dataHoje = new Date().toLocaleDateString('pt-BR');
+      for (let i = 0; i < range.count; i++) {
+        doc.switchToPage(i);
+        const footerLine = FOOTER_Y - 4;
+        doc.moveTo(MARGIN, footerLine).lineTo(PAGE_WIDTH - MARGIN, footerLine).strokeColor('#cccccc').lineWidth(0.5).stroke();
+        doc.fontSize(8).font('Helvetica').fillColor('#888888')
+          .text(
+            `${nomeEmpresa || ''} — Página ${i + 1} de ${range.count}`,
+            MARGIN, FOOTER_Y, { width: CONTENT_WIDTH / 2, align: 'left' },
+          );
+        doc.fontSize(8).font('Helvetica').fillColor('#888888')
+          .text(dataHoje, MARGIN + CONTENT_WIDTH / 2, FOOTER_Y, { width: CONTENT_WIDTH / 2, align: 'right' });
+      }
 
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.end();
     });
+  }
+
+  private async gerarDocxDoTexto(titulo: string, texto: string, empresa?: any): Promise<Buffer> {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, WidthType } = require('docx');
+
+    const PT = (n: number) => n * 2; // half-points para docx
+    const pars: any[] = [];
+
+    // Cabeçalho
+    const nomeEmpresa = empresa?.nomeFantasia || empresa?.nome;
+    if (nomeEmpresa) {
+      pars.push(new Paragraph({ children: [new TextRun({ text: nomeEmpresa, bold: true, size: PT(13) })], alignment: AlignmentType.CENTER }));
+    }
+    if (empresa?.cnpj) {
+      pars.push(new Paragraph({ children: [new TextRun({ text: `CNPJ: ${empresa.cnpj}`, size: PT(10), color: '555555' })], alignment: AlignmentType.CENTER }));
+    }
+    if (empresa?.logradouro) {
+      const end = [empresa.logradouro, empresa.numero, empresa.cidade, empresa.estado].filter(Boolean).join(', ');
+      pars.push(new Paragraph({ children: [new TextRun({ text: end, size: PT(9), color: '777777' })], alignment: AlignmentType.CENTER }));
+    }
+
+    // Linha separadora via borda inferior
+    pars.push(new Paragraph({
+      text: '',
+      border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'cccccc', space: 6 } },
+      spacing: { after: 200 },
+    }));
+
+    // Título
+    pars.push(new Paragraph({
+      children: [new TextRun({ text: titulo.toUpperCase(), bold: true, size: PT(14) })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 280 },
+    }));
+
+    // Corpo
+    for (const linha of texto.split('\n')) {
+      const trimmed = linha.trim();
+      if (!trimmed) {
+        pars.push(new Paragraph({ text: '', spacing: { after: 80 } }));
+        continue;
+      }
+
+      if (/^CLÁUSULA|^CLAUSULA/.test(trimmed)) {
+        pars.push(new Paragraph({
+          children: [new TextRun({ text: trimmed, bold: true, size: PT(11) })],
+          spacing: { before: 280, after: 120 },
+        }));
+      } else if (/^\d+\.\d+\./.test(trimmed)) {
+        pars.push(new Paragraph({
+          children: [new TextRun({ text: trimmed, size: PT(11) })],
+          alignment: AlignmentType.JUSTIFIED,
+          indent: { left: 360 },
+          spacing: { after: 100 },
+        }));
+      } else if (/^_{5,}/.test(trimmed)) {
+        pars.push(new Paragraph({
+          children: [new TextRun({ text: trimmed, size: PT(11) })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 280, after: 80 },
+        }));
+      } else {
+        pars.push(new Paragraph({
+          children: [new TextRun({ text: trimmed, size: PT(11) })],
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 100 },
+        }));
+      }
+    }
+
+    const doc = new Document({
+      styles: {
+        default: {
+          document: {
+            run: { font: 'Arial', size: PT(11) },
+            paragraph: { spacing: { line: 276 } },
+          },
+        },
+      },
+      sections: [{
+        properties: {
+          page: {
+            margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 },
+            size: { width: 11906, height: 16838, orientation: 'portrait' as any },
+          },
+        },
+        children: pars,
+      }],
+    });
+
+    return Packer.toBuffer(doc);
   }
 }
