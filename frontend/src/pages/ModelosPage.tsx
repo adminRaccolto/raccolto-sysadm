@@ -6,7 +6,7 @@ import Feedback from '../components/Feedback';
 import LoadingBlock from '../components/LoadingBlock';
 import Modal from '../components/Modal';
 import PageHeader from '../components/PageHeader';
-import type { ModeloDocumento, TipoModeloDocumento } from '../types/api';
+import type { ModeloDocumento, ProdutoServico, TipoModeloDocumento } from '../types/api';
 
 const TIPOS: { value: TipoModeloDocumento; label: string }[] = [
   { value: 'CONTRATO', label: 'Contratos' },
@@ -22,6 +22,7 @@ const initialForm = {
   conteudo: '',
   ativo: true,
   padrao: false,
+  produtoServicoId: '',
 };
 
 type ModeloForm = typeof initialForm;
@@ -37,6 +38,7 @@ function getApiError(err: unknown, fallback: string): string {
 export default function ModelosPage() {
   const [tipoAtivo, setTipoAtivo] = useState<TipoModeloDocumento>('CONTRATO');
   const [modelos, setModelos] = useState<ModeloDocumento[]>([]);
+  const [produtos, setProdutos] = useState<ProdutoServico[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +64,10 @@ export default function ModelosPage() {
     void loadModelos(tipoAtivo);
   }, [tipoAtivo]);
 
+  useEffect(() => {
+    http.get<ProdutoServico[]>('/produtos-servicos').then((r) => setProdutos(r.data)).catch(() => {});
+  }, []);
+
   function openNew() {
     setForm(initialForm);
     setEditingId(null);
@@ -71,7 +77,7 @@ export default function ModelosPage() {
   }
 
   function openEdit(m: ModeloDocumento) {
-    setForm({ nome: m.nome, descricao: m.descricao || '', conteudo: m.conteudo, ativo: m.ativo, padrao: m.padrao });
+    setForm({ nome: m.nome, descricao: m.descricao || '', conteudo: m.conteudo, ativo: m.ativo, padrao: m.padrao, produtoServicoId: m.produtoServicoId || '' });
     setEditingId(m.id);
     setError(null);
     setSuccess(null);
@@ -96,6 +102,7 @@ export default function ModelosPage() {
         conteudo: form.conteudo,
         ativo: form.ativo,
         padrao: form.padrao,
+        produtoServicoId: form.produtoServicoId || null,
       };
       if (editingId) {
         await http.put(`/modelos-documento/${editingId}`, payload);
@@ -168,7 +175,7 @@ export default function ModelosPage() {
               <thead>
                 <tr>
                   <th>Nome</th>
-                  <th>Descrição</th>
+                  <th>Serviço vinculado</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
@@ -180,7 +187,7 @@ export default function ModelosPage() {
                       <strong>{m.nome}</strong>
                       {m.padrao ? <span className="badge badge--accent" style={{ marginLeft: 6 }}>Padrão</span> : null}
                     </td>
-                    <td>{m.descricao || '—'}</td>
+                    <td>{m.produtoServico?.nome || '—'}</td>
                     <td>
                       <span className={`badge ${m.ativo ? 'badge--success' : 'badge--muted'}`}>
                         {m.ativo ? 'Ativo' : 'Inativo'}
@@ -219,6 +226,17 @@ export default function ModelosPage() {
             <label>Descrição (opcional)</label>
             <input value={form.descricao} onChange={(e) => setForm((c) => ({ ...c, descricao: e.target.value }))} />
           </div>
+          {(tipoAtivo === 'CONTRATO' || tipoAtivo === 'PROPOSTA') ? (
+            <div className="field field--span-2">
+              <label>Serviço vinculado (opcional)</label>
+              <select value={form.produtoServicoId} onChange={(e) => setForm((c) => ({ ...c, produtoServicoId: e.target.value }))}>
+                <option value="">— Nenhum —</option>
+                {produtos.filter((p) => p.ativo).map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div className="field field--span-2">
             <label>Conteúdo</label>
             <textarea

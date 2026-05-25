@@ -154,6 +154,8 @@ export interface ModeloDocumento {
   conteudo: string;
   ativo: boolean;
   padrao: boolean;
+  produtoServicoId?: string | null;
+  produtoServico?: { id: string; nome: string } | null;
   createdAt?: string;
 }
 
@@ -187,7 +189,15 @@ export interface RelatorioDeslocamento {
   anotacoes?: string;
 }
 
-export type TipoItemReembolso = 'KM' | 'PEDAGIO' | 'ALIMENTACAO' | 'HOSPEDAGEM' | 'OUTRO';
+export interface TipoGastoReembolso {
+  id: string;
+  nome: string;
+  padrao: boolean;
+  ativo: boolean;
+  ordem: number;
+  createdAt: string;
+}
+
 export type StatusRelatorioReembolso =
   | 'RASCUNHO'
   | 'AGUARDANDO_APROVACAO'
@@ -197,7 +207,7 @@ export type StatusRelatorioReembolso =
 
 export interface ItemReembolso {
   id: string;
-  tipo: TipoItemReembolso;
+  tipo: string;
   data?: string | null;
   descricao: string;
   km?: number | null;
@@ -219,12 +229,15 @@ export interface ReembolsoCliente {
     nomeFazenda?: string | null;
     distanciaKm?: number | null;
     precoKmReembolso?: number | null;
+    email?: string | null;
+    contatoPrincipal?: string | null;
   };
 }
 
 export interface RelatorioReembolso {
   id: string;
   empresaId: string;
+  interno: boolean;
   projetoId?: string | null;
   responsavelId?: string | null;
   titulo: string;
@@ -509,6 +522,21 @@ export interface ContaGerencial {
   };
 }
 
+export interface CentroCusto {
+  id: string;
+  codigo: string;
+  descricao: string;
+  ativo: boolean;
+  contaPaiId?: string | null;
+  contaPai?: { id: string; codigo: string; descricao: string } | null;
+  _count?: {
+    subcentros: number;
+    contasPagar: number;
+    lancamentosTesouraria: number;
+    recebiveis: number;
+  };
+}
+
 export interface Banco {
   id: string;
   codigo: string;
@@ -702,12 +730,15 @@ export interface Recebivel {
 }
 
 export type StatusAssinaturaArato = 'ATIVA' | 'SUSPENSA' | 'CANCELADA';
+export type ModalidadeAssinaturaArato = 'CONSULTORIA_MENTORIA' | 'ARATO_DIRETO';
 
 export interface AssinaturaArato {
   id: string;
   clienteId: string;
   produtoServicoId: string;
   contaGerencialId?: string | null;
+  modalidade: ModalidadeAssinaturaArato;
+  probono: boolean;
   valorMensal: number;
   diaVencimento: number;
   dataInicio: string;
@@ -718,6 +749,8 @@ export interface AssinaturaArato {
   cliente: Cliente;
   produtoServico: ProdutoServico;
   recebiveis?: Recebivel[];
+  aratoAviso?: string | null;
+  aratoCredenciais?: { user_email: string; user_senha: string } | null;
 }
 
 export interface DashboardResumo {
@@ -908,25 +941,41 @@ export interface DiagramaFull extends DiagramaListItem {
 
 export type StatusDiagnosticoLead = 'PENDENTE' | 'QUALIFICADO' | 'NAO_QUALIFICADO';
 
+export interface BlockScore {
+  percentual: number;
+  nivel: 'CRITICO' | 'ATENCAO' | 'BOM' | 'EXCELENTE';
+  diagnostico: string;
+}
+
+export interface DiagnosticoScore {
+  bloco1: BlockScore;
+  bloco2: BlockScore;
+  bloco3: BlockScore;
+  bloco4: BlockScore;
+  geral: BlockScore;
+}
+
 export interface DiagnosticoLeadResumo {
   id: string;
   nome: string;
   email: string;
   telefone: string;
   cidade: string | null;
-  estado: string | null;
+  profissao: string | null;
   status: StatusDiagnosticoLead;
   createdAt: string;
 }
 
 export interface DiagnosticoLeadFull extends DiagnosticoLeadResumo {
   idade: number | null;
+  estado: string | null;
   profissao: string | null;
   nomeFazenda: string | null;
   culturas: string[];
   percentualArrendado: number | null;
   operacoesTerceirizadas: string[];
   temSiloArmazem: boolean | null;
+  funcionariosOperacionais: number | null;
   produtividadeMedia: { cultura: string; media: number }[] | null;
   custosInsumosDiretos: string | null;
   hectaresPorTrabalhador: number | null;
@@ -934,13 +983,15 @@ export interface DiagnosticoLeadFull extends DiagnosticoLeadResumo {
   boaLeituraComercializacao: boolean | null;
   frustracaoSafra: Record<string, number | null> | null;
   percentualCusteio: string | null;
-  captouMaisQuePageu: boolean | null;
+  captouMaisQuePageu: string | null;
   usaSoftwareGestao: string | null;
   sabeCustoPorSaca: boolean | null;
   clarezaCustos: boolean | null;
   baseDecisoes: string | null;
   reuniaoFechamento: boolean | null;
+  interesses: string[];
   respondidoAt: string | null;
   updatedAt: string;
+  score?: DiagnosticoScore;
 }
 

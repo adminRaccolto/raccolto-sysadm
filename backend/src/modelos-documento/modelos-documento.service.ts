@@ -163,6 +163,7 @@ export interface UpsertModeloDto {
   conteudo: string;
   ativo?: boolean;
   padrao?: boolean;
+  produtoServicoId?: string | null;
 }
 
 @Injectable()
@@ -173,6 +174,7 @@ export class ModelosDocumentoService {
     return this.prisma.modeloDocumento.findMany({
       where: { empresaId, ...(tipo ? { tipo } : {}) },
       orderBy: [{ tipo: 'asc' }, { padrao: 'desc' }, { nome: 'asc' }],
+      include: { produtoServico: { select: { id: true, nome: true } } },
     });
   }
 
@@ -200,6 +202,7 @@ export class ModelosDocumentoService {
           conteudo: data.conteudo,
           ativo: data.ativo ?? true,
           padrao: data.padrao ?? false,
+          produtoServicoId: data.produtoServicoId ?? null,
         },
       });
     });
@@ -225,6 +228,7 @@ export class ModelosDocumentoService {
           ...(data.conteudo !== undefined ? { conteudo: data.conteudo } : {}),
           ...(data.ativo !== undefined ? { ativo: data.ativo } : {}),
           ...(data.padrao !== undefined ? { padrao: data.padrao } : {}),
+          ...('produtoServicoId' in data ? { produtoServicoId: data.produtoServicoId ?? null } : {}),
         },
       });
     });

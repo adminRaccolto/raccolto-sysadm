@@ -77,13 +77,6 @@ type ContratoForm = {
   cobrancas: ContratoCobranca[];
 };
 
-type ModeloForm = {
-  nome: string;
-  descricao: string;
-  conteudo: string;
-  ativo: boolean;
-  padrao: boolean;
-};
 
 const initialForm: ContratoForm = {
   clienteId: '',
@@ -126,13 +119,6 @@ const initialForm: ContratoForm = {
   cobrancas: [],
 };
 
-const initialModeloForm: ModeloForm = {
-  nome: '',
-  descricao: '',
-  conteudo: '',
-  ativo: true,
-  padrao: false,
-};
 
 function resolveIntervaloMeses(periodicidade: string) {
   switch (periodicidade) {
@@ -325,9 +311,6 @@ export default function ContratosPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCobrancasModalOpen, setIsCobrancasModalOpen] = useState(false);
-  const [isModelosModalOpen, setIsModelosModalOpen] = useState(false);
-  const [editingModeloId, setEditingModeloId] = useState<string | null>(null);
-  const [modeloForm, setModeloForm] = useState<ModeloForm>(initialModeloForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -483,24 +466,6 @@ export default function ContratosPage() {
     setIsModalOpen(true);
   }
 
-  function openModelosModal() {
-    setEditingModeloId(null);
-    setModeloForm(initialModeloForm);
-    setIsModelosModalOpen(true);
-  }
-
-  function startEditModelo(modelo: ModeloDocumento) {
-    setEditingModeloId(modelo.id);
-    setModeloForm({
-      nome: modelo.nome,
-      descricao: modelo.descricao || '',
-      conteudo: modelo.conteudo,
-      ativo: modelo.ativo,
-      padrao: modelo.padrao,
-    });
-    setIsModelosModalOpen(true);
-  }
-
   function aplicarTextoPadrao() {
     const modelo = modelos.find((item) => item.id === form.modeloContratoId) || modelos.find((item) => item.padrao) || null;
     const texto = modelo ? mergeContratoTemplate(modelo.conteudo, form, clienteAtual, user?.empresa ?? null) : construirTextoPadrao(form, clienteAtual, user?.empresa ?? null);
@@ -531,49 +496,6 @@ export default function ContratosPage() {
     setForm((current) => ({ ...current, cobrancas: grade }));
     setIsCobrancasModalOpen(true);
     setError(null);
-  }
-
-  async function handleSaveModelo(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const payload = {
-        nome: modeloForm.nome.trim(),
-        ...(modeloForm.descricao ? { descricao: modeloForm.descricao.trim() } : {}),
-        conteudo: modeloForm.conteudo,
-        ativo: modeloForm.ativo,
-        padrao: modeloForm.padrao,
-      };
-      if (editingModeloId) {
-        await http.put(`/modelos-documento/${editingModeloId}`, payload);
-        setSuccess('Modelo de contrato atualizado com sucesso.');
-      } else {
-        await http.post('/modelos-documento', { ...payload, tipo: 'CONTRATO' });
-        setSuccess('Modelo de contrato criado com sucesso.');
-      }
-      setIsModelosModalOpen(false);
-      setEditingModeloId(null);
-      setModeloForm(initialModeloForm);
-      await loadData();
-    } catch (err) {
-      handleApiError(err, 'Falha ao salvar modelo de contrato.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDeleteModelo(modelo: ModeloDocumento) {
-    const confirmed = window.confirm(`Excluir o modelo "${modelo.nome}"?`);
-    if (!confirmed) return;
-    try {
-      await http.delete(`/modelos-documento/${modelo.id}`);
-      setSuccess('Modelo de contrato excluído com sucesso.');
-      await loadData();
-    } catch (err) {
-      handleApiError(err, 'Falha ao excluir modelo de contrato.');
-    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -695,6 +617,43 @@ export default function ContratosPage() {
     }
   }
 
+  async function handleReenviarAutentique(contrato: Contrato) {
+    if (!confirm(`Reenviar contrato "${contrato.titulo}" ao Autentique? Isso cancelará o documento anterior e enviará um novo.`)) return;
+    setError(null);
+    setSuccess(null);
+    try {
+      await http.post(`/contratos/${contrato.id}/reenviar-autentique`);
+      setSuccess('Contrato reenviado ao Autentique com sucesso. O cliente receberá novo link por e-mail.');
+      await loadData();
+    } catch (err) {
+      handleApiError(err, 'Falha ao reenviar ao Autentique.');
+    }
+  }
+
+  async function handleSincronizarAutentique(contrato: Contrato) {
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await http.post<{ message: string; assinado: boolean }>(`/contratos/${contrato.id}/sincronizar-autentique`);
+      setSuccess(res.data.message);
+      if (res.data.assinado) await loadData();
+    } catch (err) {
+      handleApiError(err, 'Falha ao sincronizar com Autentique.');
+    }
+  }
+
+  async function handleSincronizarFinanceiro(contrato: Contrato) {
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await http.post<{ message: string }>(`/contratos/${contrato.id}/sincronizar-financeiro`);
+      setSuccess(res.data.message);
+      await loadData();
+    } catch (err) {
+      handleApiError(err, 'Falha ao sincronizar financeiro.');
+    }
+  }
+
   async function handleDelete(contrato: Contrato) {
     const confirmed = window.confirm(
       `Excluir o contrato "${contrato.titulo}"? A exclusão só funciona se ele ainda não tiver vínculos operacionais.`,
@@ -763,24 +722,36 @@ export default function ContratosPage() {
             <div className="table-actions-toolbar">
               <button className="button button--ghost button--small" type="button" onClick={openNewModal}>Novo</button>
               <button className="button button--ghost button--small" type="button" disabled={!selectedContrato} onClick={() => selectedContrato && startEdit(selectedContrato)}>Editar</button>
-              <button
-                className="button button--small"
-                type="button"
-                disabled={!selectedContrato || !!selectedContrato.autentiqueDocId}
-                title={selectedContrato?.autentiqueDocId ? 'Já enviado para assinatura' : 'Enviar para assinatura digital via Autentique'}
-                onClick={() => selectedContrato && void handleEnviarAssinatura(selectedContrato)}
-              >
-                {selectedContrato?.statusAssinatura === 'ASSINADO' ? 'Assinado' : selectedContrato?.autentiqueDocId ? 'Aguardando assinatura' : 'Enviar para assinar'}
-              </button>
+              {/* Botão de assinatura — comportamento depende do estado atual */}
+              {selectedContrato && selectedContrato.statusAssinatura !== 'ASSINADO' && !selectedContrato.autentiqueDocId ? (
+                <button
+                  className="button button--small"
+                  type="button"
+                  title="Enviar para assinatura digital via Autentique"
+                  onClick={() => void handleEnviarAssinatura(selectedContrato)}
+                >
+                  Enviar para assinar
+                </button>
+              ) : null}
+              {selectedContrato && selectedContrato.statusAssinatura !== 'ASSINADO' && selectedContrato.autentiqueDocId ? (
+                <button
+                  className="button button--small"
+                  type="button"
+                  title="Cancelar documento anterior no Autentique e reenviar"
+                  onClick={() => void handleReenviarAutentique(selectedContrato)}
+                >
+                  Reenviar ao Autentique
+                </button>
+              ) : null}
+              {selectedContrato?.statusAssinatura === 'ASSINADO' ? (
+                <button className="button button--small" type="button" disabled>Assinado</button>
+              ) : null}
               {selectedContrato?.autentiqueSignUrl && selectedContrato.statusAssinatura !== 'ASSINADO' ? (
                 <>
                   <button
                     className="button button--ghost button--small"
                     type="button"
-                    onClick={() => {
-                      void navigator.clipboard.writeText(selectedContrato.autentiqueSignUrl!);
-                      setSuccess('Link copiado.');
-                    }}
+                    onClick={() => { void navigator.clipboard.writeText(selectedContrato.autentiqueSignUrl!); setSuccess('Link copiado.'); }}
                   >
                     Copiar link
                   </button>
@@ -789,9 +760,19 @@ export default function ContratosPage() {
                     type="button"
                     onClick={() => void handleReenviarLink(selectedContrato)}
                   >
-                    Reenviar por e-mail
+                    Reenviar link
                   </button>
                 </>
+              ) : null}
+              {selectedContrato?.autentiqueDocId && selectedContrato.statusAssinatura !== 'ASSINADO' ? (
+                <button
+                  className="button button--ghost button--small"
+                  type="button"
+                  onClick={() => void handleSincronizarAutentique(selectedContrato)}
+                  title="Consultar Autentique para verificar se o documento foi assinado"
+                >
+                  Sincronizar Autentique
+                </button>
               ) : null}
               {selectedContrato ? (
                 <button
@@ -808,13 +789,23 @@ export default function ContratosPage() {
                   className="button button--small"
                   type="button"
                   onClick={() => void handleAssinarEmpresa(selectedContrato)}
-                  title="Registrar assinatura da empresa e enviar contrato ao cliente"
+                  title="Gerar PDF assinado pela empresa e enviar ao cliente por e-mail"
                 >
                   Assinar pela empresa
                 </button>
               ) : null}
               {selectedContrato?.pdfAssinadoUrl ? (
                 <a className="button button--ghost button--small" href={selectedContrato.pdfAssinadoUrl} target="_blank" rel="noreferrer">PDF assinado</a>
+              ) : null}
+              {selectedContrato ? (
+                <button
+                  className="button button--ghost button--small"
+                  type="button"
+                  onClick={() => void handleSincronizarFinanceiro(selectedContrato)}
+                  title="Sincronizar recebiveis com a grade de cobrança atual"
+                >
+                  Atualizar financeiro
+                </button>
               ) : null}
               <button className="button button--danger button--small" type="button" disabled={!selectedContrato} onClick={() => selectedContrato && void handleDelete(selectedContrato)}>Excluir</button>
             </div>
@@ -893,7 +884,15 @@ export default function ContratosPage() {
           </div>
           <div className="field">
             <label>Produto/serviço</label>
-            <select value={form.produtoServicoId} onChange={(e) => setForm((c) => ({ ...c, produtoServicoId: e.target.value }))}>
+            <select value={form.produtoServicoId} onChange={(e) => {
+                const pid = e.target.value;
+                const modeloSugerido = modelos.find((m) => m.produtoServicoId === pid && m.ativo) || null;
+                setForm((c) => ({
+                  ...c,
+                  produtoServicoId: pid,
+                  ...(modeloSugerido ? { modeloContratoId: modeloSugerido.id, modeloContratoNome: modeloSugerido.nome } : {}),
+                }));
+              }}>
               <option value="">Selecione</option>
               {produtos.map((produto) => (
                 <option key={produto.id} value={produto.id}>{produto.nome}</option>
@@ -904,6 +903,7 @@ export default function ContratosPage() {
             <label>Status</label>
             <select value={form.status} onChange={(e) => setForm((c) => ({ ...c, status: e.target.value as StatusContrato }))}>
               <option value="RASCUNHO">Rascunho</option>
+              <option value="AGUARDANDO_CONFERENCIA">Aguardando conferência</option>
               <option value="ATIVO">Ativo</option>
               <option value="SUSPENSO">Suspenso</option>
               <option value="ENCERRADO">Encerrado</option>
@@ -1016,7 +1016,7 @@ export default function ContratosPage() {
                   <option key={modelo.id} value={modelo.id}>{modelo.nome}{modelo.padrao ? ' (padrão)' : ''}</option>
                 ))}
               </select>
-              <button className="button button--ghost button--small" type="button" onClick={openModelosModal}>Modelos</button>
+              <button className="button button--ghost button--small" type="button" onClick={() => window.open('/modelos', '_blank')}>Gerenciar modelos</button>
             </div>
           </div>
           <div className="field">
@@ -1174,82 +1174,6 @@ export default function ContratosPage() {
         </div>
       </Modal>
 
-      <Modal
-        open={isModelosModalOpen}
-        title={editingModeloId ? 'Editar modelo de contrato' : 'Modelos de contrato'}
-        subtitle="Mantenha os textos base do contrato em um repositório próprio e aplique-os na minuta com preenchimento automático."
-        onClose={() => {
-          if (saving) return;
-          setIsModelosModalOpen(false);
-          setEditingModeloId(null);
-        }}
-      >
-        <div className="page-stack">
-          <div className="table-actions-toolbar">
-            <button className="button button--ghost button--small" type="button" onClick={() => { setEditingModeloId(null); setModeloForm(initialModeloForm); }}>Novo modelo</button>
-          </div>
-
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Descrição</th>
-                  <th>Status</th>
-                  <th>Padrão</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {modelos.map((modelo) => (
-                  <tr key={modelo.id}>
-                    <td>{modelo.nome}</td>
-                    <td>{modelo.descricao || '—'}</td>
-                    <td>{modelo.ativo ? 'Ativo' : 'Inativo'}</td>
-                    <td>{modelo.padrao ? 'Sim' : 'Não'}</td>
-                    <td>
-                      <div className="table-actions-toolbar">
-                        <button className="button button--ghost button--small" type="button" onClick={() => startEditModelo(modelo)}>Editar</button>
-                        <button className="button button--danger button--small" type="button" onClick={() => void handleDeleteModelo(modelo)}>Excluir</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <form className="form-grid" onSubmit={handleSaveModelo}>
-            <div className="field">
-              <label>Nome</label>
-              <input value={modeloForm.nome} onChange={(e) => setModeloForm((c) => ({ ...c, nome: e.target.value }))} required />
-            </div>
-            <div className="field">
-              <label>Descrição</label>
-              <input value={modeloForm.descricao} onChange={(e) => setModeloForm((c) => ({ ...c, descricao: e.target.value }))} />
-            </div>
-            <div className="field field--checkbox">
-              <label><input type="checkbox" checked={modeloForm.ativo} onChange={(e) => setModeloForm((c) => ({ ...c, ativo: e.target.checked }))} /> Ativo</label>
-            </div>
-            <div className="field field--checkbox">
-              <label><input type="checkbox" checked={modeloForm.padrao} onChange={(e) => setModeloForm((c) => ({ ...c, padrao: e.target.checked }))} /> Modelo padrão</label>
-            </div>
-            <div className="field field--span-2">
-              <label>Conteúdo do modelo</label>
-              <textarea
-                value={modeloForm.conteudo}
-                onChange={(e) => setModeloForm((c) => ({ ...c, conteudo: e.target.value }))}
-                rows={10}
-                placeholder="Use variáveis como {{contratada_nome_razao_social}}, {{contratada_documento}}, {{contratante_nome_razao_social}}, {{objeto_contrato}}, {{valor_global_contrato}}, {{grade_parcelamento_contrato}}"
-                required
-              />
-            </div>
-            <div className="field field--span-2">
-              <button className="button" type="submit" disabled={saving}>{saving ? 'Salvando...' : editingModeloId ? 'Salvar modelo' : 'Criar modelo'}</button>
-            </div>
-          </form>
-        </div>
-      </Modal>
     </div>
   );
 }
