@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrioridadeNotificacao, Prisma, StatusAssinatura, StatusContrato } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
+import { ProjetosService } from '../projetos/projetos.service';
 import { AutentiqueService } from './autentique.service';
 import { MailService } from '../mail/mail.service';
 import { StorageService } from '../storage/storage.service';
@@ -17,6 +18,7 @@ export class ContratosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificacoesService: NotificacoesService,
+    private readonly projetosService: ProjetosService,
     private readonly autentiqueService: AutentiqueService,
     private readonly mailService: MailService,
     private readonly storageService: StorageService,
@@ -122,6 +124,23 @@ export class ContratosService {
     });
 
     await this.notificarMudancaContrato(empresaId, contrato.id, 'Contrato criado');
+
+    if (data.gerarProjetoAutomatico) {
+      try {
+        await this.projetosService.create(empresaId, {
+          nome: contrato.titulo,
+          clienteId: contrato.clienteId,
+          contratoId: contrato.id,
+          produtoServicoId: contrato.produtoServicoId ?? undefined,
+          dataInicio: data.dataInicio,
+          dataFimPrevista: data.dataFim ?? undefined,
+        });
+        this.logger.log(`Projeto criado automaticamente para contrato ${contrato.id}`);
+      } catch (err) {
+        this.logger.warn(`Falha ao criar projeto automático para contrato ${contrato.id}: ${err}`);
+      }
+    }
+
     return this.findOne(empresaId, contrato.id);
   }
 
@@ -609,6 +628,71 @@ export class ContratosService {
     this.logger.log(`Contrato ${contrato.id} marcado como ASSINADO via webhook Autentique`);
   }
 
+  async sincronizarFinanceiroManual(empresaId: string, contratoId: string): Promise<{ message: string }> {
+    const contrato = await this.prisma.contrato.findFirst({
+      where: { id: contratoId, empresaId },
+      include: {
+        produtoServico: true,
+        cobrancas: { orderBy: { ordem: 'asc' as const } },
+      },
+    });
+    if (!contrato) throw new BadRequestException('Contrato não encontrado.');
+    if (!contrato.cobrancas.length) throw new BadRequestException('Nenhuma parcela configurada na grade de cobrança.');
+
+    const contaGerencialId = contrato.produtoServico?.contaGerencialReceita
+      ? ((await this.prisma.contaGerencial.findFirst({
+          where: { id: contrato.produtoServico.contaGerencialReceita, empresaId },
+          select: { id: true },
+        }))?.id ?? null)
+      : null;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.recebivel.deleteMany({ where: { contratoId, origemAutomatica: true } });
+      await tx.recebivel.createMany({
+        data: contrato.cobrancas.map((item, index) => ({
+          empresaId: contrato.empresaId,
+          clienteId: contrato.clienteId,
+          contratoId: contrato.id,
+          produtoServicoId: contrato.produtoServicoId,
+          contaGerencialId,
+          descricao: item.descricao || `${contrato.titulo} - parcela ${index + 1}/${contrato.cobrancas.length}`,
+          parcelaNumero: index + 1,
+          totalParcelas: contrato.cobrancas.length,
+          valor: item.valor,
+          vencimento: new Date(item.vencimento),
+          origemAutomatica: true,
+        })),
+      });
+    });
+
+    return { message: `${contrato.cobrancas.length} parcela(s) sincronizada(s) com o financeiro.` };
+  }
+
+  async sincronizarAutentique(empresaId: string, contratoId: string): Promise<{ message: string; assinado: boolean }> {
+    const contrato = await this.prisma.contrato.findFirst({ where: { id: contratoId, empresaId } });
+    if (!contrato) throw new BadRequestException('Contrato não encontrado.');
+    if (!contrato.autentiqueDocId) throw new BadRequestException('Contrato não foi enviado para assinatura no Autentique.');
+    if (contrato.statusAssinatura === StatusAssinatura.ASSINADO) {
+      return { message: 'Contrato já está marcado como assinado.', assinado: true };
+    }
+
+    const doc = await this.autentiqueService.consultarDocumento(contrato.autentiqueDocId);
+    if (!doc) throw new BadRequestException('Documento não encontrado no Autentique.');
+
+    const assinado = !!doc.signatures?.every((s: any) => s.signed?.created_at);
+    if (assinado) {
+      const pdfAssinadoUrl = doc.files?.signed ?? null;
+      await this.prisma.contrato.update({
+        where: { id: contratoId },
+        data: { statusAssinatura: StatusAssinatura.ASSINADO, dataAssinatura: new Date(), pdfAssinadoUrl },
+      });
+      await this.sincronizarRecebiveisAutomaticos(empresaId, contratoId);
+      return { message: 'Contrato marcado como assinado e financeiro sincronizado.', assinado: true };
+    }
+
+    return { message: 'Contrato ainda aguarda assinatura no Autentique.', assinado: false };
+  }
+
   private async notificarMudancaContrato(empresaId: string, contratoId: string, acao: string) {
     const contrato = await this.prisma.contrato.findFirst({
       where: { id: contratoId, empresaId },
@@ -885,9 +969,11 @@ export class ContratosService {
     if (!contrato) throw new BadRequestException('Contrato não encontrado.');
 
     const empresa = await this.prisma.empresa.findFirst({ where: { id: empresaId } });
-    const texto = await this.resolverTextoContrato(contrato as any);
     const titulo = contrato.titulo;
-    const buffer = await this.gerarPdfDoTexto(titulo, texto ?? titulo, empresa);
+    const texto = contrato.textoContratoBase?.trim()
+      || (await this.resolverTextoContrato(contrato as any))
+      || titulo;
+    const buffer = await this.gerarPdfDoTexto(titulo, texto, empresa);
     return { buffer, titulo };
   }
 
@@ -899,9 +985,11 @@ export class ContratosService {
     if (!contrato) throw new BadRequestException('Contrato não encontrado.');
 
     const empresa = await this.prisma.empresa.findFirst({ where: { id: empresaId } });
-    const texto = await this.resolverTextoContrato(contrato as any);
     const titulo = contrato.titulo;
-    const buffer = await this.gerarDocxDoTexto(titulo, texto ?? titulo, empresa);
+    const texto = contrato.textoContratoBase?.trim()
+      || (await this.resolverTextoContrato(contrato as any))
+      || titulo;
+    const buffer = await this.gerarDocxDoTexto(titulo, texto, empresa);
     return { buffer, titulo };
   }
 

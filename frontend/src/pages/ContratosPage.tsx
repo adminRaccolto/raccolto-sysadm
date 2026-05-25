@@ -591,7 +591,13 @@ export default function ContratosPage() {
     const token = localStorage.getItem('raccolto_token');
     const url = `${apiUrl}/contratos/${contrato.id}/${formato}`;
     void fetch(url, { headers: { Authorization: `Bearer ${token ?? ''}` } })
-      .then((r) => r.blob())
+      .then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({})) as { message?: string };
+          throw new Error(err.message || `Erro ${r.status}`);
+        }
+        return r.blob();
+      })
       .then((blob) => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -599,7 +605,7 @@ export default function ContratosPage() {
         a.click();
         URL.revokeObjectURL(a.href);
       })
-      .catch(() => setError(`Falha ao gerar ${formato.toUpperCase()}.`));
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : `Falha ao gerar ${formato.toUpperCase()}.`));
   }
 
   async function handleAssinarEmpresa(contrato: Contrato) {
@@ -1146,9 +1152,12 @@ export default function ContratosPage() {
                     </td>
                     <td>
                       <input
-                        value={maskCurrencyInputBRL(String(Math.round(item.valor * 100)))}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={item.valor}
                         onChange={(e) => {
-                          const parsed = parseCurrencyInputBRL(e.target.value) ?? 0;
+                          const parsed = parseFloat(e.target.value) || 0;
                           setForm((current) => ({
                             ...current,
                             cobrancas: current.cobrancas.map((row, rowIndex) =>

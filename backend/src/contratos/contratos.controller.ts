@@ -96,6 +96,16 @@ export class ContratosController {
     res.send(buffer);
   }
 
+  @Post(':id/sincronizar-financeiro')
+  sincronizarFinanceiro(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.contratosService.sincronizarFinanceiroManual(user.empresaId, id);
+  }
+
+  @Post(':id/sincronizar-autentique')
+  sincronizarAutentique(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.contratosService.sincronizarAutentique(user.empresaId, id);
+  }
+
   @Post(':id/assinar-empresa')
   assinarEmpresa(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.contratosService.assinarEmpresa(user.empresaId, id);
